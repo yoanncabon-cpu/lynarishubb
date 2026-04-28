@@ -83,9 +83,10 @@ export function TarifsPricing() {
         <div className="mx-auto max-w-6xl space-y-5">
 
           {/* ── 5 plans : Découverte / Starter / Pro ⭐ / Business / Sur-mesure ── */}
-          {/* Note : la refonte UI complète des 5 cards est traitée à l'étape 7. */}
-          {/* Cette version maintient la compat avec les nouveaux types `Plan`. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
+          {/* Note : la refonte UI premium des cards (typo, padding, hiérarchie) */}
+          {/* est traitée à l'étape 7. Cette version étend la grille à 5 colonnes */}
+          {/* avec un fallback responsive 1/2/3/5 selon viewport. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 items-stretch">
             {PLANS.map((plan) => {
               const isFree = plan.priceMonthly === 0
               const isCustom = plan.priceMonthly === null || plan.id === "custom"

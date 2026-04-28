@@ -19,60 +19,97 @@ import { GlassCard, GlassPanel, GlassChip, KpiTile } from "@/components/app/glas
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-import { PLANS as PRICING_PLANS } from "@/lib/pricing/plans"
+import {
+  PLANS as PRICING_PLANS,
+  type Plan as PricingPlan,
+  type PlanId as PricingPlanId,
+  type PlanFeatures,
+} from "@/lib/pricing/plans"
 
-// ─── Plans dashboard — 3 plans : Découverte / Pro / Sur-mesure ───────────────
-// `isFree` = essai gratuit (Découverte, prix 0)
-// `isCustom` = sur devis (Sur-mesure, pas de prix affiché)
-const PLAN_DISPLAY = [
-  {
-    id: "decouverte",
-    name: "Découverte",
-    monthly: 0,
-    annual: 0,
-    color: "#22D3EE",
-    agents: "Tous les agents",
-    actions: "50 / 14 j",
-    voice: "30 min",
-    support: "Email",
-    isCurrent: false,
-    isFree: true,
-    isCustom: false,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    monthly: PRICING_PLANS.find(p => p.id === "pro")?.priceMonthly ?? 449,
-    annual: PRICING_PLANS.find(p => p.id === "pro")?.priceAnnualMonthly ?? 382,
-    color: "#E86F4D",
-    agents: "Tous les agents Lynaris",
-    actions: "1 500/mois",
-    voice: "300 min",
-    support: "Email J+1",
-    isCurrent: true,
-    isFree: false,
-    isCustom: false,
-  },
-  {
-    id: "custom",
-    name: "Sur-mesure",
-    monthly: null,
-    annual: null,
-    color: "#F59E0B",
-    agents: "Agent dédié",
-    actions: "Illimité",
-    voice: "Sur-mesure",
-    support: "Dédié 7j/7",
-    isCurrent: false,
-    isFree: false,
-    isCustom: true,
-  },
-]
+// ─── Plans dashboard — dérivés depuis pricing/plans.ts (source de vérité) ────
+// Affichage des 5 paliers : Découverte / Starter / Pro ⭐ / Business / Sur-mesure
+
+// Couleur d'accent par plan pour l'UI (chip, prix, bordure card)
+const PLAN_DISPLAY_COLORS: Readonly<Record<PricingPlanId, string>> = {
+  discovery: "#22D3EE",
+  starter:   "#A78BFA",
+  pro:       "#E86F4D",
+  business:  "#6366F1",
+  custom:    "#F59E0B",
+}
+
+function fmtAgents(f: PlanFeatures): string {
+  switch (f.agents) {
+    case "all":                  return "Tous les agents (essai)"
+    case "limited":              return typeof f.agentsCount === "number" ? `${f.agentsCount} agents (hors Marine)` : "Agents limités"
+    case "all_no_custom":        return "Tous les 9 agents Lynaris"
+    case "all_plus_custom":      return "Tous + 1 custom"
+    case "all_plus_dedicated":   return "Agent dédié + tous"
+  }
+}
+
+function fmtQuota(q: number | "unlimited", suffix: string): string {
+  if (q === "unlimited") return "Illimité"
+  return `${q.toLocaleString("fr-FR")}${suffix}`
+}
+
+function fmtVoice(f: PlanFeatures): string {
+  if (f.voiceMinutes === "unlimited") return "Illimité"
+  if (f.voiceMinutes === 0) return "En option"
+  return `${f.voiceMinutes.toLocaleString("fr-FR")} min`
+}
+
+function fmtSupport(f: PlanFeatures): string {
+  switch (f.supportSla) {
+    case "j2":            return "Email"
+    case "j1":            return "Email J+1"
+    case "j1_priority":   return "Email prioritaire J+1"
+    case "j0_dedicated":  return "Slack/WhatsApp J+0"
+    case "manager":       return "Manager dédié 7j/7"
+  }
+}
+
+interface PlanDisplay {
+  id: PricingPlanId
+  name: string
+  monthly: number | null
+  annual: number | null
+  color: string
+  agents: string
+  actions: string
+  voice: string
+  support: string
+  setupFee: number
+  isFree: boolean
+  isCustom: boolean
+  isFeatured: boolean
+}
+
+function toDisplay(plan: PricingPlan): PlanDisplay {
+  return {
+    id: plan.id,
+    name: plan.name,
+    monthly: plan.priceMonthly,
+    annual: plan.priceAnnualMonthly,
+    color: PLAN_DISPLAY_COLORS[plan.id],
+    agents: fmtAgents(plan.features),
+    actions: fmtQuota(plan.features.actions, "/mois"),
+    voice: fmtVoice(plan.features),
+    support: fmtSupport(plan.features),
+    setupFee: plan.setupFee,
+    isFree: plan.priceMonthly === 0,
+    isCustom: plan.id === "custom",
+    isFeatured: plan.featured,
+  }
+}
+
+const PLAN_DISPLAY: readonly PlanDisplay[] = PRICING_PLANS.map(toDisplay)
 
 // Garde PLANS pour compatibilité avec le code existant
 const PLANS = PLAN_DISPLAY
 
-type PlanId = "trial" | "decouverte" | "pro" | "custom"
+// Type local — ce qu'on peut envoyer comme planId au checkout serveur
+type PlanId = PricingPlanId
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -493,19 +530,23 @@ export default function BillingPage() {
 
   async function handleChoosePlan(planId: PlanId) {
     const plan = PLANS.find((p) => p.id === planId)
-    // Mapping UI → DB : decouverte→trial, pro→pro, custom→scale
-    const dbPlanId =
-      planId === "decouverte" ? "trial" :
+    // Mapping UI → DB :
+    // - discovery → trial (essai)
+    // - custom → scale (legacy DB)
+    // - starter, pro, business → identifiant identique
+    //   (note : "business" pas encore dans l'enum DB, étape 6 du plan migration)
+    const dbPlanId: string =
+      planId === "discovery" ? "trial" :
       planId === "custom" ? "scale" :
       planId
     if (!plan || currentPlanId === dbPlanId) return
     // Sur-mesure : redirige vers contact (pas de checkout Stripe)
     if (planId === "custom") {
-      window.location.assign("/contact?plan=custom")
+      window.location.assign("/contact?type=demo")
       return
     }
     // Découverte : pas de checkout (essai géré via trialEndsAt)
-    if (planId === "decouverte") return
+    if (planId === "discovery") return
     setLoadingPlan(planId)
     try {
       const res = await fetch("/api/billing/checkout", {
@@ -920,17 +961,18 @@ export default function BillingPage() {
             </GlassPanel>
           </div>
 
-          {/* Plans grid — 3 plans (Découverte / Pro / Sur-mesure) */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+          {/* Plans grid — 5 paliers (Découverte / Starter / Pro ⭐ / Business / Sur-mesure) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
             {PLANS.map((plan) => {
               // Mapping plan_id UI → valeur DB
-              // decouverte → trial, pro → pro, custom → scale
-              const dbId =
-                plan.id === "decouverte" ? "trial" :
+              // discovery → trial, starter/pro → identique, business → "business" (étape 6),
+              // custom → scale
+              const dbId: string =
+                plan.id === "discovery" ? "trial" :
                 plan.id === "custom" ? "scale" :
                 plan.id
-              const isCurrent = currentPlanId !== null && currentPlanId === dbId
-              const isPro = plan.id === "pro"
+              const isCurrent = currentPlanId === dbId
+              const isPro = plan.isFeatured
               const price =
                 plan.isFree
                   ? 0
