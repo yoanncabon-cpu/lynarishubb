@@ -38,31 +38,18 @@ export async function sendGmail(
   options: GmailEmailOptions
 ): Promise<{ success: boolean; error?: string }> {
   const fromUser = process.env["GMAIL_USER"] ?? "support@lynarisai.com"
-  const fromField = options.from ?? `Lynaris <${fromUser}>`
+  const fallbackFrom = options.from ?? `Lynaris <${fromUser}>`
   const toField = Array.isArray(options.to) ? options.to.join(", ") : options.to
 
-  // Priorité 1 — Gmail SMTP (photo de profil Google Workspace associée automatiquement)
-  const transport = getTransporter()
-  if (transport) {
-    try {
-      await transport.sendMail({
-        from: fromField, to: toField,
-        subject: options.subject, html: options.html,
-        text: options.text, replyTo: options.replyTo,
-      })
-      console.info("[gmail] Envoyé via Gmail SMTP →", toField)
-      return { success: true }
-    } catch (err) {
-      console.error("[gmail] Erreur Gmail SMTP:", err instanceof Error ? err.message : err)
-    }
-  }
-
-  // Priorité 2 — Resend (backup si Gmail SMTP indisponible)
+  // Priorité 1 — Resend
+  // Le domaine lynarisai.com est validé chez Resend (DKIM/SPF/DMARC alignés).
+  // Envoyer via Resend garantit l'authentification DMARC complète et fait
+  // sauter le bandeau "expéditeur non vérifié" de Gmail.
   const resend = getResend()
   const customFromEmail = process.env["RESEND_FROM_EMAIL"] ?? ""
   if (resend && customFromEmail && customFromEmail !== "onboarding@resend.dev") {
     const fromName = process.env["RESEND_FROM_NAME"] ?? "Lynaris"
-    const resendFrom = `${fromName} <${customFromEmail}>`
+    const resendFrom = options.from ?? `${fromName} <${customFromEmail}>`
     try {
       const { data, error } = await resend.emails.send({
         from: resendFrom,
@@ -70,19 +57,35 @@ export async function sendGmail(
         subject: options.subject,
         html: options.html,
         text: options.text ?? "",
-        replyTo: options.replyTo ?? fromField,
+        replyTo: options.replyTo ?? customFromEmail,
       })
       if (error) {
-        console.warn("[email] Resend échec:", error.message)
+        console.warn("[email] Resend échec, fallback Gmail SMTP:", error.message)
       } else {
         console.info("[email] Envoyé via Resend →", toField, "| from:", customFromEmail, "| id:", data?.id)
         return { success: true }
       }
     } catch (err) {
-      console.error("[email] Resend exception:", err instanceof Error ? err.message : err)
+      console.error("[email] Resend exception, fallback Gmail SMTP:", err instanceof Error ? err.message : err)
     }
   }
 
-  console.warn("[email] Aucun provider n'a réussi. Vérifie RESEND_API_KEY dans .env")
+  // Priorité 2 — Gmail SMTP (fallback uniquement si Resend indisponible)
+  const transport = getTransporter()
+  if (transport) {
+    try {
+      await transport.sendMail({
+        from: fallbackFrom, to: toField,
+        subject: options.subject, html: options.html,
+        text: options.text, replyTo: options.replyTo,
+      })
+      console.info("[gmail] Envoyé via Gmail SMTP (fallback) →", toField)
+      return { success: true }
+    } catch (err) {
+      console.error("[gmail] Erreur Gmail SMTP:", err instanceof Error ? err.message : err)
+    }
+  }
+
+  console.warn("[email] Aucun provider n'a réussi. Vérifie RESEND_API_KEY ou GMAIL_APP_PASSWORD dans .env")
   return { success: false, error: "No email provider available" }
 }

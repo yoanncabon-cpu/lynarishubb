@@ -6,6 +6,7 @@ import { db } from "@/lib/db"
 import { supportTickets } from "@/lib/db/schema"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { sendGmail } from "@/lib/emails/gmail"
+import { emailLayout, emailButton, emailInfoRow, emailBadge } from "@/lib/emails/base-layout"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_FILES = 5
@@ -25,82 +26,105 @@ const TicketBodySchema = z.object({
 
 // ─── HTML email builder ────────────────────────────────────────────────────────
 
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp"])
+
+function isImageUrl(url: string): boolean {
+  const ext = url.split("?")[0]?.split(".").pop()?.toLowerCase() ?? ""
+  return IMAGE_EXTENSIONS.has(ext)
+}
+
+function fileNameFromUrl(url: string): string {
+  return decodeURIComponent(url.split("?")[0]?.split("/").pop() ?? url)
+}
+
+// URL absolue prod pour les liens email — évite les liens localhost cassés en prod
+function getPublicAppUrl(): string {
+  const url = process.env["NEXT_PUBLIC_APP_URL"] ?? ""
+  if (url && !url.includes("localhost") && !url.includes("127.0.0.1")) return url
+  return "https://lynarisai.com"
+}
+
 function buildEmailHtml(
   fields: z.infer<typeof TicketBodySchema>,
   ticketId: string,
   userEmail: string | null,
   attachmentUrls: string[]
 ): string {
-  const priorityColor: Record<string, string> = {
-    Faible: "#6366F1",
-    Normale: "#10B981",
-    Haute: "#F59E0B",
-    Urgente: "#EF4444",
+  const priorityColorMap: Record<string, "blue" | "green" | "orange" | "red"> = {
+    Faible: "blue",
+    Normale: "green",
+    Haute: "orange",
+    Urgente: "red",
   }
+  const priorityVariant = priorityColorMap[fields.priority] ?? "orange"
+  const appUrl = getPublicAppUrl()
+  const ticketUrl = `${appUrl}/dashboard/admin/tickets?ticket=${ticketId}`
 
-  const color = priorityColor[fields.priority] ?? "#E86F4D"
+  // Sépare images (preview inline) des autres fichiers (lien cliquable)
+  const images = attachmentUrls.filter(isImageUrl)
+  const otherFiles = attachmentUrls.filter((u) => !isImageUrl(u))
 
-  return `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="utf-8"><title>Ticket ${ticketId}</title></head>
-<body style="font-family:system-ui,sans-serif;background:#09090B;color:#FAFAFA;margin:0;padding:32px;">
-  <div style="max-width:600px;margin:0 auto;">
-    <div style="background:#E86F4D;borderRadius:8px;padding:4px 12px;display:inline-block;marginBottom:24px;">
-      <span style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:#fff;">TICKET ${ticketId}</span>
-    </div>
-    <h1 style="font-size:22px;font-weight:700;margin:0 0 8px;">Nouveau ticket de support</h1>
-    <p style="font-size:14px;color:rgba(250,250,250,0.6);margin:0 0 32px;">Reçu via le dashboard Lynaris</p>
+  const imagesBlock = images.length > 0
+    ? `
+    <div style="margin-bottom:24px">
+      <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:rgba(250,250,250,0.45);margin:0 0 12px;text-transform:uppercase;font-family:system-ui,-apple-system,sans-serif">
+        Captures d'écran (${images.length})
+      </p>
+      ${images.map((url) => `
+        <a href="${url}" style="display:block;margin-bottom:12px;text-decoration:none">
+          <img src="${url}" alt="Pièce jointe ticket" style="display:block;max-width:100%;height:auto;border-radius:12px;border:1px solid rgba(255,255,255,0.07)" />
+        </a>
+      `).join("")}
+    </div>` : ""
 
-    <table style="width:100%;border-collapse:collapse;margin-bottom:32px;">
-      <tr>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;color:rgba(250,250,250,0.45);width:120px;">Sujet</td>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:14px;font-weight:600;">${fields.subject}</td>
-      </tr>
-      <tr>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;color:rgba(250,250,250,0.45);">Catégorie</td>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:14px;">${fields.category}</td>
-      </tr>
-      <tr>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;color:rgba(250,250,250,0.45);">Priorité</td>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);">
-          <span style="font-size:12px;font-weight:700;color:${color};background:${color}20;border-radius:20px;padding:3px 10px;">${fields.priority}</span>
-        </td>
-      </tr>
-      ${
-        userEmail
-          ? `<tr>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;color:rgba(250,250,250,0.45);">Utilisateur</td>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:14px;">${userEmail}</td>
-      </tr>`
-          : ""
-      }
-      ${
-        attachmentUrls.length > 0
-          ? `<tr>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;color:rgba(250,250,250,0.45);vertical-align:top;">Pièces jointes</td>
-        <td style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;">${attachmentUrls.map(u => `<a href="${u}" style="color:#E86F4D;display:block;word-break:break-all;">${u.split("/").pop()}</a>`).join("")}</td>
-      </tr>`
-          : ""
-      }
+  const filesBlock = otherFiles.length > 0
+    ? `
+    <div style="margin-bottom:24px">
+      <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:rgba(250,250,250,0.45);margin:0 0 12px;text-transform:uppercase;font-family:system-ui,-apple-system,sans-serif">
+        Fichiers joints
+      </p>
+      ${otherFiles.map((url) => `
+        <a href="${url}" style="display:block;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 16px;margin-bottom:8px;color:#E86F4D;text-decoration:none;font-size:13px;font-family:system-ui,-apple-system,sans-serif;word-break:break-all">
+          📎 ${fileNameFromUrl(url)}
+        </a>
+      `).join("")}
+    </div>` : ""
+
+  const content = `
+    <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px"><tr><td>
+      <span style="display:inline-block;background:rgba(232,111,77,0.15);color:#E86F4D;font-size:11px;font-weight:700;letter-spacing:0.06em;padding:5px 12px;border-radius:6px;font-family:system-ui,-apple-system,sans-serif;border:1px solid rgba(232,111,77,0.30)">
+        TICKET ${ticketId}
+      </span>
+    </td></tr></table>
+
+    <h1 style="font-size:24px;font-weight:700;color:#FAFAFA;margin:0 0 8px;font-family:system-ui,-apple-system,sans-serif;letter-spacing:-0.02em">
+      Nouveau ticket de support
+    </h1>
+    <p style="font-size:14px;color:rgba(250,250,250,0.55);margin:0 0 28px;font-family:system-ui,-apple-system,sans-serif">
+      Reçu via le dashboard Lynaris
+    </p>
+
+    <table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-bottom:24px">
+      ${emailInfoRow("Sujet", `<strong style="color:#FAFAFA">${fields.subject}</strong>`)}
+      ${emailInfoRow("Catégorie", fields.category)}
+      ${emailInfoRow("Priorité", emailBadge(fields.priority, priorityVariant))}
+      ${userEmail ? emailInfoRow("Utilisateur", `<a href="mailto:${userEmail}" style="color:#E86F4D;text-decoration:none">${userEmail}</a>`) : ""}
     </table>
 
-    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:32px;">
-      <p style="font-size:12px;font-weight:600;letter-spacing:0.06em;color:rgba(250,250,250,0.4);margin:0 0 12px;text-transform:uppercase;">Description</p>
-      <p style="font-size:14px;line-height:1.7;color:#FAFAFA;margin:0;white-space:pre-wrap;">${fields.description}</p>
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px;margin-bottom:24px">
+      <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:rgba(250,250,250,0.45);margin:0 0 12px;text-transform:uppercase;font-family:system-ui,-apple-system,sans-serif">
+        Description
+      </p>
+      <p style="font-size:14px;line-height:1.7;color:#FAFAFA;margin:0;white-space:pre-wrap;font-family:system-ui,-apple-system,sans-serif">${fields.description}</p>
     </div>
 
-    <a href="${process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"}/dashboard/admin/tickets?ticket=${ticketId}"
-       style="display:inline-block;background:#E86F4D;color:#fff;text-decoration:none;border-radius:10px;padding:14px 28px;font-size:15px;font-weight:600;letter-spacing:-0.01em;">
-      Gérer ce ticket →
-    </a>
-    <p style="font-size:12px;color:rgba(250,250,250,0.3);margin:16px 0 0;">
-      Ou copie ce lien : ${process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"}/dashboard/admin/tickets?ticket=${ticketId}
-    </p>
-  </div>
-</body>
-</html>
-  `.trim()
+    ${imagesBlock}
+    ${filesBlock}
+
+    ${emailButton("Gérer ce ticket →", ticketUrl)}
+  `
+
+  return emailLayout(content)
 }
 
 // ─── Handler ───────────────────────────────────────────────────────────────────

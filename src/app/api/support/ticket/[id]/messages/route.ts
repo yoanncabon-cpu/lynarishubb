@@ -6,6 +6,7 @@ import { isLynarisAdmin } from "@/lib/auth/is-admin"
 import { db } from "@/lib/db"
 import { supportTickets, ticketMessages } from "@/lib/db/schema"
 import { sendGmail } from "@/lib/emails/gmail"
+import { emailLayout, emailButton } from "@/lib/emails/base-layout"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -214,6 +215,12 @@ async function sendNotification({
   }
 }
 
+function getPublicAppUrl(): string {
+  const url = process.env["NEXT_PUBLIC_APP_URL"] ?? ""
+  if (url && !url.includes("localhost") && !url.includes("127.0.0.1")) return url
+  return "https://lynarisai.com"
+}
+
 function buildNotifHtml({
   ticketId,
   subject,
@@ -225,27 +232,51 @@ function buildNotifHtml({
   subject: string
   content: string
   from: string
-  direction: string
+  direction: "client → admin" | "admin → client"
 }): string {
-  return `
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="utf-8"><title>Message ticket ${ticketId}</title></head>
-<body style="font-family:system-ui,sans-serif;background:#09090B;color:#FAFAFA;margin:0;padding:32px;">
-  <div style="max-width:600px;margin:0 auto;">
-    <div style="background:#E86F4D;border-radius:8px;padding:4px 12px;display:inline-block;margin-bottom:24px;">
-      <span style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:#fff;">${ticketId}</span>
-    </div>
-    <h1 style="font-size:20px;font-weight:700;margin:0 0 6px;">Nouveau message (${direction})</h1>
-    <p style="font-size:13px;color:rgba(250,250,250,0.5);margin:0 0 24px;">Ticket : ${subject}</p>
-    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;">
-      <p style="font-size:12px;font-weight:600;letter-spacing:0.06em;color:rgba(250,250,250,0.4);margin:0 0 10px;text-transform:uppercase;">De : ${from}</p>
-      <p style="font-size:14px;line-height:1.7;color:#FAFAFA;margin:0;white-space:pre-wrap;">${content}</p>
-    </div>
-    <p style="font-size:12px;color:rgba(250,250,250,0.3);margin-top:24px;">
-      Réponds directement depuis le dashboard Lynaris → support/tickets
+  const isAdminToClient = direction === "admin → client"
+  const headline = isAdminToClient ? "Réponse de l'équipe Lynaris" : "Nouveau message client"
+  const intro = isAdminToClient
+    ? `L'équipe support a répondu à ton ticket <strong style="color:#FAFAFA">${subject}</strong>.`
+    : `Nouveau message reçu sur le ticket <strong style="color:#FAFAFA">${subject}</strong>.`
+
+  const appUrl = getPublicAppUrl()
+  const ctaUrl = isAdminToClient
+    ? `${appUrl}/dashboard/support/tickets?ticket=${ticketId}`
+    : `${appUrl}/dashboard/admin/tickets?ticket=${ticketId}`
+  const ctaLabel = isAdminToClient ? "Voir le ticket →" : "Répondre depuis le dashboard →"
+
+  const inner = `
+    <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px"><tr><td>
+      <span style="display:inline-block;background:rgba(232,111,77,0.15);color:#E86F4D;font-size:11px;font-weight:700;letter-spacing:0.06em;padding:5px 12px;border-radius:6px;font-family:system-ui,-apple-system,sans-serif;border:1px solid rgba(232,111,77,0.30)">
+        TICKET ${ticketId}
+      </span>
+    </td></tr></table>
+
+    <h1 style="font-size:24px;font-weight:700;color:#FAFAFA;margin:0 0 8px;font-family:system-ui,-apple-system,sans-serif;letter-spacing:-0.02em">
+      ${headline}
+    </h1>
+    <p style="font-size:14px;color:rgba(250,250,250,0.55);line-height:1.6;margin:0 0 24px;font-family:system-ui,-apple-system,sans-serif">
+      ${intro}
     </p>
-  </div>
-</body>
-</html>`.trim()
+
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px;margin-bottom:24px">
+      <table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-bottom:14px">
+        <tr>
+          <td style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:rgba(250,250,250,0.45);text-transform:uppercase;font-family:system-ui,-apple-system,sans-serif">
+            De
+          </td>
+          <td style="text-align:right;font-size:13px;color:#FAFAFA;font-family:system-ui,-apple-system,sans-serif">
+            <a href="mailto:${from}" style="color:#E86F4D;text-decoration:none">${from}</a>
+          </td>
+        </tr>
+      </table>
+      <div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:14px"></div>
+      <p style="font-size:14px;line-height:1.7;color:#FAFAFA;margin:0;white-space:pre-wrap;font-family:system-ui,-apple-system,sans-serif">${content}</p>
+    </div>
+
+    ${emailButton(ctaLabel, ctaUrl)}
+  `
+
+  return emailLayout(inner)
 }
