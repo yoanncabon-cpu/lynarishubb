@@ -1,0 +1,197 @@
+{
+  "name": "Lynaris — Create Trello Card",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-trello-card",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "f0e1d2c3-8001-4b01-b008-webhook000001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "list_id", "value": "={{ $json.data.list_id }}", "type": "string" },
+            { "id": "2", "name": "name", "value": "={{ $json.data.name }}", "type": "string" },
+            { "id": "3", "name": "desc", "value": "={{ $json.data.desc }}", "type": "string" },
+            { "id": "4", "name": "due", "value": "={{ $json.data.due }}", "type": "string" },
+            { "id": "5", "name": "members", "value": "={{ $json.data.members }}", "type": "array" },
+            { "id": "6", "name": "org_id", "value": "={{ $json.org_id }}", "type": "string" },
+            { "id": "7", "name": "run_id", "value": "={{ $json.run_id }}", "type": "string" },
+            { "id": "8", "name": "timestamp", "value": "={{ $json.timestamp }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000002",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/cards",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key", "value": "={{ $env.TRELLO_API_KEY }}" },
+            { "name": "token", "value": "={{ $env.TRELLO_TOKEN }}" },
+            { "name": "idList", "value": "={{ $json.list_id }}" },
+            { "name": "name", "value": "={{ $json.name }}" },
+            { "name": "desc", "value": "={{ $json.desc }}" },
+            { "name": "due", "value": "={{ $json.due }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000003",
+      "name": "Create Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $('Extract Data').item.json.members }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000004",
+      "name": "Has Members",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "command": "runOnceForAllItems",
+        "jsCode": "// Add each member to the card\nconst cardId = $('Create Card').first().json.id;\nconst members = $('Extract Data').first().json.members || [];\nconst results = [];\nfor (const memberId of members) {\n  results.push({ json: { card_id: cardId, member_id: memberId } });\n}\nreturn results;"
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000005",
+      "name": "Prepare Members",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.trello.com/1/cards/{{ $json.card_id }}/idMembers",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key", "value": "={{ $env.TRELLO_API_KEY }}" },
+            { "name": "token", "value": "={{ $env.TRELLO_TOKEN }}" },
+            { "name": "value", "value": "={{ $json.member_id }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000006",
+      "name": "Add Members",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Extract Data').item.json.run_id, org_id: $('Extract Data').item.json.org_id, workflow: 'create-trello-card', status: 'success', output: { card_id: $('Create Card').item.json.id, card_url: $('Create Card').item.json.shortUrl }, duration_ms: Date.now() - new Date($('Extract Data').item.json.timestamp).getTime() }) }}",
+        "options": {}
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000007",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', run_id: $('Extract Data').item.json.run_id }) }}",
+        "options": {}
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000010",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {},
+      "id": "b8c9d0e1-8001-4b01-b008-000000000008",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [900, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow: 'create-trello-card', status: 'error', error: $json.message || 'Unknown error' }) }}",
+        "options": {}
+      },
+      "id": "b8c9d0e1-8001-4b01-b008-000000000009",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 540]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract Data", "type": "main", "index": 0 }]] },
+    "Extract Data": { "main": [[{ "node": "Create Card", "type": "main", "index": 0 }]] },
+    "Create Card": { "main": [[{ "node": "Has Members", "type": "main", "index": 0 }]] },
+    "Has Members": { "main": [[{ "node": "Prepare Members", "type": "main", "index": 0 }], [{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Prepare Members": { "main": [[{ "node": "Add Members", "type": "main", "index": 0 }]] },
+    "Add Members": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Callback Success": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Error Trigger": { "main": [[{ "node": "Callback Error", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "lynaris" }, { "name": "trello" }]
+}

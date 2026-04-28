@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Lynaris — 4 directions navigation</title>
+<style>
+  :root {
+    --bg-canvas: #07070A;
+    --glass-1: rgba(22, 22, 28, 0.55);
+    --glass-2: rgba(28, 28, 36, 0.42);
+    --glass-3: rgba(36, 36, 46, 0.32);
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-border-strong: rgba(255,255,255,0.16);
+    --accent: #E86F4D;
+    --accent-glow: rgba(232,111,77,0.35);
+    --aurora-orange: rgba(232,111,77,0.28);
+    --aurora-violet: rgba(124,58,237,0.22);
+    --aurora-blue: rgba(56,99,207,0.20);
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-canvas);
+    color: #FAFAFA;
+    font-family: -apple-system, "SF Pro Display", "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Aurora background */
+  .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .aurora__b { position: absolute; border-radius: 50%; filter: blur(80px); }
+  .aurora__b--1 { width: 520px; height: 520px; top: -120px; right: -80px; background: radial-gradient(circle, var(--aurora-orange), transparent 65%); animation: drift1 90s ease-in-out infinite; }
+  .aurora__b--2 { width: 640px; height: 640px; bottom: -160px; left: -120px; background: radial-gradient(circle, var(--aurora-violet), transparent 65%); animation: drift2 120s ease-in-out infinite; }
+  .aurora__b--3 { width: 560px; height: 560px; bottom: 5%; left: 35%; background: radial-gradient(circle, var(--aurora-blue), transparent 65%); animation: drift3 140s ease-in-out infinite; }
+  @keyframes drift1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-60px,80px) scale(1.08); } }
+  @keyframes drift2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(80px,-60px) scale(1.05); } }
+  @keyframes drift3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-90px,-40px) scale(1.10); } }
+
+  .container { position: relative; z-index: 1; max-width: 1480px; margin: 0 auto; padding: 32px clamp(20px, 4vw, 40px); }
+  .intro { margin-bottom: 40px; }
+  .intro h1 { font-size: clamp(32px, 4vw, 48px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; margin: 0 0 12px; }
+  .intro p { font-size: 16px; color: rgba(250,250,250,0.65); margin: 0; max-width: 760px; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 32px; }
+  @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+  /* Surface verre */
+  .glass {
+    background: var(--glass-2);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    backdrop-filter: blur(28px) saturate(1.6);
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+    border-radius: 22px;
+  }
+  .glass-strong {
+    background: var(--glass-1);
+    border-color: var(--glass-border-strong);
+    box-shadow: 0 30px 80px -25px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  /* Option card */
+  .option {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .option__head { display: flex; align-items: flex-start; gap: 14px; }
+  .option__badge {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), #C2552A);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
+    box-shadow: 0 6px 16px -4px var(--accent-glow);
+  }
+  .option__title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 4px; }
+  .option__sub { font-size: 13px; color: rgba(250,250,250,0.55); margin: 0; }
+
+  .preview {
+    position: relative;
+    border-radius: 16px;
+    background: rgba(7,7,10,0.85);
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: var(--glass-3);
+    border: 1px solid var(--glass-border);
+    font-size: 11px; font-weight: 600; color: rgba(250,250,250,0.78);
+  }
+  .chip--pro { color: #34D399; border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.10); }
+  .chip--con { color: #FBBF24; border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.10); }
+
+  .desc { font-size: 13px; color: rgba(250,250,250,0.7); margin: 0; line-height: 1.55; }
+  .vote {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--accent), #C2552A);
+    color: #fff; font-size: 13px; font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 8px 24px -6px var(--accent-glow);
+    margin-top: auto;
+    align-self: flex-start;
+  }
+
+  /* ─── PREVIEW A — Spotlight Top Bar ─── */
+  .pA {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 12px;
+    background: var(--bg-canvas);
+  }
+  .pA__topbar {
+    height: 38px;
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border-strong);
+    -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px);
+    border-radius: 14px;
+    display: flex; align-items: center;
+    padding: 0 12px;
+    gap: 12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .pA__logo { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--accent), #C2552A); }
+  .pA__nav { display: flex; gap: 4px; align-items: center; flex: 1; justify-content: center; }
+  .pA__navItem { font-size: 11px; padding: 5px 10px; border-radius: 8px; color: rgba(250,250,250,0.65); }
+  .pA__navItem--active { background: rgba(232,111,77,0.18); color: #FAFAFA; border: 1px solid rgba(232,111,77,0.32); }
+  .pA__cmd { width: 90px; height: 22px; border-radius: 7px; background: var(--glass-3); border: 1px solid var(--glass-border); font-size: 9px; color: rgba(250,250,250,0.5); display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .pA__avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #C2552A); }
+  .pA__subnav {
+    margin-top: 8px;
+    height: 30px;
+    background: var(--glass-2);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    border-radius: 10px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 12px;
+    font-size: 10px; color: rgba(250,250,250,0.6);
+  }
+  .pA__sub { padding: 4px 8px; border-radius: 6px; }
+  .pA__sub--active { color: var(--accent); background: rgba(232,111,77,0.10); }
+  .pA__content {
+    margin-top: 10px;
+    height: calc(100% - 100px);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .pA__card { background: var(--glass-2); border: 1px solid var(--glass-border); border-radius: 12px; }
+
+  /* ─── PREVIEW B — Floating Dock ─── */
+  .pB {
+    position: relative;
+    width: 100%; height: 100%;
+    padding: 12px;
+    background: var(--bg-canvas);
+    display: flex;
+    gap: 10px;
+  }
+  .pB__dock {
+    width: 50px;
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border-strong);
+    -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px);
+    border-radius: 16px;
+    padding: 10px 0;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .pB__icon { width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .pB__icon--active { background: rgba(232,111,77,0.18); border: 1px solid rgba(232,111,77,0.32); }
+  .pB__main { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .pB__topbar { height: 32px; background: var(--glass-1); border: 1px solid var(--glass-border); border-radius: 12px; -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px); display: flex; align-items: center; padding: 0 12px; }
+  .pB__content { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pB__card { background: var(--glass-2); border: 1px solid var(--glass-border); border-radius: 12px; }
+
+  /* ─── PREVIEW C — Bento Hub ─── */
+  .pC {
+    position: relative;
+    width: 100%; height: 100%;
+    padding: 12px;
+    background: var(--bg-canvas);
+  }
+  .pC__topbar { height: 32px; background: var(--glass-1); border: 1px solid var(--glass-border); border-radius: 12px; -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px); display: flex; align-items: center; padding: 0 12px; gap: 8px; }
+  .pC__logo { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(135deg, var(--accent), #C2552A); }
+  .pC__greet { flex: 1; font-size: 12px; font-weight: 700; }
+  .pC__bento {
+    margin-top: 10px;
+    height: calc(100% - 50px);
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .pC__tile { border-radius: 14px; padding: 10px; background: var(--glass-2); border: 1px solid var(--glass-border); position: relative; overflow: hidden; }
+  .pC__tile--big { grid-column: 1 / 2; grid-row: 1 / 3; background: linear-gradient(135deg, rgba(232,111,77,0.18), var(--glass-2)); }
+  .pC__tile--charles { grid-column: 1 / 2; grid-row: 3 / 4; background: linear-gradient(135deg, rgba(124,58,237,0.18), var(--glass-2)); }
+  .pC__tile--travail { grid-column: 2 / 3; grid-row: 1 / 2; background: linear-gradient(135deg, rgba(52,211,153,0.16), var(--glass-2)); }
+  .pC__tile--croissance { grid-column: 3 / 4; grid-row: 1 / 2; background: linear-gradient(135deg, rgba(34,211,238,0.16), var(--glass-2)); }
+  .pC__tile--plateforme { grid-column: 2 / 4; grid-row: 2 / 3; background: linear-gradient(135deg, rgba(244,114,182,0.16), var(--glass-2)); }
+  .pC__tile--activity { grid-column: 2 / 4; grid-row: 3 / 4; }
+  .pC__tile h3 { font-size: 9px; margin: 0 0 4px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(250,250,250,0.55); }
+  .pC__tile p { font-size: 11px; margin: 0; font-weight: 600; }
+
+  /* ─── PREVIEW D — Tab Bar segmentée ─── */
+  .pD {
+    position: relative;
+    width: 100%; height: 100%;
+    padding: 12px;
+    background: var(--bg-canvas);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pD__topbar {
+    height: 36px;
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border-strong);
+    -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px);
+    border-radius: 14px;
+    display: flex; align-items: center;
+    padding: 0 8px; gap: 8px;
+  }
+  .pD__seg {
+    background: var(--glass-3);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 3px;
+    display: flex; gap: 2px;
+    flex: 1;
+    max-width: 320px;
+    margin-left: 22px;
+  }
+  .pD__seg span { flex: 1; padding: 4px 6px; font-size: 10px; text-align: center; border-radius: 7px; color: rgba(250,250,250,0.55); }
+  .pD__seg span.active { background: rgba(232,111,77,0.20); color: #FAFAFA; border: 1px solid rgba(232,111,77,0.35); font-weight: 600; }
+  .pD__body { flex: 1; display: flex; gap: 8px; }
+  .pD__side { width: 110px; background: var(--glass-1); border: 1px solid var(--glass-border); -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 3px; }
+  .pD__sideItem { font-size: 10px; padding: 5px 8px; border-radius: 7px; color: rgba(250,250,250,0.55); }
+  .pD__sideItem--active { background: rgba(232,111,77,0.16); color: #FAFAFA; border: 1px solid rgba(232,111,77,0.28); font-weight: 600; }
+  .pD__content { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pD__card { background: var(--glass-2); border: 1px solid var(--glass-border); border-radius: 12px; }
+
+  /* Footer */
+  .footer { margin: 48px 0 24px; text-align: center; color: rgba(250,250,250,0.4); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="aurora">
+  <div class="aurora__b aurora__b--1"></div>
+  <div class="aurora__b aurora__b--2"></div>
+  <div class="aurora__b aurora__b--3"></div>
+</div>
+
+<div class="container">
+
+  <header class="intro">
+    <h1>4 directions navigation Lynaris</h1>
+    <p>Mockups Liquid Glass à plat — choisis A, B, C ou D pour qu'on l'implémente. Chaque preview imite le rendu réel du dashboard avec halos animés en fond.</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- ═════════ A — Spotlight Top Bar ═════════ -->
+    <article class="glass option">
+      <div class="option__head">
+        <div class="option__badge">A</div>
+        <div>
+          <h2 class="option__title">Spotlight Top Bar</h2>
+          <p class="option__sub">Top nav verre flottante centrale + sub-nav contextuelle. Plein écran pour le contenu. Référence : Stripe Dashboard, macOS Settings, Linear.</p>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="pA">
+          <div class="pA__topbar">
+            <div class="pA__logo"></div>
+            <div class="pA__nav">
+              <span class="pA__navItem pA__navItem--active">Accueil</span>
+              <span class="pA__navItem">Travail ▾</span>
+              <span class="pA__navItem">Croissance ▾</span>
+              <span class="pA__navItem">Plateforme ▾</span>
+              <span class="pA__navItem">Compte ▾</span>
+            </div>
+            <div class="pA__cmd">⌘K</div>
+            <div class="pA__avatar"></div>
+          </div>
+          <div class="pA__subnav">
+            <span class="pA__sub pA__sub--active">Vue d'ensemble</span>
+            <span class="pA__sub">Mes agents</span>
+            <span class="pA__sub">Conversations</span>
+          </div>
+          <div class="pA__content">
+            <div class="pA__card"></div>
+            <div class="pA__card"></div>
+            <div class="pA__card"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span class="chip chip--pro">+ Air maximal</span>
+        <span class="chip chip--pro">+ Wayfinding clair</span>
+        <span class="chip chip--pro">+ Très Apple</span>
+        <span class="chip chip--con">− Sub-nav 1 clic de plus</span>
+      </div>
+      <p class="desc"><strong>Idéal si :</strong> tu veux une interface ultra-pro qui rappelle Stripe / macOS Settings, et tu vends à des TPE qui ont besoin de comprendre tout en 5 secondes.</p>
+    </article>
+
+    <!-- ═════════ B — Floating Dock ═════════ -->
+    <article class="glass option">
+      <div class="option__head">
+        <div class="option__badge">B</div>
+        <div>
+          <h2 class="option__title">Floating Dock</h2>
+          <p class="option__sub">Rail vertical 50–64 px ultra-fin, icônes only. Hover = popover verre avec label + sous-pages. Référence : iPad sidebar, Arc browser, Linear collapsed.</p>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="pB">
+          <div class="pB__dock">
+            <div class="pB__icon">L</div>
+            <div class="pB__icon pB__icon--active">⌗</div>
+            <div class="pB__icon">🤖</div>
+            <div class="pB__icon">💬</div>
+            <div class="pB__icon">📊</div>
+            <div class="pB__icon">🔌</div>
+            <div class="pB__icon">⚙</div>
+          </div>
+          <div class="pB__main">
+            <div class="pB__topbar"></div>
+            <div class="pB__content">
+              <div class="pB__card"></div>
+              <div class="pB__card"></div>
+              <div class="pB__card"></div>
+              <div class="pB__card"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span class="chip chip--pro">+ Le plus de place pour le contenu</span>
+        <span class="chip chip--pro">+ Esthétique pure</span>
+        <span class="chip chip--con">− Labels invisibles par défaut</span>
+        <span class="chip chip--con">− Moins découvrable</span>
+      </div>
+      <p class="desc"><strong>Idéal si :</strong> tes utilisateurs sont power-users qui mémorisent vite les icônes, et tu veux une esthétique proche d'Arc ou d'un IDE.</p>
+    </article>
+
+    <!-- ═════════ C — Bento Hub ═════════ -->
+    <article class="glass option">
+      <div class="option__head">
+        <div class="option__badge">C</div>
+        <div>
+          <h2 class="option__title">Bento Hub Home</h2>
+          <p class="option__sub">Plus de sidebar du tout. /dashboard devient un mega-bento où chaque section est une mega-tuile cliquable. Le reste via ⌘K omniprésent. Référence : Apple Health, Notion homepage, Arc.</p>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="pC">
+          <div class="pC__topbar">
+            <div class="pC__logo"></div>
+            <div class="pC__greet">Bonjour Yoann</div>
+            <div class="pA__cmd">⌘K</div>
+            <div class="pA__avatar"></div>
+          </div>
+          <div class="pC__bento">
+            <div class="pC__tile pC__tile--big">
+              <h3>Charles</h3>
+              <p>Demande-lui n'importe quoi…</p>
+            </div>
+            <div class="pC__tile pC__tile--travail">
+              <h3>Travail</h3>
+              <p>4 modules</p>
+            </div>
+            <div class="pC__tile pC__tile--croissance">
+              <h3>Croissance</h3>
+              <p>3 KPIs</p>
+            </div>
+            <div class="pC__tile pC__tile--plateforme">
+              <h3>Plateforme</h3>
+              <p>12 intégrations</p>
+            </div>
+            <div class="pC__tile pC__tile--charles">
+              <h3>Activité</h3>
+              <p>4 conv. · 58 actions</p>
+            </div>
+            <div class="pC__tile pC__tile--activity">
+              <h3>Récap jour</h3>
+              <p>Tous les agents répondent</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span class="chip chip--pro">+ Disruption / wow</span>
+        <span class="chip chip--pro">+ Mémorable</span>
+        <span class="chip chip--pro">+ Immersif</span>
+        <span class="chip chip--con">− Nav quotidienne plus lente</span>
+        <span class="chip chip--con">− Pari plus radical</span>
+      </div>
+      <p class="desc"><strong>Idéal si :</strong> tu veux que Lynaris se distingue radicalement de la concurrence et que la home soit l'expérience-signature.</p>
+    </article>
+
+    <!-- ═════════ D — Tab Bar segmentée ═════════ -->
+    <article class="glass option">
+      <div class="option__head">
+        <div class="option__badge">D</div>
+        <div>
+          <h2 class="option__title">Tab Bar segmentée</h2>
+          <p class="option__sub">Top bar verre avec 5 onglets segmentés iOS-style. Sidebar contextuelle courte (200 px) qui change selon l'onglet actif. Référence : macOS System Settings 2024, Vercel.</p>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="pD">
+          <div class="pD__topbar">
+            <div class="pA__logo" style="margin-left: 4px;"></div>
+            <div class="pD__seg">
+              <span>Home</span>
+              <span class="active">Travail</span>
+              <span>Croissance</span>
+              <span>Compte</span>
+              <span>Admin</span>
+            </div>
+            <div class="pA__cmd" style="margin-left: auto;">⌘K</div>
+            <div class="pA__avatar"></div>
+          </div>
+          <div class="pD__body">
+            <div class="pD__side">
+              <span class="pD__sideItem pD__sideItem--active">Contenus</span>
+              <span class="pD__sideItem">Documents</span>
+              <span class="pD__sideItem">Workspace</span>
+              <span class="pD__sideItem">Auto.</span>
+            </div>
+            <div class="pD__content">
+              <div class="pD__card"></div>
+              <div class="pD__card"></div>
+              <div class="pD__card"></div>
+              <div class="pD__card"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span class="chip chip--pro">+ Structure claire 2 niveaux</span>
+        <span class="chip chip--pro">+ Sub-nav visible</span>
+        <span class="chip chip--pro">+ Apple Settings vibe</span>
+        <span class="chip chip--con">− 2 niveaux de chrome</span>
+      </div>
+      <p class="desc"><strong>Idéal si :</strong> tu veux le meilleur compromis entre wayfinding (clients TPE) et modernité — le plus "safe" et le plus pro.</p>
+    </article>
+
+  </div>
+
+  <p class="footer">Mockups statiques — Liquid Glass tokens identiques au dashboard réel.<br/>Choisis une direction, je l'implémente proprement.</p>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1239 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { AgentAvatar } from "@/components/shared/AgentAvatar"
+import { GlassCard } from "@/components/app/glass/GlassCard"
+import {
+  ThumbsUp,
+  Presentation,
+  Image,
+  Mic,
+  Palette,
+  Video,
+  BarChart2,
+  FileText,
+  BookOpen,
+  Phone,
+  MessageSquare,
+  Clock,
+  Send,
+  X,
+} from "lucide-react"
+
+// LinkedIn icon (not in this lucide version)
+const LinkedInSvg: React.FC<{ size?: number; color?: string; strokeWidth?: number }> = ({
+  size = 24,
+  color = "currentColor",
+}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect x="2" y="9" width="4" height="12" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+)
+
+// ─── Agent color map ──────────────────────────────────────────────────────────
+
+const AGENT_COLORS: Record<string, string> = {
+  lou: "#F472B6",
+  max: "#FB923C",
+  mae: "#FBBF24",
+  marine: "#22D3EE",
+  elio: "#34D399",
+  charles: "#A78BFA",
+  nova: "#818CF8",
+  alba: "#C084FC",
+  orion: "#94A3B8",
+}
+
+function getAgentColor(slug: string): string {
+  return AGENT_COLORS[slug] ?? "#E86F4D"
+}
+
+// ─── Skill data ───────────────────────────────────────────────────────────────
+
+type LucideIcon = React.FC<{ size?: number; color?: string; strokeWidth?: number }>
+
+interface SkillItem {
+  id: string
+  title: string
+  tagline: string
+  agentSlug: string
+  agentName: string
+  agentRole: string
+  icon: LucideIcon
+  ctaLabel?: string
+  category: "contenu" | "commercial" | "automatisation"
+}
+
+const SKILLS: SkillItem[] = [
+  // ─── Création de contenus ─────────────────────────────────────────────────
+  {
+    id: "post-reseaux",
+    title: "Créer un post pour les réseaux sociaux",
+    tagline: "Créez des visuels prêts à poster pour vos réseaux sociaux en un seul clic",
+    agentSlug: "lou",
+    agentName: "Lou",
+    agentRole: "Agente SEO",
+    icon: ThumbsUp,
+    category: "contenu",
+  },
+  {
+    id: "presentation",
+    title: "Générer une présentation",
+    tagline: "Transformez vos idées en présentations claires et percutantes.",
+    agentSlug: "lou",
+    agentName: "Lou",
+    agentRole: "Agente SEO",
+    icon: Presentation,
+    category: "contenu",
+  },
+  {
+    id: "supprimer-fond",
+    title: "Effacer l'arrière-plan d'une image",
+    tagline: "Supprimez l'arrière-plan de vos images en un instant pour des visuels propres.",
+    agentSlug: "max",
+    agentName: "Max",
+    agentRole: "Agent Photo & Vidéo",
+    icon: Image,
+    category: "contenu",
+  },
+  {
+    id: "audio-texte",
+    title: "Convertir un audio en texte",
+    tagline: "Transformez vos enregistrements audio en transcriptions précises et exploitables.",
+    agentSlug: "mae",
+    agentName: "Mae",
+    agentRole: "Agente Mail",
+    icon: Mic,
+    category: "contenu",
+  },
+  {
+    id: "creer-image",
+    title: "Créer une image",
+    tagline: "Générez de nouvelles images à partir de vos consignes ou transformez vos fichiers existants.",
+    agentSlug: "max",
+    agentName: "Max",
+    agentRole: "Agent Photo & Vidéo",
+    icon: Palette,
+    category: "contenu",
+  },
+  {
+    id: "creer-video",
+    title: "Créer une vidéo",
+    tagline: "Générez des vidéos à partir de vos consignes ou transformez vos fichiers existants en contenu vidéo.",
+    agentSlug: "max",
+    agentName: "Max",
+    agentRole: "Agent Photo & Vidéo",
+    icon: Video,
+    category: "contenu",
+  },
+  {
+    id: "audit-seo",
+    title: "Réaliser un audit SEO",
+    tagline: "Analysez votre site et obtenez des recommandations pour booster votre SEO.",
+    agentSlug: "lou",
+    agentName: "Lou",
+    agentRole: "Agente SEO",
+    icon: BarChart2,
+    category: "contenu",
+  },
+  {
+    id: "article-blog",
+    title: "Créer un article de blog",
+    tagline: "Rédigez automatiquement des articles complets, optimisés et prêts à publier.",
+    agentSlug: "lou",
+    agentName: "Lou",
+    agentRole: "Agente SEO",
+    icon: FileText,
+    category: "contenu",
+  },
+  // ─── Campagne sur mesure ──────────────────────────────────────────────────
+  {
+    id: "campagne-blog",
+    title: "Campagne d'articles de blog",
+    tagline: "Planifiez, générez et publiez des articles réguliers pour attirer plus de trafic.",
+    agentSlug: "lou",
+    agentName: "Lou",
+    agentRole: "Agente SEO",
+    icon: BookOpen,
+    ctaLabel: "Lancer cette campagne",
+    category: "commercial",
+  },
+  {
+    id: "campagne-linkedin",
+    title: "Campagne de prospection LinkedIn",
+    tagline: "Trouvez et contactez automatiquement vos prospects idéaux sur LinkedIn.",
+    agentSlug: "elio",
+    agentName: "Elio",
+    agentRole: "Agent Commercial",
+    icon: LinkedInSvg,
+    ctaLabel: "Lancer cette campagne",
+    category: "commercial",
+  },
+  {
+    id: "campagne-appels",
+    title: "Campagne d'appels sortants",
+    tagline: "Lancez et gérez des appels automatisés pour toucher vos clients efficacement.",
+    agentSlug: "elio",
+    agentName: "Elio",
+    agentRole: "Agent Commercial",
+    icon: Phone,
+    ctaLabel: "Lancer cette campagne",
+    category: "commercial",
+  },
+  // ─── Agents autonomes ────────────────────────────────────────────────────
+  {
+    id: "agent-support",
+    title: "Agent de support client",
+    tagline: "Répondez rapidement aux demandes de vos clients et améliorez leur expérience d'assistance.",
+    agentSlug: "marine",
+    agentName: "Marine",
+    agentRole: "Agent Téléphonique",
+    icon: MessageSquare,
+    ctaLabel: "Créer un agent",
+    category: "automatisation",
+  },
+  {
+    id: "agent-standard",
+    title: "Agent de standard téléphonique",
+    tagline: "Prenez en charge les appels entrants, accueillez vos interlocuteurs et redirigez-les efficacement.",
+    agentSlug: "marine",
+    agentName: "Marine",
+    agentRole: "Agent Téléphonique",
+    icon: Phone,
+    ctaLabel: "Créer un agent",
+    category: "automatisation",
+  },
+]
+
+const GROUPS: Array<{
+  key: "contenu" | "commercial" | "automatisation"
+  overline: string
+  label: string
+  sub: string
+}> = [
+  {
+    key: "contenu",
+    overline: "Création",
+    label: "Création de contenus",
+    sub: "Créez rapidement du contenu avec l'aide de vos assistants.",
+  },
+  {
+    key: "commercial",
+    overline: "Campagne",
+    label: "Campagne sur mesure",
+    sub: "Lancez des campagnes personnalisées adaptées à vos objectifs et à votre audience.",
+  },
+  {
+    key: "automatisation",
+    overline: "Automatisation",
+    label: "Agents autonomes",
+    sub: "Gérez vos interactions clients automatiquement, que ce soit par chat, appel ou support en ligne.",
+  },
+]
+
+// ─── Social toggle data ──────────────────────────────────────────────────────
+
+type SocialNetwork = "linkedin" | "facebook" | "instagram"
+
+const SOCIAL_NETWORKS: Array<{
+  id: SocialNetwork
+  label: string
+  icon: React.FC<{ size?: number }>
+  color: string
+}> = [
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    icon: ({ size = 18 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+        <rect x="2" y="9" width="4" height="12" />
+        <circle cx="4" cy="4" r="2" />
+      </svg>
+    ),
+    color: "#0077B5",
+  },
+  {
+    id: "facebook",
+    label: "Facebook",
+    icon: ({ size = 18 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+      </svg>
+    ),
+    color: "#1877F2",
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    icon: ({ size = 18 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+        <path
+          d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"
+          fill="white"
+          opacity="0.9"
+        />
+        <line
+          x1="17.5"
+          y1="6.5"
+          x2="17.51"
+          y2="6.5"
+          stroke="white"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+    color: "linear-gradient(135deg, #F58529, #DD2A7B, #8134AF)",
+  },
+]
+
+// ─── Wizard state ─────────────────────────────────────────────────────────────
+
+interface WizardState {
+  step: 1 | 2 | 3
+  description: string
+  networks: Record<SocialNetwork, boolean>
+  scheduling: "now" | "planned"
+  date: string
+  time: string
+}
+
+const INITIAL_WIZARD: WizardState = {
+  step: 1,
+  description: "",
+  networks: { linkedin: false, facebook: false, instagram: false },
+  scheduling: "planned",
+  date: "",
+  time: "",
+}
+
+const HAS_NETWORK_STEP_CATEGORIES: SkillItem["category"][] = ["contenu", "commercial"]
+
+function hasNetworkStep(skill: SkillItem): boolean {
+  return HAS_NETWORK_STEP_CATEGORIES.includes(skill.category)
+}
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
+
+const S = {
+  overlay: {
+    position: "fixed" as const,
+    inset: 0,
+    background: "rgba(0,0,0,0.7)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    zIndex: 9999,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px 16px",
+  },
+  modal: {
+    background: "#111113",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 14,
+    width: "100%",
+    maxWidth: 560,
+    padding: "28px 28px",
+    position: "relative" as const,
+    boxShadow: "0 24px 64px rgba(0,0,0,0.7)",
+  },
+  closeBtn: {
+    position: "absolute" as const,
+    top: 16,
+    right: 16,
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "rgba(250,250,250,0.28)",
+    padding: 4,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    transition: "color 0.15s",
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "rgba(250,250,250,0.4)",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase" as const,
+    marginBottom: 6,
+  },
+  textarea: {
+    width: "100%",
+    minHeight: 120,
+    background: "rgba(255,255,255,0.042)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 8,
+    padding: "12px 14px",
+    fontSize: 14,
+    color: "#FAFAFA",
+    resize: "vertical" as const,
+    fontFamily: "inherit",
+    lineHeight: 1.6,
+    outline: "none",
+    transition: "border-color 0.15s",
+    boxSizing: "border-box" as const,
+  },
+  btnPrimary: {
+    height: 38,
+    paddingLeft: 20,
+    paddingRight: 20,
+    background: "linear-gradient(135deg, #E86F4D, #D05A38)",
+    border: "none",
+    borderRadius: 8,
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    whiteSpace: "nowrap" as const,
+  },
+  btnSecondary: {
+    height: 38,
+    paddingLeft: 16,
+    paddingRight: 16,
+    background: "transparent",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 8,
+    color: "rgba(250,250,250,0.5)",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  input: {
+    background: "rgba(255,255,255,0.042)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 8,
+    padding: "9px 12px",
+    fontSize: 13,
+    color: "#FAFAFA",
+    fontFamily: "inherit",
+    outline: "none",
+    transition: "border-color 0.15s",
+    boxSizing: "border-box" as const,
+  },
+}
+
+// ─── Wizard steps ─────────────────────────────────────────────────────────────
+
+function Step1({
+  skill,
+  state,
+  onChange,
+  onNext,
+}: {
+  skill: SkillItem
+  state: WizardState
+  onChange: (v: string) => void
+  onNext: () => void
+}) {
+  const IconComp = skill.icon
+  const agentColor = getAgentColor(skill.agentSlug)
+
+  return (
+    <>
+      <div style={{ marginBottom: 24 }}>
+        {/* Big icon */}
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            background: `rgba(${hexToRgb(agentColor)}, 0.12)`,
+            border: `1px solid rgba(${hexToRgb(agentColor)}, 0.2)`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+          }}
+        >
+          <IconComp size={22} color={agentColor} strokeWidth={1.7} />
+        </div>
+        <h2
+          style={{
+            fontSize: 18,
+            fontWeight: 600,
+            color: "#FAFAFA",
+            margin: "0 0 6px",
+            lineHeight: 1.35,
+            paddingRight: 32,
+          }}
+        >
+          {skill.title}
+        </h2>
+        <p
+          style={{
+            fontSize: 13,
+            color: "rgba(250,250,250,0.45)",
+            margin: "0 0 20px",
+            lineHeight: 1.55,
+          }}
+        >
+          {skill.tagline}
+        </p>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <div style={S.label}>Descriptif</div>
+        <textarea
+          style={S.textarea}
+          placeholder="Décrivez l'idée, le ton et le message..."
+          value={state.description}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)"
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"
+          }}
+        />
+      </div>
+
+      {/* Ask agent link */}
+      <div style={{ marginBottom: 20 }}>
+        <button
+          type="button"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: "rgba(250,250,250,0.4)",
+            fontSize: 12,
+            fontWeight: 500,
+            textDecoration: "underline",
+            textDecorationColor: "rgba(250,250,250,0.15)",
+            transition: "color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "rgba(250,250,250,0.75)"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "rgba(250,250,250,0.4)"
+          }}
+        >
+          <AgentAvatar slug={skill.agentSlug} size={16} />
+          Demander de l&apos;aide à {skill.agentName}
+        </button>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button
+          style={{
+            ...S.btnPrimary,
+            opacity: state.description.trim() ? 1 : 0.4,
+            cursor: state.description.trim() ? "pointer" : "not-allowed",
+          }}
+          onClick={onNext}
+          disabled={!state.description.trim()}
+          onMouseEnter={(e) => {
+            if (state.description.trim()) {
+              e.currentTarget.style.background = "linear-gradient(135deg, #F47856, #E86F4D)"
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "linear-gradient(135deg, #E86F4D, #D05A38)"
+          }}
+        >
+          Suivant →
+        </button>
+      </div>
+    </>
+  )
+}
+
+function Step2({
+  state,
+  onToggle,
+  onBack,
+  onNext,
+}: {
+  skill: SkillItem
+  state: WizardState
+  onToggle: (n: SocialNetwork) => void
+  onBack: () => void
+  onNext: () => void
+}) {
+  const hasSelection = Object.values(state.networks).some(Boolean)
+
+  return (
+    <>
+      <div style={{ marginBottom: 24 }}>
+        <h2
+          style={{
+            fontSize: 18,
+            fontWeight: 600,
+            color: "#FAFAFA",
+            margin: "0 0 6px",
+            lineHeight: 1.35,
+            paddingRight: 32,
+          }}
+        >
+          Sélectionner les réseaux pour la planification du post
+        </h2>
+        <p style={{ fontSize: 13, color: "rgba(250,250,250,0.45)", margin: 0, lineHeight: 1.55 }}>
+          Choisissez le ou les réseaux sociaux où vous souhaitez publier.
+        </p>
+      </div>
+
+      {/* Instagram gradient def */}
+      <svg width={0} height={0} style={{ position: "absolute" }}>
+        <defs>
+          <linearGradient id="ig-grad-skills" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#F58529" />
+            <stop offset="50%" stopColor="#DD2A7B" />
+            <stop offset="100%" stopColor="#8134AF" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+        {SOCIAL_NETWORKS.map((net) => {
+          const active = state.networks[net.id]
+          const bg =
+            net.id === "instagram"
+              ? "linear-gradient(135deg, #F58529, #DD2A7B, #8134AF)"
+              : net.color
+          return (
+            <button
+              key={net.id}
+              onClick={() => onToggle(net.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 16px",
+                background: active ? "rgba(255,255,255,0.065)" : "rgba(255,255,255,0.028)",
+                border: `1px solid ${active ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.07)"}`,
+                borderRadius: 10,
+                cursor: "pointer",
+                transition: "all 0.15s",
+                width: "100%",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    background: bg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <net.icon size={17} />
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#FAFAFA" }}>
+                  {net.label}
+                </span>
+              </div>
+              {/* Toggle pill */}
+              <div
+                style={{
+                  width: 42,
+                  height: 24,
+                  borderRadius: 12,
+                  background: active ? "#E86F4D" : "rgba(255,255,255,0.12)",
+                  position: "relative",
+                  transition: "background 0.2s",
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 3,
+                    left: active ? 21 : 3,
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    background: "#fff",
+                    transition: "left 0.2s",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                  }}
+                />
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <button
+          style={S.btnSecondary}
+          onClick={onBack}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"
+            e.currentTarget.style.color = "#FAFAFA"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"
+            e.currentTarget.style.color = "rgba(250,250,250,0.5)"
+          }}
+        >
+          ← Retour
+        </button>
+        <button
+          style={{
+            ...S.btnPrimary,
+            opacity: hasSelection ? 1 : 0.4,
+            cursor: hasSelection ? "pointer" : "not-allowed",
+          }}
+          onClick={onNext}
+          disabled={!hasSelection}
+          onMouseEnter={(e) => {
+            if (hasSelection) {
+              e.currentTarget.style.background = "linear-gradient(135deg, #F47856, #E86F4D)"
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "linear-gradient(135deg, #E86F4D, #D05A38)"
+          }}
+        >
+          Suivant →
+        </button>
+      </div>
+    </>
+  )
+}
+
+function Step3({
+  state,
+  onChange,
+  onBack,
+  onCreate,
+}: {
+  skill: SkillItem
+  state: WizardState
+  onChange: (patch: Partial<WizardState>) => void
+  onBack: () => void
+  onCreate: () => void
+}) {
+  const isPlanned = state.scheduling === "planned"
+  const canCreate = !isPlanned || (state.date.trim() !== "" && state.time.trim() !== "")
+
+  return (
+    <>
+      <div style={{ marginBottom: 24 }}>
+        <h2
+          style={{
+            fontSize: 18,
+            fontWeight: 600,
+            color: "#FAFAFA",
+            margin: "0 0 6px",
+            lineHeight: 1.35,
+            paddingRight: 32,
+          }}
+        >
+          Définir la date et l&apos;heure de publication
+        </h2>
+        <p style={{ fontSize: 13, color: "rgba(250,250,250,0.45)", margin: 0, lineHeight: 1.55 }}>
+          Planifiez la publication ou publiez dès maintenant.
+        </p>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
+        {/* Planifier */}
+        <button
+          onClick={() => onChange({ scheduling: "planned" })}
+          style={{
+            flex: 1,
+            padding: "14px 16px",
+            background: isPlanned ? "rgba(232,111,77,0.12)" : "rgba(255,255,255,0.028)",
+            border: `1px solid ${isPlanned ? "rgba(232,111,77,0.35)" : "rgba(255,255,255,0.07)"}`,
+            borderRadius: 10,
+            cursor: "pointer",
+            transition: "all 0.15s",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Clock
+            size={22}
+            color={isPlanned ? "#E86F4D" : "rgba(250,250,250,0.28)"}
+            strokeWidth={1.8}
+          />
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: isPlanned ? "#FAFAFA" : "rgba(250,250,250,0.45)",
+            }}
+          >
+            Planifier
+          </span>
+        </button>
+
+        {/* Publier maintenant */}
+        <button
+          onClick={() => onChange({ scheduling: "now" })}
+          style={{
+            flex: 1,
+            padding: "14px 16px",
+            background: !isPlanned ? "rgba(232,111,77,0.12)" : "rgba(255,255,255,0.028)",
+            border: `1px solid ${!isPlanned ? "rgba(232,111,77,0.35)" : "rgba(255,255,255,0.07)"}`,
+            borderRadius: 10,
+            cursor: "pointer",
+            transition: "all 0.15s",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Send
+            size={22}
+            color={!isPlanned ? "#E86F4D" : "rgba(250,250,250,0.28)"}
+            strokeWidth={1.8}
+          />
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: !isPlanned ? "#FAFAFA" : "rgba(250,250,250,0.45)",
+            }}
+          >
+            Publier maintenant
+          </span>
+        </button>
+      </div>
+
+      {/* Date + time conditional */}
+      {isPlanned && (
+        <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
+          <div style={{ flex: 1 }}>
+            <div style={S.label}>Date</div>
+            <input
+              type="date"
+              value={state.date}
+              onChange={(e) => onChange({ date: e.target.value })}
+              style={{ ...S.input, width: "100%", colorScheme: "dark" }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)"
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"
+              }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={S.label}>Heure</div>
+            <input
+              type="time"
+              value={state.time}
+              onChange={(e) => onChange({ time: e.target.value })}
+              style={{ ...S.input, width: "100%", colorScheme: "dark" }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)"
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {!isPlanned && <div style={{ height: 28 }} />}
+
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <button
+          style={S.btnSecondary}
+          onClick={onBack}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"
+            e.currentTarget.style.color = "#FAFAFA"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"
+            e.currentTarget.style.color = "rgba(250,250,250,0.5)"
+          }}
+        >
+          ← Retour
+        </button>
+        <button
+          style={{
+            ...S.btnPrimary,
+            opacity: canCreate ? 1 : 0.4,
+            cursor: canCreate ? "pointer" : "not-allowed",
+          }}
+          onClick={onCreate}
+          disabled={!canCreate}
+          onMouseEnter={(e) => {
+            if (canCreate) {
+              e.currentTarget.style.background = "linear-gradient(135deg, #F47856, #E86F4D)"
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "linear-gradient(135deg, #E86F4D, #D05A38)"
+          }}
+        >
+          Créer →
+        </button>
+      </div>
+    </>
+  )
+}
+
+// ─── Wizard modal ─────────────────────────────────────────────────────────────
+
+function SkillWizardModal({
+  skill,
+  onClose,
+}: {
+  skill: SkillItem
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [state, setState] = useState<WizardState>({ ...INITIAL_WIZARD })
+
+  function patch(p: Partial<WizardState>) {
+    setState((prev) => ({ ...prev, ...p }))
+  }
+
+  function handleNext() {
+    if (state.step === 1) {
+      patch({ step: hasNetworkStep(skill) ? 2 : 3 })
+    } else if (state.step === 2) {
+      patch({ step: 3 })
+    }
+  }
+
+  function handleBack() {
+    if (state.step === 3) {
+      patch({ step: hasNetworkStep(skill) ? 2 : 1 })
+    } else if (state.step === 2) {
+      patch({ step: 1 })
+    }
+  }
+
+  function handleCreate() {
+    const lines: string[] = []
+    lines.push(state.description)
+
+    if (hasNetworkStep(skill)) {
+      const selected = (Object.keys(state.networks) as SocialNetwork[]).filter(
+        (k) => state.networks[k]
+      )
+      if (selected.length) {
+        lines.push(
+          `\nRéseaux : ${selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}`
+        )
+      }
+    }
+
+    if (state.scheduling === "planned" && state.date && state.time) {
+      lines.push(`Planifié le ${state.date} à ${state.time}`)
+    } else if (state.scheduling === "now") {
+      lines.push("Publication immédiate")
+    }
+
+    localStorage.setItem("lynaris_prefill_message", lines.join("\n"))
+    router.push(`/dashboard/agents/${skill.agentSlug}`)
+  }
+
+  const totalSteps = hasNetworkStep(skill) ? 3 : 2
+  const currentDisplay = state.step === 3 ? (hasNetworkStep(skill) ? 3 : 2) : state.step
+
+  return (
+    <div style={S.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={S.modal}>
+        {/* Close */}
+        <button
+          style={S.closeBtn}
+          onClick={onClose}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "#FAFAFA"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "rgba(250,250,250,0.28)"
+          }}
+        >
+          <X size={18} />
+        </button>
+
+        {/* Step progress bars */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+          {Array.from({ length: totalSteps }, (_, i) => (
+            <div
+              key={i}
+              style={{
+                height: 3,
+                flex: 1,
+                borderRadius: 2,
+                background: i + 1 <= currentDisplay ? "#E86F4D" : "rgba(255,255,255,0.1)",
+                transition: "background 0.2s",
+              }}
+            />
+          ))}
+        </div>
+
+        {state.step === 1 && (
+          <Step1
+            skill={skill}
+            state={state}
+            onChange={(v) => patch({ description: v })}
+            onNext={handleNext}
+          />
+        )}
+        {state.step === 2 && (
+          <Step2
+            skill={skill}
+            state={state}
+            onToggle={(n) =>
+              patch({ networks: { ...state.networks, [n]: !state.networks[n] } })
+            }
+            onBack={handleBack}
+            onNext={handleNext}
+          />
+        )}
+        {state.step === 3 && (
+          <Step3
+            skill={skill}
+            state={state}
+            onChange={patch}
+            onBack={handleBack}
+            onCreate={handleCreate}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Skill card ───────────────────────────────────────────────────────────────
+
+function SkillCard({
+  skill,
+  onOpen,
+}: {
+  skill: SkillItem
+  onOpen: (s: SkillItem) => void
+}) {
+  const IconComp = skill.icon
+  const agentColor = getAgentColor(skill.agentSlug)
+  const agentRgb = hexToRgb(agentColor)
+
+  return (
+    <GlassCard radius={20} padding={18} hover>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          height: "100%",
+        }}
+      >
+        {/* Header: icon + title */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: `rgba(${agentRgb}, 0.12)`,
+              border: `1px solid rgba(${agentRgb}, 0.2)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <IconComp size={17} color={agentColor} strokeWidth={1.7} />
+          </div>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#FAFAFA",
+              lineHeight: 1.3,
+            }}
+          >
+            {skill.title}
+          </span>
+        </div>
+
+        {/* Description */}
+        <p
+          style={{
+            fontSize: 13,
+            color: "rgba(250,250,250,0.45)",
+            margin: 0,
+            lineHeight: 1.5,
+            flex: 1,
+          }}
+        >
+          {skill.tagline}
+        </p>
+
+        {/* Agent badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <AgentAvatar slug={skill.agentSlug} size={20} />
+          <span style={{ fontSize: 12, color: "rgba(250,250,250,0.4)" }}>
+            {skill.agentName}, {skill.agentRole}
+          </span>
+        </div>
+
+        {/* CTA button */}
+        <button
+          onClick={() => onOpen(skill)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: 32,
+            borderRadius: 8,
+            background: "rgba(232,111,77,0.1)",
+            border: "1px solid rgba(232,111,77,0.25)",
+            fontSize: 12,
+            color: "var(--accent)",
+            fontWeight: 600,
+            transition: "background 220ms var(--ease-apple), border-color 220ms var(--ease-apple)",
+            cursor: "pointer",
+            width: "100%",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(232,111,77,0.18)"
+            e.currentTarget.style.borderColor = "rgba(232,111,77,0.4)"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(232,111,77,0.1)"
+            e.currentTarget.style.borderColor = "rgba(232,111,77,0.25)"
+          }}
+        >
+          {skill.ctaLabel ?? "Créer avec ce super-pouvoir"}
+        </button>
+      </div>
+    </GlassCard>
+  )
+}
+
+// ─── Hex to RGB helper ────────────────────────────────────────────────────────
+
+function hexToRgb(hex: string): string {
+  const clean = hex.replace("#", "")
+  const r = parseInt(clean.slice(0, 2), 16)
+  const g = parseInt(clean.slice(2, 4), 16)
+  const b = parseInt(clean.slice(4, 6), 16)
+  return `${r},${g},${b}`
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function SkillsPage() {
+  const [activeSkill, setActiveSkill] = useState<SkillItem | null>(null)
+
+  return (
+    <div
+      style={{
+        padding: "28px 32px",
+        maxWidth: 1080,
+      }}
+    >
+      {/* Header */}
+      <div style={{ marginBottom: 36 }}>
+        <h1
+          style={{
+            fontSize: "clamp(28px, 4vw, 44px)",
+            fontWeight: 700,
+            color: "#FAFAFA",
+            margin: "0 0 6px",
+            lineHeight: 1.15,
+            letterSpacing: "-0.03em",
+          }}
+        >
+          Super-pouvoirs
+        </h1>
+        <p
+          style={{
+            fontSize: 14,
+            color: "rgba(250,250,250,0.5)",
+            margin: 0,
+            lineHeight: 1.5,
+          }}
+        >
+          Lancez des actions IA en quelques secondes.
+        </p>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {GROUPS.map((group, idx) => {
+          const skills = SKILLS.filter((s) => s.category === group.key)
+          if (!skills.length) return null
+          return (
+            <section
+              key={group.key}
+              style={{ marginTop: idx === 0 ? 0 : 40 }}
+            >
+              {/* Overline */}
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "rgba(232,111,77,0.6)",
+                  marginBottom: 6,
+                }}
+              >
+                {group.overline}
+              </div>
+              <h2
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "#FAFAFA",
+                  margin: "0 0 4px",
+                  lineHeight: 1.3,
+                }}
+              >
+                {group.label}
+              </h2>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "rgba(250,250,250,0.45)",
+                  margin: "0 0 20px",
+                  lineHeight: 1.5,
+                }}
+              >
+                {group.sub}
+              </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: 10,
+                }}
+              >
+                {skills.map((skill) => (
+                  <SkillCard key={skill.id} skill={skill} onOpen={setActiveSkill} />
+                ))}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+
+      {activeSkill && (
+        <SkillWizardModal skill={activeSkill} onClose={() => setActiveSkill(null)} />
+      )}
+    </div>
+  )
+}

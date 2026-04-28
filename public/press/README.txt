@@ -1,0 +1,1 @@
+Assets presse Lynaris — à compléter avec les vrais fichiers

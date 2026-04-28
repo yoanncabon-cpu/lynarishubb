@@ -1,0 +1,200 @@
+{
+  "name": "Lynaris — LinkedIn Prospecting Send Message",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "linkedin-prospecting",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "f0e1d2c3-b001-4e01-b011-webhook000001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "prospect_profile_url", "value": "={{ $json.data.prospect_profile_url }}", "type": "string" },
+            { "id": "2", "name": "message_content", "value": "={{ $json.data.message_content }}", "type": "string" },
+            { "id": "3", "name": "prospect_name", "value": "={{ $json.data.prospect_name }}", "type": "string" },
+            { "id": "4", "name": "org_id", "value": "={{ $json.org_id }}", "type": "string" },
+            { "id": "5", "name": "run_id", "value": "={{ $json.run_id }}", "type": "string" },
+            { "id": "6", "name": "timestamp", "value": "={{ $json.timestamp }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000002",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.message_content }}",
+              "rightValue": "={{ $json.prospect_name }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000003",
+      "name": "Is Personalized",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PHANTOMBUSTER_API_URL || 'https://api.phantombuster.com/api/v2/agents/launch' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Phantombuster-Key", "value": "={{ $env.PHANTOMBUSTER_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ id: $env.PHANTOMBUSTER_LINKEDIN_AGENT_ID || 'CONFIGURE_AGENT_ID', argument: { profileUrl: $json.prospect_profile_url, message: $json.message_content } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000004",
+      "name": "Send via Phantombuster",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000005",
+      "name": "Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Extract Data').item.json.run_id, org_id: $('Extract Data').item.json.org_id, workflow: 'linkedin-prospecting-send-message', status: 'success', output: { prospect_name: $('Extract Data').item.json.prospect_name, prospect_url: $('Extract Data').item.json.prospect_profile_url, message_sent: true }, duration_ms: Date.now() - new Date($('Extract Data').item.json.timestamp).getTime() }) }}",
+        "options": {}
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000006",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', run_id: $('Extract Data').item.json.run_id }) }}",
+        "options": {}
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000009",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Extract Data').item.json.run_id, org_id: $('Extract Data').item.json.org_id, workflow: 'linkedin-prospecting-send-message', status: 'error', error: 'Message not personalized: prospect name not found in message content' }) }}",
+        "options": {}
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000010",
+      "name": "Callback Not Personalized",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 440]
+    },
+    {
+      "parameters": {},
+      "id": "e1f2a3b4-b001-4e01-b011-000000000007",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [680, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow: 'linkedin-prospecting-send-message', status: 'error', error: $json.message || 'Unknown error' }) }}",
+        "options": {}
+      },
+      "id": "e1f2a3b4-b001-4e01-b011-000000000008",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 600]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract Data", "type": "main", "index": 0 }]] },
+    "Extract Data": { "main": [[{ "node": "Is Personalized", "type": "main", "index": 0 }]] },
+    "Is Personalized": { "main": [[{ "node": "Send via Phantombuster", "type": "main", "index": 0 }], [{ "node": "Callback Not Personalized", "type": "main", "index": 0 }]] },
+    "Send via Phantombuster": { "main": [[{ "node": "Rate Limit Wait", "type": "main", "index": 0 }]] },
+    "Rate Limit Wait": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Callback Success": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Error Trigger": { "main": [[{ "node": "Callback Error", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "lynaris" }, { "name": "prospecting" }, { "name": "linkedin" }],
+  "staticData": null,
+  "meta": {
+    "notes": "Configure either Phantombuster LinkedIn agent or manual LinkedIn API access. Set PHANTOMBUSTER_API_KEY, PHANTOMBUSTER_API_URL, and PHANTOMBUSTER_LINKEDIN_AGENT_ID in n8n environment variables."
+  }
+}

@@ -1,0 +1,739 @@
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import { Save, Check } from "lucide-react"
+import type { Agent } from "@/lib/agents/data"
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AgentSettings {
+  // Generic
+  displayName: string
+  customInstructions: string
+  tone: "Professionnel" | "Décontracté" | "Formel" | "Chaleureux"
+  language: "Français" | "English" | "Español"
+  autonomy: boolean
+  notifications: boolean
+  isActive: boolean
+  modelId: string
+  // Agent-specific (free-form)
+  specific: Record<string, string>
+}
+
+type SaveState = "idle" | "loading" | "success" | "error"
+
+interface SpecificField {
+  key: string
+  label: string
+  placeholder: string
+  helper: string
+  type?: "text" | "textarea" | "number"
+}
+
+// ─── Agent-specific fields ────────────────────────────────────────────────────
+
+const AGENT_SPECIFIC_FIELDS: Record<string, SpecificField[]> = {
+  marine: [
+    // Placeholders Cabinet Ménigoz / Dr. Ménigoz retirés — pas d'accord de citation
+    { key: "orgName", label: "Nom de l'organisation", placeholder: "Nom de votre cabinet", helper: "Nom utilisé par Marine pour se présenter" },
+    { key: "practitionerName", label: "Nom du praticien", placeholder: "Dr. Dupont", helper: "Marine mentionnera ce nom lors des urgences" },
+    { key: "services", label: "Services proposés", placeholder: "Kinésithérapie, Thérapie manuelle...", helper: "Séparés par des virgules" },
+    { key: "escalationPhone", label: "Téléphone d'urgence", placeholder: "+33612345678", helper: "Numéro où transférer les urgences" },
+    { key: "openingHours", label: "Horaires d'ouverture", placeholder: "Lundi-Vendredi 8h-19h, Samedi 9h-12h", helper: "Marine les annoncera aux patients" },
+    { key: "appointmentDuration", label: "Durée RDV (minutes)", placeholder: "30", helper: "Durée par défaut d'un rendez-vous", type: "number" },
+  ],
+  charles: [
+    { key: "ownerName", label: "Ton prénom", placeholder: "Yoann", helper: "Charles t'appellera par ton prénom" },
+    { key: "whatsappNumber", label: "Numéro WhatsApp", placeholder: "+33612345678", helper: "Numéro où Charles te contacte" },
+    { key: "timezone", label: "Fuseau horaire", placeholder: "Europe/Paris", helper: "Pour les rappels et briefs" },
+    { key: "priorities", label: "Priorités actuelles", placeholder: "Lancer la campagne LinkedIn, Préparer la démo client...", helper: "Charles en tiendra compte dans ses briefings", type: "textarea" },
+  ],
+  lou: [
+    { key: "brandVoice", label: "Voix de marque", placeholder: "Experte, accessible, moderne", helper: "Ton de voix pour le contenu produit" },
+    { key: "targetAudience", label: "Audience cible", placeholder: "PME françaises, dirigeants 30-50 ans", helper: "Audience principale de tes contenus" },
+    { key: "websiteUrl", label: "URL du site WordPress", placeholder: "https://mon-site.com", helper: "Pour la publication automatique" },
+    { key: "linkedinProfile", label: "Profil LinkedIn", placeholder: "https://linkedin.com/in/...", helper: "Pour cibler les posts LinkedIn" },
+    { key: "seoKeywords", label: "Mots-clés SEO prioritaires", placeholder: "agent IA, automatisation PME...", helper: "Séparés par des virgules", type: "textarea" },
+  ],
+  elio: [
+    { key: "companyName", label: "Nom de ton entreprise", placeholder: "Lynaris", helper: "Utilisé dans les messages de prospection" },
+    { key: "companyDescription", label: "Description (1 phrase)", placeholder: "On aide les PME à automatiser leurs ops avec des agents IA", helper: "Le pitch qu'Elio utilisera" },
+    { key: "targetIndustry", label: "Secteur cible", placeholder: "Cabinets médicaux, Agences web...", helper: "Industries à prospecter en priorité" },
+    { key: "valueProposition", label: "Valeur ajoutée", placeholder: "Gain de 10h/semaine, ROI en 3 mois", helper: "Argument principal d'Elio", type: "textarea" },
+  ],
+  mae: [
+    { key: "emailSignature", label: "Signature email", placeholder: "Cordialement,\nYoann Cabon\nLynaris", helper: "Utilisée par Mae dans ses brouillons", type: "textarea" },
+    { key: "prioritySenders", label: "Expéditeurs prioritaires", placeholder: "client@important.com, vip@autre.com", helper: "Emails de ces personnes = urgents" },
+    { key: "autoArchive", label: "Auto-archiver après", placeholder: "newsletters, promotions", helper: "Catégories à archiver automatiquement" },
+  ],
+  max: [
+    { key: "defaultStyle", label: "Style visuel par défaut", placeholder: "Minimaliste, dark, professionnel", helper: "Style appliqué si rien n'est précisé" },
+    { key: "brandColors", label: "Couleurs de marque", placeholder: "#E86F4D, #0C0C0E, #F5F5F7", helper: "Codes hex séparés par des virgules" },
+    { key: "logoDescription", label: "Description du logo", placeholder: "Logo Lynaris — lettre L stylisée orange sur fond sombre", helper: "Max l'intégrera dans les visuels" },
+  ],
+  nova: [
+    { key: "currency", label: "Devise", placeholder: "EUR", helper: "Devise principale de tes finances" },
+    { key: "mrr_goal", label: "Objectif MRR", placeholder: "10000", helper: "En euros — Nova trackera l'écart", type: "number" },
+    { key: "alertThreshold", label: "Seuil d'alerte MRR (% chute)", placeholder: "10", helper: "Nova alerte si le MRR baisse de ce % en une semaine", type: "number" },
+    { key: "reportDay", label: "Jour du rapport hebdo", placeholder: "Lundi", helper: "Jour où Nova génère le rapport" },
+  ],
+  alba: [
+    { key: "companyName", label: "Nom de l'entreprise", placeholder: "Lynaris", helper: "Utilisé dans les contrats et messages" },
+    { key: "defaultContractType", label: "Type de contrat par défaut", placeholder: "CDI", helper: "CDI, CDD, Stage, Alternance, Freelance" },
+    { key: "jobCriteria", label: "Critères de recrutement", placeholder: "3+ ans XP, TypeScript, remote-friendly...", helper: "Alba scorera les CVs sur ces critères", type: "textarea" },
+    { key: "hrContact", label: "Email RH", placeholder: "rh@entreprise.com", helper: "Pour les notifications d'entretien" },
+  ],
+  orion: [
+    { key: "n8nBaseUrl", label: "URL n8n", placeholder: "https://n8n.mon-instance.com", helper: "URL de ton instance n8n (sans /webhook)" },
+    { key: "defaultWorkflowPrefix", label: "Préfixe des workflows", placeholder: "lynaris-", helper: "Orion préfixera ses workflows avec ce nom" },
+    { key: "notifyOnDeploy", label: "Email de notification", placeholder: "moi@email.com", helper: "Orion envoie un email après chaque déploiement" },
+  ],
+  aria: [
+    { key: "orgName", label: "Nom de l'organisation", placeholder: "Ma Startup", helper: "Aria mentionnera ce nom dans ses interactions" },
+    { key: "industry", label: "Secteur d'activité", placeholder: "E-commerce, Conseil, Santé...", helper: "Pour personnaliser les conseils sectoriels" },
+    { key: "teamSize", label: "Taille de l'équipe", placeholder: "5 personnes", helper: "Aria adapte ses recommandations RH" },
+    { key: "legalEntity", label: "Forme juridique", placeholder: "SAS, SARL, Auto-entrepreneur...", helper: "Pour la rédaction de documents légaux" },
+    { key: "accountingEmail", label: "Email comptable", placeholder: "compta@mon-entreprise.fr", helper: "Pour l'envoi automatique des factures" },
+    { key: "invoicePrefix", label: "Préfixe factures", placeholder: "FAC-2026-", helper: "Préfixe utilisé pour la numérotation des factures" },
+  ],
+}
+
+// ─── Defaults ─────────────────────────────────────────────────────────────────
+
+const TONE_OPTIONS: AgentSettings["tone"][] = ["Professionnel", "Décontracté", "Formel", "Chaleureux"]
+const LANG_OPTIONS: AgentSettings["language"][] = ["Français", "English", "Español"]
+
+const AI_MODELS = [
+  { id: "claude-haiku-4-5",   label: "Claude Haiku 4.5",  provider: "Anthropic", color: "#34D399" },
+  { id: "claude-sonnet-4-6",  label: "Claude Sonnet 4.6", provider: "Anthropic", color: "#E86F4D" },
+  { id: "claude-opus-4-6",    label: "Claude Opus 4.6",   provider: "Anthropic", color: "#A78BFA" },
+  { id: "gpt-4o",             label: "GPT-4o",            provider: "OpenAI",    color: "#10B981" },
+  { id: "gpt-4o-mini",        label: "GPT-4o mini",       provider: "OpenAI",    color: "#22D3EE" },
+  { id: "gpt-4-turbo",        label: "GPT-4 Turbo",       provider: "OpenAI",    color: "#6366F1" },
+  { id: "gemini-2.0-flash",   label: "Gemini 2.0 Flash",  provider: "Google",    color: "#4285F4" },
+  { id: "gemini-1.5-pro",     label: "Gemini 1.5 Pro",    provider: "Google",    color: "#34A853" },
+  { id: "gemini-1.5-flash",   label: "Gemini 1.5 Flash",  provider: "Google",    color: "#FBBC04" },
+] as const
+
+function buildDefaults(agentName: string): AgentSettings {
+  return {
+    displayName: agentName,
+    customInstructions: "",
+    tone: "Professionnel",
+    language: "Français",
+    autonomy: false,
+    notifications: false,
+    isActive: true,
+    modelId: "claude-sonnet-4-6",
+    specific: {},
+  }
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase" as const,
+  color: "rgba(255,255,255,0.35)",
+  marginBottom: 8,
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: 36,
+  padding: "0 12px",
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.04)",
+  color: "rgba(255,255,255,0.85)",
+  fontSize: 13,
+  outline: "none",
+  boxSizing: "border-box" as const,
+  transition: "border-color 150ms",
+}
+
+const selectStyle: React.CSSProperties = {
+  ...inputStyle,
+  cursor: "pointer",
+  appearance: "none" as const,
+  WebkitAppearance: "none" as const,
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 10px center",
+  paddingRight: 30,
+}
+
+const sectionStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.055)",
+  backdropFilter: "blur(20px) saturate(1.4)",
+  WebkitBackdropFilter: "blur(20px) saturate(1.4)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 12,
+  padding: "20px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 16,
+}
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase" as const,
+  color: "rgba(255,255,255,0.25)",
+  margin: 0,
+  paddingBottom: 4,
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+}
+
+const helperStyle: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 11,
+  color: "rgba(255,255,255,0.25)",
+  lineHeight: 1.4,
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+interface SwitchProps {
+  checked: boolean
+  onChange: (val: boolean) => void
+  label: string
+  description?: string
+}
+
+function Switch({ checked, onChange, label, description }: SwitchProps) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        cursor: "pointer",
+        gap: 12,
+      }}
+    >
+      <div>
+        <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>
+          {label}
+        </p>
+        {description && (
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+            {description}
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        style={{
+          flexShrink: 0,
+          position: "relative",
+          width: 36,
+          height: 20,
+          borderRadius: 999,
+          border: "none",
+          background: checked ? "#7C3AED" : "rgba(255,255,255,0.1)",
+          cursor: "pointer",
+          transition: "background 200ms",
+          padding: 0,
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            top: 2,
+            left: checked ? 18 : 2,
+            width: 16,
+            height: 16,
+            borderRadius: 999,
+            background: "white",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+            transition: "left 200ms",
+            display: "block",
+          }}
+        />
+      </button>
+    </label>
+  )
+}
+
+function SkeletonLoader() {
+  const skeletonRow: React.CSSProperties = {
+    height: 36,
+    borderRadius: 8,
+    background: "rgba(255,255,255,0.06)",
+    opacity: 0.5,
+    animation: "pulse 1.5s ease-in-out infinite",
+  }
+  const skeletonLabel: React.CSSProperties = {
+    height: 10,
+    width: "30%",
+    borderRadius: 4,
+    background: "rgba(255,255,255,0.06)",
+    opacity: 0.5,
+    marginBottom: 8,
+    animation: "pulse 1.5s ease-in-out infinite",
+  }
+
+  return (
+    <>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.2; }
+        }
+      `}</style>
+      <div style={{ ...sectionStyle, gap: 20 }}>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i}>
+            <div style={{ ...skeletonLabel, animationDelay: `${i * 0.1}s` }} />
+            <div style={{ ...skeletonRow, animationDelay: `${i * 0.1 + 0.05}s` }} />
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function focusInput(el: HTMLElement | null) {
+  if (!el) return
+  el.style.borderColor = "rgba(124,58,237,0.5)"
+}
+
+function blurInput(el: HTMLElement | null) {
+  if (!el) return
+  el.style.borderColor = "rgba(255,255,255,0.08)"
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export function AgentSettingsTab({ agent }: { agent: Agent }) {
+  const [settings, setSettings] = useState<AgentSettings>(() => buildDefaults(agent.name))
+  const [saveState, setSaveState] = useState<SaveState>("idle")
+  const [toastMsg, setToastMsg] = useState<string | null>(null)
+  const [toastIsError, setToastIsError] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const storageKey = `agent-settings-${agent.slug}`
+  const specificFields = AGENT_SPECIFIC_FIELDS[agent.slug] ?? []
+
+  // Load from API on mount, fallback to localStorage
+  useEffect(() => {
+    fetch(`/api/agents/${agent.slug}/settings`)
+      .then((r) => r.json())
+      .then((data: { settings: Partial<AgentSettings>; isActive?: boolean }) => {
+        const { displayName: _ignored, ...rest } = data.settings
+        setSettings((prev) => ({
+          ...prev,
+          ...rest,
+          // isActive est retourné séparément par l'API
+          isActive: typeof data.isActive === "boolean" ? data.isActive : (prev.isActive),
+          // cast explicite des booléens (JSON parse peut retourner autre chose)
+          autonomy: typeof rest.autonomy === "boolean" ? rest.autonomy : prev.autonomy,
+          notifications: typeof rest.notifications === "boolean" ? rest.notifications : prev.notifications,
+          specific: { ...prev.specific, ...(rest.specific as Record<string, string> ?? {}) },
+        }))
+        setLoaded(true)
+      })
+      .catch(() => {
+        try {
+          const raw = localStorage.getItem(storageKey)
+          if (raw) {
+            const { displayName: _ignored, ...cached } = JSON.parse(raw) as Partial<AgentSettings>
+            setSettings((prev) => ({ ...prev, ...cached }))
+          }
+        } catch {
+          // ignore malformed
+        }
+        setLoaded(true)
+      })
+  }, [agent.slug, storageKey])
+
+  function showToast(msg: string, isError = false) {
+    setToastMsg(msg)
+    setToastIsError(isError)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToastMsg(null), 3000)
+  }
+
+  async function handleSave() {
+    setSaveState("loading")
+    try {
+      const res = await fetch(`/api/agents/${agent.slug}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      })
+      if (res.ok) {
+        localStorage.setItem(storageKey, JSON.stringify(settings))
+        setSaveState("success")
+        showToast("Paramètres sauvegardés")
+        setTimeout(() => setSaveState("idle"), 2500)
+      } else {
+        setSaveState("error")
+        showToast("Erreur lors de la sauvegarde", true)
+        setTimeout(() => setSaveState("idle"), 2500)
+      }
+    } catch {
+      setSaveState("error")
+      showToast("Erreur lors de la sauvegarde", true)
+      setTimeout(() => setSaveState("idle"), 2500)
+    }
+  }
+
+  function setSpecific(key: string, value: string) {
+    setSettings((s) => ({ ...s, specific: { ...s.specific, [key]: value } }))
+  }
+
+  const charCount = settings.customInstructions.length
+  const charOver = charCount > 1000
+
+  const textareaBaseStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "8px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.04)",
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
+    outline: "none",
+    resize: "none" as const,
+    lineHeight: 1.5,
+    boxSizing: "border-box" as const,
+    transition: "border-color 150ms",
+  }
+
+  if (!loaded) {
+    return (
+      <div style={{ padding: 24, overflowY: "auto", height: "100%" }}>
+        <div style={{ maxWidth: 480 }}>
+          <SkeletonLoader />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: 24, overflowY: "auto", height: "100%", position: "relative" }}>
+      <div style={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 16 }}>
+
+        {/* Section 1: Identité */}
+        <div style={sectionStyle}>
+          <p style={sectionTitleStyle}>Identité</p>
+
+          <div>
+            <label htmlFor="setting-name" style={labelStyle}>
+              Nom affiché
+            </label>
+            <input
+              id="setting-name"
+              type="text"
+              value={settings.displayName}
+              onChange={(e) => setSettings((s) => ({ ...s, displayName: e.target.value }))}
+              style={inputStyle}
+              onFocus={(e) => focusInput(e.currentTarget)}
+              onBlur={(e) => blurInput(e.currentTarget)}
+            />
+          </div>
+
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
+              <label htmlFor="setting-instructions" style={{ ...labelStyle, marginBottom: 0 }}>
+                Instructions personnalisées
+              </label>
+              <span style={{ fontSize: 10, color: charOver ? "#ef4444" : "rgba(255,255,255,0.25)" }}>
+                {charCount}/1000
+              </span>
+            </div>
+            <textarea
+              id="setting-instructions"
+              value={settings.customInstructions}
+              onChange={(e) => {
+                if (e.target.value.length <= 1000) {
+                  setSettings((s) => ({ ...s, customInstructions: e.target.value }))
+                }
+              }}
+              placeholder={`Instructions spécifiques pour ${agent.name}...`}
+              rows={4}
+              style={textareaBaseStyle}
+              onFocus={(e) => focusInput(e.currentTarget)}
+              onBlur={(e) => blurInput(e.currentTarget)}
+            />
+          </div>
+        </div>
+
+        {/* Section 3: Modèle IA */}
+        <div style={sectionStyle}>
+          <p style={sectionTitleStyle}>Modèle IA</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {AI_MODELS.map((m) => (
+              <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="modelId"
+                  value={m.id}
+                  checked={settings.modelId === m.id}
+                  onChange={() => setSettings((s) => ({ ...s, modelId: m.id }))}
+                  style={{ accentColor: m.color }}
+                />
+                <span
+                  style={{
+                    flex: 1, fontSize: 13,
+                    color: settings.modelId === m.id ? "#F5EFE6" : "rgba(255,255,255,0.6)",
+                    fontWeight: settings.modelId === m.id ? 600 : 400,
+                  }}
+                >
+                  {m.label}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10, color: m.color,
+                    background: `${m.color}14`,
+                    padding: "1px 6px", borderRadius: 4,
+                  }}
+                >
+                  {m.provider}
+                </span>
+              </label>
+            ))}
+          </div>
+          {settings.modelId.startsWith("gpt-") && (
+            <p style={{ fontSize: 11, color: "#F59E0B", marginTop: 8 }}>
+              Nécessite une clé OpenAI configurée dans les intégrations.
+            </p>
+          )}
+        </div>
+
+        {/* Section 4: Configuration avancée (agent-specific) */}
+        {specificFields.length > 0 && (
+          <div style={sectionStyle}>
+            <p style={sectionTitleStyle}>Configuration avancée</p>
+
+            {specificFields.map((field) => {
+              const value = settings.specific[field.key] ?? ""
+              const fieldId = `specific-${field.key}`
+
+              if (field.type === "textarea") {
+                return (
+                  <div key={field.key}>
+                    <label htmlFor={fieldId} style={labelStyle}>
+                      {field.label}
+                    </label>
+                    <textarea
+                      id={fieldId}
+                      value={value}
+                      onChange={(e) => setSpecific(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      rows={3}
+                      style={textareaBaseStyle}
+                      onFocus={(e) => focusInput(e.currentTarget)}
+                      onBlur={(e) => blurInput(e.currentTarget)}
+                    />
+                    <p style={helperStyle}>{field.helper}</p>
+                  </div>
+                )
+              }
+
+              if (field.type === "number") {
+                return (
+                  <div key={field.key}>
+                    <label htmlFor={fieldId} style={labelStyle}>
+                      {field.label}
+                    </label>
+                    <input
+                      id={fieldId}
+                      type="number"
+                      value={value}
+                      onChange={(e) => setSpecific(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      style={inputStyle}
+                      onFocus={(e) => focusInput(e.currentTarget)}
+                      onBlur={(e) => blurInput(e.currentTarget)}
+                    />
+                    <p style={helperStyle}>{field.helper}</p>
+                  </div>
+                )
+              }
+
+              return (
+                <div key={field.key}>
+                  <label htmlFor={fieldId} style={labelStyle}>
+                    {field.label}
+                  </label>
+                  <input
+                    id={fieldId}
+                    type="text"
+                    value={value}
+                    onChange={(e) => setSpecific(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    style={inputStyle}
+                    onFocus={(e) => focusInput(e.currentTarget)}
+                    onBlur={(e) => blurInput(e.currentTarget)}
+                  />
+                  <p style={helperStyle}>{field.helper}</p>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Section 5: Voix & Langue */}
+        <div style={sectionStyle}>
+          <p style={sectionTitleStyle}>Voix et Langue</p>
+
+          <div>
+            <label htmlFor="setting-tone" style={labelStyle}>
+              Ton de voix
+            </label>
+            <div style={{ position: "relative" }}>
+              <select
+                id="setting-tone"
+                value={settings.tone}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, tone: e.target.value as AgentSettings["tone"] }))
+                }
+                style={selectStyle}
+                onFocus={(e) => focusInput(e.currentTarget)}
+                onBlur={(e) => blurInput(e.currentTarget)}
+              >
+                {TONE_OPTIONS.map((t) => (
+                  <option key={t} value={t} style={{ background: "#1a1a2e" }}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="setting-language" style={labelStyle}>
+              Langue
+            </label>
+            <div style={{ position: "relative" }}>
+              <select
+                id="setting-language"
+                value={settings.language}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    language: e.target.value as AgentSettings["language"],
+                  }))
+                }
+                style={selectStyle}
+                onFocus={(e) => focusInput(e.currentTarget)}
+                onBlur={(e) => blurInput(e.currentTarget)}
+              >
+                {LANG_OPTIONS.map((l) => (
+                  <option key={l} value={l} style={{ background: "#1a1a2e" }}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 6: Comportement */}
+        <div style={sectionStyle}>
+          <p style={sectionTitleStyle}>Comportement</p>
+
+          <Switch
+            checked={settings.autonomy}
+            onChange={(val) => setSettings((s) => ({ ...s, autonomy: val }))}
+            label="Autonomie complète"
+            description="L'agent agit sans demander validation"
+          />
+
+          <div style={{ height: 1, background: "rgba(255,255,255,0.05)" }} />
+
+          <Switch
+            checked={settings.notifications}
+            onChange={(val) => setSettings((s) => ({ ...s, notifications: val }))}
+            label="Notifications email"
+            description="Recevoir un email à chaque action"
+          />
+        </div>
+
+        {/* Save button */}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saveState === "loading"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            height: 36,
+            borderRadius: 8,
+            border: "none",
+            background: "#7C3AED",
+            color: "white",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: saveState === "loading" ? "not-allowed" : "pointer",
+            opacity: saveState === "loading" ? 0.7 : 1,
+            transition: "opacity 150ms",
+            alignSelf: "flex-start",
+            padding: "0 20px",
+            minWidth: 160,
+          }}
+        >
+          {saveState === "success" ? (
+            <>
+              <Check size={14} />
+              Sauvegardé
+            </>
+          ) : saveState === "loading" ? (
+            "Sauvegarde..."
+          ) : (
+            <>
+              <Save size={14} />
+              Sauvegarder
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Toast */}
+      {toastMsg && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            padding: "10px 16px",
+            borderRadius: 10,
+            background: toastIsError ? "rgba(239,68,68,0.15)" : "rgba(34,197,94,0.12)",
+            border: toastIsError
+              ? "1px solid rgba(239,68,68,0.25)"
+              : "1px solid rgba(34,197,94,0.2)",
+            color: toastIsError ? "#f87171" : "#86efac",
+            fontSize: 13,
+            fontWeight: 500,
+            zIndex: 50,
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          {toastMsg}
+        </div>
+      )}
+    </div>
+  )
+}

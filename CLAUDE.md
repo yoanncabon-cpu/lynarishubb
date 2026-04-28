@@ -1,0 +1,2 @@
+@CLAUDE_STANDARDS.md
+@AGENTS.md

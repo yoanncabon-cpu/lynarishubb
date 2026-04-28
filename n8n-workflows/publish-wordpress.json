@@ -1,0 +1,213 @@
+{
+  "name": "Lynaris — Publish WordPress",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "publish-wordpress",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "f0e1d2c3-4001-4d01-b004-webhook000001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "title", "value": "={{ $json.data.title }}", "type": "string" },
+            { "id": "2", "name": "content", "value": "={{ $json.data.content }}", "type": "string" },
+            { "id": "3", "name": "tags", "value": "={{ $json.data.tags }}", "type": "array" },
+            { "id": "4", "name": "status", "value": "={{ $json.data.status || 'publish' }}", "type": "string" },
+            { "id": "5", "name": "schedule_at", "value": "={{ $json.data.schedule_at }}", "type": "string" },
+            { "id": "6", "name": "site_url", "value": "={{ $json.data.site_url }}", "type": "string" },
+            { "id": "7", "name": "username", "value": "={{ $json.data.username }}", "type": "string" },
+            { "id": "8", "name": "app_password", "value": "={{ $json.data.app_password }}", "type": "string" },
+            { "id": "9", "name": "org_id", "value": "={{ $json.org_id }}", "type": "string" },
+            { "id": "10", "name": "run_id", "value": "={{ $json.run_id }}", "type": "string" },
+            { "id": "11", "name": "timestamp", "value": "={{ $json.timestamp }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000002",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.schedule_at }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000003",
+      "name": "Has Schedule",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "wp_status", "value": "future", "type": "string" },
+            { "id": "2", "name": "wp_date", "value": "={{ $json.schedule_at }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000004",
+      "name": "Set Scheduled",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "wp_status", "value": "={{ $('Extract Data').item.json.status }}", "type": "string" },
+            { "id": "2", "name": "wp_date", "value": "", "type": "string" }
+          ]
+        }
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000005",
+      "name": "Set Immediate",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {},
+        "options": {}
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-0000000000m1",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Extract Data').item.json.site_url }}/wp-json/wp/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Basic {{ Buffer.from($('Extract Data').item.json.username + ':' + $('Extract Data').item.json.app_password).toString('base64') }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $('Extract Data').item.json.title, content: $('Extract Data').item.json.content, status: $json.wp_status, date: $json.wp_date || undefined, tags: $('Extract Data').item.json.tags }) }}",
+        "options": {}
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000006",
+      "name": "Create WP Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Extract Data').item.json.run_id, org_id: $('Extract Data').item.json.org_id, workflow: 'publish-wordpress', status: 'success', output: { post_id: $json.id, post_url: $json.link, post_status: $json.status }, duration_ms: Date.now() - new Date($('Extract Data').item.json.timestamp).getTime() }) }}",
+        "options": {}
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000007",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', run_id: $('Extract Data').item.json.run_id }) }}",
+        "options": {}
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000010",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {},
+      "id": "d4e5f6a7-4001-4d01-b004-000000000008",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [900, 560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow: 'publish-wordpress', status: 'error', error: $json.message || 'Unknown error' }) }}",
+        "options": {}
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000009",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 560]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract Data", "type": "main", "index": 0 }]] },
+    "Extract Data": { "main": [[{ "node": "Has Schedule", "type": "main", "index": 0 }]] },
+    "Has Schedule": { "main": [[{ "node": "Set Scheduled", "type": "main", "index": 0 }], [{ "node": "Set Immediate", "type": "main", "index": 0 }]] },
+    "Set Scheduled": { "main": [[{ "node": "Merge", "type": "main", "index": 0 }]] },
+    "Set Immediate": { "main": [[{ "node": "Merge", "type": "main", "index": 0 }]] },
+    "Merge": { "main": [[{ "node": "Create WP Post", "type": "main", "index": 0 }]] },
+    "Create WP Post": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Callback Success": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Error Trigger": { "main": [[{ "node": "Callback Error", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "lynaris" }, { "name": "content" }, { "name": "wordpress" }]
+}

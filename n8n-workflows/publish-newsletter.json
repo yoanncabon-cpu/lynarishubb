@@ -1,0 +1,158 @@
+{
+  "name": "Lynaris — Publish Newsletter",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "publish-newsletter",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "f0e1d2c3-5001-4e01-b005-webhook000001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "from", "value": "={{ $json.data.from }}", "type": "string" },
+            { "id": "2", "name": "to", "value": "={{ $json.data.to }}", "type": "array" },
+            { "id": "3", "name": "subject", "value": "={{ $json.data.subject }}", "type": "string" },
+            { "id": "4", "name": "html", "value": "={{ $json.data.html }}", "type": "string" },
+            { "id": "5", "name": "text", "value": "={{ $json.data.text }}", "type": "string" },
+            { "id": "6", "name": "org_id", "value": "={{ $json.org_id }}", "type": "string" },
+            { "id": "7", "name": "run_id", "value": "={{ $json.run_id }}", "type": "string" },
+            { "id": "8", "name": "timestamp", "value": "={{ $json.timestamp }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000002",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "runOnceForAllItems",
+        "jsCode": "// Split recipients into batches of 50 for Resend limits\nconst data = $input.first().json;\nconst recipients = data.to;\nconst batches = [];\nfor (let i = 0; i < recipients.length; i += 50) {\n  batches.push({\n    json: {\n      batch: recipients.slice(i, i + 50),\n      from: data.from,\n      subject: data.subject,\n      html: data.html,\n      text: data.text,\n      batch_index: Math.floor(i / 50)\n    }\n  });\n}\nreturn batches;"
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000003",
+      "name": "Split Batches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails/batch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.RESEND_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.batch.map(email => ({ from: $json.from, to: email, subject: $json.subject, html: $json.html, text: $json.text }))) }}",
+        "options": {}
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000004",
+      "name": "Send Batch Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "command": "runOnceForAllItems",
+        "jsCode": "// Aggregate batch results\nconst results = $input.all().map(item => item.json);\nconst totalSent = results.reduce((acc, r) => acc + (r.data ? r.data.length : 0), 0);\nreturn [{ json: { total_sent: totalSent, batches: results.length } }];"
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000005",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Extract Data').item.json.run_id, org_id: $('Extract Data').item.json.org_id, workflow: 'publish-newsletter', status: 'success', output: { total_sent: $json.total_sent, batches: $json.batches }, duration_ms: Date.now() - new Date($('Extract Data').item.json.timestamp).getTime() }) }}",
+        "options": {}
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000006",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', run_id: $('Extract Data').item.json.run_id }) }}",
+        "options": {}
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000009",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {},
+      "id": "e5f6a7b8-5001-4e01-b005-000000000007",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [900, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow: 'publish-newsletter', status: 'error', error: $json.message || 'Unknown error' }) }}",
+        "options": {}
+      },
+      "id": "e5f6a7b8-5001-4e01-b005-000000000008",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 540]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract Data", "type": "main", "index": 0 }]] },
+    "Extract Data": { "main": [[{ "node": "Split Batches", "type": "main", "index": 0 }]] },
+    "Split Batches": { "main": [[{ "node": "Send Batch Email", "type": "main", "index": 0 }]] },
+    "Send Batch Email": { "main": [[{ "node": "Aggregate Results", "type": "main", "index": 0 }]] },
+    "Aggregate Results": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Callback Success": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Error Trigger": { "main": [[{ "node": "Callback Error", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "lynaris" }, { "name": "email" }]
+}

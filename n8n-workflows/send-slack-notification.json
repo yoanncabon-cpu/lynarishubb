@@ -1,0 +1,185 @@
+{
+  "name": "Lynaris — Send Slack Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-slack-notification",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "f0e1d2c3-9001-4c01-b009-webhook000001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "channel", "value": "={{ $json.data.channel || $env.SLACK_DEFAULT_CHANNEL }}", "type": "string" },
+            { "id": "2", "name": "message", "value": "={{ $json.data.message }}", "type": "string" },
+            { "id": "3", "name": "blocks", "value": "={{ $json.data.blocks }}", "type": "array" },
+            { "id": "4", "name": "username", "value": "={{ $json.data.username || 'Lynaris Bot' }}", "type": "string" },
+            { "id": "5", "name": "webhook_url", "value": "={{ $json.data.webhook_url }}", "type": "string" },
+            { "id": "6", "name": "org_id", "value": "={{ $json.org_id }}", "type": "string" },
+            { "id": "7", "name": "run_id", "value": "={{ $json.run_id }}", "type": "string" },
+            { "id": "8", "name": "timestamp", "value": "={{ $json.timestamp }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000002",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.webhook_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000003",
+      "name": "Use Webhook or API",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.webhook_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.message, blocks: $json.blocks || undefined, username: $json.username }) }}",
+        "options": {}
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000004",
+      "name": "Send via Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.SLACK_BOT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel, text: $json.message, blocks: $json.blocks || undefined, username: $json.username }) }}",
+        "options": {}
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000005",
+      "name": "Send via API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Extract Data').item.json.run_id, org_id: $('Extract Data').item.json.org_id, workflow: 'send-slack-notification', status: 'success', output: { channel: $('Extract Data').item.json.channel, sent_via: $('Use Webhook or API').item.json.webhook_url ? 'webhook' : 'api' }, duration_ms: Date.now() - new Date($('Extract Data').item.json.timestamp).getTime() }) }}",
+        "options": {}
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000006",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', run_id: $('Extract Data').item.json.run_id }) }}",
+        "options": {}
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000009",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {},
+      "id": "c9d0e1f2-9001-4c01-b009-000000000007",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [680, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow: 'send-slack-notification', status: 'error', error: $json.message || 'Unknown error' }) }}",
+        "options": {}
+      },
+      "id": "c9d0e1f2-9001-4c01-b009-000000000008",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 540]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract Data", "type": "main", "index": 0 }]] },
+    "Extract Data": { "main": [[{ "node": "Use Webhook or API", "type": "main", "index": 0 }]] },
+    "Use Webhook or API": { "main": [[{ "node": "Send via Webhook", "type": "main", "index": 0 }], [{ "node": "Send via API", "type": "main", "index": 0 }]] },
+    "Send via Webhook": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Send via API": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Callback Success": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Error Trigger": { "main": [[{ "node": "Callback Error", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "lynaris" }, { "name": "slack" }]
+}

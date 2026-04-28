@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\Users\\Yoann\\Desktop\\lynaris hub\\lynaris\" && npx tsc *)"
+    ]
+  }
+}

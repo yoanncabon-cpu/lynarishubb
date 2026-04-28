@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(py -3 \"C:/Users/Yoann/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"apple minimal dark SaaS AI dashboard premium\" --design-system -p \"Lynaris\" -f markdown)",
+      "Bash(python \"C:/Users/Yoann/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"apple minimal dark SaaS AI dashboard premium\" --design-system -p \"Lynaris\" -f markdown)",
+      "Bash(python \"C:/Users/Yoann/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"glassmorphism dark minimal premium\" --domain style)",
+      "Bash(python \"C:/Users/Yoann/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"SaaS AI premium dark\" --domain color)",
+      "Bash(python \"C:/Users/Yoann/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"dashboard navigation animation accessibility\" --domain ux)",
+      "Bash(dir \"C:\\\\Users\\\\Yoann\\\\OneDrive\\\\Images\\\\limova\")",
+      "Read(//c/Users/Yoann/OneDrive/Images/limova/**)",
+      "Bash(sort -t/ -k1,1)",
+      "Bash(xargs ls *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(read f *)",
+      "Bash(python3 -c ' import json, sys for line in open\\('\\\\''__TRACKED_VAR__'\\\\'', errors='\\\\''ignore'\\\\''\\): try: obj = json.loads\\(line\\) if obj.get\\('\\\\''type'\\\\''\\) == '\\\\''assistant'\\\\'': for c in obj.get\\('\\\\''message'\\\\'', {}\\).get\\('\\\\''content'\\\\'', []\\): if c.get\\('\\\\''type'\\\\''\\) == '\\\\''tool_use'\\\\'' and c.get\\('\\\\''name'\\\\''\\) == '\\\\''Bash'\\\\'': cmd = c.get\\('\\\\''input'\\\\'', {}\\).get\\('\\\\''command'\\\\'', '\\\\'''\\\\''\\) if cmd: print\\(cmd[:200]\\) except: pass ' done)",
+      "Bash(grep -v '^$')",
+      "Bash(node *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(npx next *)",
+      "Bash(npx eslint *)",
+      "Bash(python3 *)"
+    ]
+  }
+}

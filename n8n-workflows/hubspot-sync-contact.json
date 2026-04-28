@@ -1,0 +1,210 @@
+{
+  "name": "Lynaris — HubSpot Sync Contact",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hubspot-sync-contact",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "f0e1d2c3-c001-4f01-b012-webhook000001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "email", "value": "={{ $json.data.email }}", "type": "string" },
+            { "id": "2", "name": "firstname", "value": "={{ $json.data.firstname }}", "type": "string" },
+            { "id": "3", "name": "lastname", "value": "={{ $json.data.lastname }}", "type": "string" },
+            { "id": "4", "name": "company", "value": "={{ $json.data.company }}", "type": "string" },
+            { "id": "5", "name": "phone", "value": "={{ $json.data.phone }}", "type": "string" },
+            { "id": "6", "name": "properties", "value": "={{ $json.data.properties }}", "type": "object" },
+            { "id": "7", "name": "org_id", "value": "={{ $json.org_id }}", "type": "string" },
+            { "id": "8", "name": "run_id", "value": "={{ $json.run_id }}", "type": "string" },
+            { "id": "9", "name": "timestamp", "value": "={{ $json.timestamp }}", "type": "string" }
+          ]
+        }
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000002",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: $json.email }] }], properties: ['email', 'firstname', 'lastname'], limit: 1 }) }}",
+        "options": {}
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000003",
+      "name": "Search Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000004",
+      "name": "Contact Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/contacts/{{ $('Search Contact').item.json.results[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: Object.assign({ firstname: $('Extract Data').item.json.firstname, lastname: $('Extract Data').item.json.lastname, company: $('Extract Data').item.json.company, phone: $('Extract Data').item.json.phone }, $('Extract Data').item.json.properties || {}) }) }}",
+        "options": {}
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000005",
+      "name": "Update Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: Object.assign({ email: $('Extract Data').item.json.email, firstname: $('Extract Data').item.json.firstname, lastname: $('Extract Data').item.json.lastname, company: $('Extract Data').item.json.company, phone: $('Extract Data').item.json.phone }, $('Extract Data').item.json.properties || {}) }) }}",
+        "options": {}
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000006",
+      "name": "Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Extract Data').item.json.run_id, org_id: $('Extract Data').item.json.org_id, workflow: 'hubspot-sync-contact', status: 'success', output: { contact_id: $json.id, action: $('Contact Exists').item.json.total > 0 ? 'updated' : 'created', email: $('Extract Data').item.json.email }, duration_ms: Date.now() - new Date($('Extract Data').item.json.timestamp).getTime() }) }}",
+        "options": {}
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000007",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', run_id: $('Extract Data').item.json.run_id }) }}",
+        "options": {}
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000010",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {},
+      "id": "f2a3b4c5-c001-4f01-b012-000000000008",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [900, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LYNARIS_CALLBACK_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow: 'hubspot-sync-contact', status: 'error', error: $json.message || 'Unknown error' }) }}",
+        "options": {}
+      },
+      "id": "f2a3b4c5-c001-4f01-b012-000000000009",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 540]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract Data", "type": "main", "index": 0 }]] },
+    "Extract Data": { "main": [[{ "node": "Search Contact", "type": "main", "index": 0 }]] },
+    "Search Contact": { "main": [[{ "node": "Contact Exists", "type": "main", "index": 0 }]] },
+    "Contact Exists": { "main": [[{ "node": "Update Contact", "type": "main", "index": 0 }], [{ "node": "Create Contact", "type": "main", "index": 0 }]] },
+    "Update Contact": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Create Contact": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Callback Success": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Error Trigger": { "main": [[{ "node": "Callback Error", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "lynaris" }, { "name": "crm" }, { "name": "hubspot" }]
+}
