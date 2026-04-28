@@ -10,6 +10,12 @@ import {
   subscriptionCancelled,
   planChanged,
 } from "@/lib/emails/stripe-templates"
+import {
+  getPlanFromStripePriceId,
+  isVoicePackPriceId,
+} from "@/lib/pricing/stripe-resolver"
+import { PLANS, type PlanId } from "@/lib/pricing/plans"
+import { addVoicePackMinutes } from "@/lib/usage/service"
 
 export const runtime = "nodejs"
 
@@ -38,32 +44,16 @@ export async function POST(request: NextRequest) {
   const appUrl =
     process.env["NEXT_PUBLIC_APP_URL"] ?? "https://lynarisai.com"
 
-  // Résout un price ID vers le nom de plan lisible et l'identifiant DB.
-  // Nouvelle nomenclature 3 plans :
-  //   - PRO_MONTHLY/YEARLY → dbPlan="pro", displayName="Pro"
-  //   - Sur-mesure géré hors Stripe (devis manuel) → dbPlan="scale" via /api/billing/activate
-  // Anciens price IDs (STARTER, ESSENTIEL, CABINET) conservés pour rétrocompat
-  // des subscriptions existantes — mappés vers la nouvelle nomenclature.
+  // Résout un Stripe price_id vers PlanId + displayName.
+  // Source de vérité : src/lib/pricing/stripe-resolver.ts
   function resolvePlan(priceId: string | undefined): {
-    dbPlan: "starter" | "pro" | "scale" | undefined
+    planId: PlanId | null
     displayName: string
   } {
-    const map: Record<string, { dbPlan: "starter" | "pro" | "scale"; displayName: string }> = {
-      // Anciens IDs Essentiel (rétrocompat) → affichés comme Pro
-      [process.env["STRIPE_PRICE_STARTER_MONTHLY"] ?? "_"]: { dbPlan: "pro", displayName: "Pro" },
-      [process.env["STRIPE_PRICE_STARTER_YEARLY"] ?? "_"]: { dbPlan: "pro", displayName: "Pro" },
-      [process.env["STRIPE_PRICE_ESSENTIEL_MONTHLY"] ?? "_"]: { dbPlan: "pro", displayName: "Pro" },
-      [process.env["STRIPE_PRICE_ESSENTIEL_YEARLY"] ?? "_"]: { dbPlan: "pro", displayName: "Pro" },
-      // Pro (nouveau pricing 149€/127€)
-      [process.env["STRIPE_PRICE_PRO_MONTHLY"] ?? "_"]: { dbPlan: "pro", displayName: "Pro" },
-      [process.env["STRIPE_PRICE_PRO_YEARLY"] ?? "_"]: { dbPlan: "pro", displayName: "Pro" },
-      [process.env["STRIPE_PRICE_PRO"] ?? "_"]: { dbPlan: "pro", displayName: "Pro" },
-      // Sur-mesure (anciens cabinet/scale)
-      [process.env["STRIPE_PRICE_CABINET_MONTHLY"] ?? "_"]: { dbPlan: "scale", displayName: "Sur-mesure" },
-      [process.env["STRIPE_PRICE_SCALE"] ?? "_"]: { dbPlan: "scale", displayName: "Sur-mesure" },
-    }
-    if (!priceId) return { dbPlan: undefined, displayName: "Pro" }
-    return map[priceId] ?? { dbPlan: undefined, displayName: "Pro" }
+    if (!priceId) return { planId: null, displayName: "Pro" }
+    const planId = getPlanFromStripePriceId(priceId)
+    if (planId === null) return { planId: null, displayName: "Pro" }
+    return { planId, displayName: PLANS[planId].name }
   }
 
   function fmtDate(ts: number): string {
@@ -82,6 +72,52 @@ export async function POST(request: NextRequest) {
       const customerEmail = session.customer_email ?? session.customer_details?.email
 
       console.info("[Stripe] Checkout completed", { orgId, sessionId: session.id, action })
+
+      // ── Voice pack Marine purchase (option Starter) ──────────────────
+      if (action === "voice_pack_purchase" && orgId) {
+        const minutes = parseInt(session.metadata?.["minutes"] ?? "0", 10)
+        if (minutes > 0) {
+          try {
+            const { db } = await import("@/lib/db")
+            const { organizations } = await import("@/lib/db/schema")
+            const { eq } = await import("drizzle-orm")
+
+            const org = await db.query.organizations.findFirst({
+              where: eq(organizations.id, orgId),
+              columns: { settings: true },
+            })
+            const settings = (org?.settings ?? {}) as Record<string, unknown>
+            const processed = Array.isArray(settings["processed_voice_packs"])
+              ? (settings["processed_voice_packs"] as string[])
+              : []
+
+            if (processed.includes(session.id)) {
+              console.info("[Stripe] Voice pack déjà traité — skip", { orgId, sessionId: session.id })
+              break
+            }
+
+            const result = await addVoicePackMinutes(orgId, minutes)
+
+            await db.update(organizations)
+              .set({
+                settings: {
+                  ...settings,
+                  processed_voice_packs: [...processed, session.id],
+                },
+              })
+              .where(eq(organizations.id, orgId))
+
+            console.info("[Stripe] Voice pack credited", {
+              orgId,
+              minutes,
+              newBalance: result.newBalance,
+            })
+          } catch (err) {
+            console.error("[Stripe] Failed to credit voice pack", err)
+          }
+        }
+        break
+      }
 
       // ── Credit recharge (phone or API) ──────────────────────────────
       // Filet de sécurité : si l'utilisateur ferme l'onglet avant le retour
@@ -193,26 +229,32 @@ export async function POST(request: NextRequest) {
 
       // ── New subscription — activate plan in DB ───────────────────────
       let activatedPlanName = "Pro"
-      if (orgId && action !== "credit_recharge") {
+      if (orgId && action !== "credit_recharge" && action !== "voice_pack_purchase") {
         try {
           const { db } = await import("@/lib/db")
           const { organizations } = await import("@/lib/db/schema")
           const { eq } = await import("drizzle-orm")
 
           const priceId = session.metadata?.["price_id"]
-          const { dbPlan, displayName } = resolvePlan(priceId)
+          const { planId, displayName } = resolvePlan(priceId)
           activatedPlanName = displayName
 
-          if (dbPlan) {
+          if (planId !== null) {
             const customerId = typeof session.customer === "string" ? session.customer : undefined
+            // Détecter cycle de facturation depuis le mode/recurring du price
+            const billingMode = session.metadata?.["billing"] === "annual" ? "annual" : "monthly"
             await db
               .update(organizations)
               .set({
-                plan: dbPlan,
+                planId,
+                planBillingCycle: billingMode,
+                planActivatedAt: new Date(),
                 ...(customerId ? { stripeCustomerId: customerId } : {}),
               })
               .where(eq(organizations.id, orgId))
-            console.info("[Stripe] Org plan activated", { orgId, plan: dbPlan })
+            console.info("[Stripe] Org plan activated", { orgId, planId, billingMode })
+          } else {
+            console.warn("[Stripe] Unknown price_id — plan non activé", { orgId, priceId })
           }
         } catch (err) {
           console.error("[Stripe] Failed to activate org plan", err)
@@ -287,7 +329,7 @@ export async function POST(request: NextRequest) {
         priceId,
       })
 
-      const { dbPlan: newDbPlan, displayName: newDisplayName } = resolvePlan(priceId)
+      const { planId: newPlanId, displayName: newDisplayName } = resolvePlan(priceId)
       const { displayName: oldDisplayName } = resolvePlan(prevPriceId)
 
       try {
@@ -295,12 +337,12 @@ export async function POST(request: NextRequest) {
         const { organizations } = await import("@/lib/db/schema")
         const { eq } = await import("drizzle-orm")
 
-        if (customerId && newDbPlan) {
+        if (customerId && newPlanId !== null) {
           await db
             .update(organizations)
-            .set({ plan: newDbPlan })
+            .set({ planId: newPlanId, planActivatedAt: new Date() })
             .where(eq(organizations.stripeCustomerId, customerId))
-          console.info("[Stripe] Org plan updated", { customerId, plan: newDbPlan, status })
+          console.info("[Stripe] Org plan updated", { customerId, planId: newPlanId, status })
         }
       } catch (err) {
         console.error("[Stripe] Failed to update org on subscription update", err)
@@ -358,9 +400,9 @@ export async function POST(request: NextRequest) {
         if (customerId) {
           await db
             .update(organizations)
-            .set({ plan: "trial" })
+            .set({ planId: "discovery", planActivatedAt: new Date() })
             .where(eq(organizations.stripeCustomerId, customerId))
-          console.info("[Stripe] Org downgraded to trial", { customerId })
+          console.info("[Stripe] Org downgraded to discovery", { customerId })
         }
       } catch (err) {
         console.error("[Stripe] Failed to downgrade org on subscription deleted", err)
