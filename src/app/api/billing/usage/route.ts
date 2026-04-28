@@ -1,36 +1,59 @@
-﻿import { type NextRequest, NextResponse } from "next/server"
-import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
-import { db } from "@/lib/db"
-import { usageEvents } from "@/lib/db/schema"
-import { eq, gte, and, sum } from "drizzle-orm"
+// GET /api/billing/usage — usage courant de l'org (compteurs visibles client)
+//
+// Utilisé par le dashboard /billing pour afficher les barres de progression
+// (actions / voix / RAG / membres équipe).
+//
+// ⚠️ N'expose JAMAIS le coût réel ni les seuils protection (admin only).
+
+import { NextResponse } from "next/server"
+import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
+import { getCurrentUsage } from "@/lib/usage/service"
+import { getOrgPlanId } from "@/lib/agents/instrumentation"
+import { PLANS } from "@/lib/pricing/plans"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const orgId = await getOrProvisionOrgId()
-  const startOfMonth = new Date()
-  startOfMonth.setDate(1)
-  startOfMonth.setHours(0, 0, 0, 0)
+  if (orgId === ANON_ORG_ID) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+  }
 
-  const rows = await db
-    .select({
-      metric: usageEvents.metric,
-      total: sum(usageEvents.quantity),
-      cost: sum(usageEvents.costUsd),
-    })
-    .from(usageEvents)
-    .where(
-      and(
-        eq(usageEvents.orgId, orgId),
-        gte(usageEvents.createdAt, startOfMonth)
-      )
-    )
-    .groupBy(usageEvents.metric)
+  const [usage, planId] = await Promise.all([
+    getCurrentUsage(orgId),
+    getOrgPlanId(orgId),
+  ])
+  const plan = PLANS[planId]
+
+  // Limites courantes du plan (sentinels -1 / 'all' déjà résolus)
+  const limits = {
+    actions:
+      plan.features.monthlyActions === -1 ? null : plan.features.monthlyActions,
+    voiceMinutes:
+      plan.features.marineVoiceMinutes === -1
+        ? null
+        : plan.features.marineVoiceMinutes,
+    ragDocs:
+      plan.features.ragMaxDocs === -1 ? null : plan.features.ragMaxDocs,
+    teamMembers:
+      plan.features.teamMembers === -1 ? null : plan.features.teamMembers,
+  }
 
   return NextResponse.json({
-    org_id: orgId,
-    period_start: startOfMonth.toISOString(),
-    usage: rows,
+    orgId,
+    planId,
+    period: {
+      start: usage.periodStart.toISOString(),
+      end: usage.periodEnd.toISOString(),
+    },
+    usage: {
+      actions: usage.actions,
+      voiceMinutes: usage.voiceMinutes,
+      ragDocs: usage.ragDocs,
+      teamMembers: usage.teamMembers,
+      voicePackMinutesRemaining: usage.voicePackMinutesRemaining,
+    },
+    limits,
   })
 }

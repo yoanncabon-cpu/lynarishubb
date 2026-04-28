@@ -3,6 +3,10 @@ import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { runAgent } from "@/lib/agents/executor"
 import { getAgent } from "@/lib/agents/registry"
+import {
+  buildAccessDeniedPayload,
+  checkPreTurnAccess,
+} from "@/lib/agents/instrumentation"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -37,6 +41,18 @@ export async function POST(
   // En délégation interne (Charles → Mae etc.), l'orgId est passé en header pour bypasser l'auth cookie
   const delegationOrgId = request.headers.get("x-internal-org-id")
   const orgId = delegationOrgId ?? await getOrProvisionOrgId()
+
+  // Gating plan : vérifie que l'agent est accessible. Skip pour la délégation
+  // interne (Charles peut déléguer à n'importe quel agent même sur Starter).
+  if (delegationOrgId === null) {
+    const access = await checkPreTurnAccess(orgId, slug, [])
+    if (!access.allowed) {
+      return NextResponse.json(buildAccessDeniedPayload(access.access), {
+        status: 403,
+      })
+    }
+  }
+
   const messages: MessageParam[] = [{ role: "user", content: body.message }]
 
   try {

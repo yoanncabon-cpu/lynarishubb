@@ -7,6 +7,10 @@ import { db } from "@/lib/db"
 import { agentInstances, actionLogs } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit"
+import {
+  buildAccessDeniedPayload,
+  checkPreTurnAccess,
+} from "@/lib/agents/instrumentation"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -46,6 +50,15 @@ export async function POST(
   }
 
   const orgId = await getOrProvisionOrgId()
+
+  // Gating plan : vérifie que l'agent est accessible sur le plan courant
+  // (ex: Marine refusée sur Starter, 4e agent refusé sur Starter, etc.)
+  const access = await checkPreTurnAccess(orgId, slug, [])
+  if (!access.allowed) {
+    return NextResponse.json(buildAccessDeniedPayload(access.access), {
+      status: 403,
+    })
+  }
 
   // Load saved agent config from DB
   let dbConfig: Record<string, unknown> = {}
