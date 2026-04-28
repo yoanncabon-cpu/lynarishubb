@@ -230,7 +230,13 @@ export function VoiceLynaris() {
     }, 400)
   }, [updatePhase])
 
-  // Initialise la reconnaissance vocale + branchement au toggle VoiceLynarisCard
+  // Refs pour callbacks (évite de retrigger le useEffect d'init)
+  const updatePhaseRef = useRef(updatePhase)
+  const scheduleSendRef = useRef(scheduleSend)
+  useEffect(() => { updatePhaseRef.current = updatePhase }, [updatePhase])
+  useEffect(() => { scheduleSendRef.current = scheduleSend }, [scheduleSend])
+
+  // Initialise la reconnaissance vocale UNE SEULE FOIS au mount
   useEffect(() => {
     const SpeechAPI = window.SpeechRecognition ?? window.webkitSpeechRecognition
     if (!SpeechAPI) { setSupported(false); return }
@@ -239,6 +245,23 @@ export function VoiceLynaris() {
     rec.continuous = true
     rec.interimResults = true
     rec.lang = "fr-FR"
+
+    let isRunning = false
+    const safeStart = () => {
+      if (isRunning) return
+      try {
+        rec.start()
+        isRunning = true
+      } catch (e) {
+        const name = (e as Error).name
+        // InvalidStateError = déjà démarré → considéré ok
+        if (name === "InvalidStateError") {
+          isRunning = true
+        } else {
+          console.warn("[VoiceLynaris] start failed:", name, (e as Error).message)
+        }
+      }
+    }
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
       let text = ""
@@ -256,63 +279,74 @@ export function VoiceLynaris() {
           setMsgs([])
           historyRef.current = []
           setIsOpen(true)
-          updatePhase("listening")
-          if (cmd) scheduleSend()
+          updatePhaseRef.current("listening")
+          if (cmd) scheduleSendRef.current()
         }
       } else if (p === "listening") {
-        // Conversation ouverte — chaque phrase est une nouvelle demande
         const cmd = stripWakeWord(text)
         commandRef.current = cmd
         setInterim(cmd)
-        scheduleSend()
+        scheduleSendRef.current()
       }
-      // Pendant thinking/responding on n'écoute pas de nouvelle commande
     }
 
     rec.onerror = (e) => {
       const err = (e as Event & { error?: string }).error
+      isRunning = false
       if (err === "aborted" || err === "no-speech") return
-      // Re-démarre seulement si toujours autorisé (toggle ON)
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        console.warn("[VoiceLynaris] Permission micro refusée")
+        setMicOn(false)
+        return
+      }
       if (localStorage.getItem("lynaris-voice-enabled") !== "0") {
-        setTimeout(() => { try { rec.start() } catch { /* */ } }, 1000)
+        setTimeout(safeStart, 600)
       }
     }
 
     rec.onend = () => {
+      isRunning = false
       if (intentionalAbort.current) { intentionalAbort.current = false; return }
       const p = phaseRef.current
-      // Re-démarre seulement si toggle ON et phase compatible
       if ((p === "idle" || p === "listening") && localStorage.getItem("lynaris-voice-enabled") !== "0") {
-        setTimeout(() => { try { rec.start() } catch { /* */ } }, 300)
+        setTimeout(safeStart, 200)
       }
     }
 
     recognitionRef.current = rec
 
-    // Démarrage initial : ON par défaut, sauf si l'utilisateur a désactivé via le toggle
+    // Démarrage initial : ON par défaut sauf désactivation explicite
     const enabled = localStorage.getItem("lynaris-voice-enabled") !== "0"
     if (enabled) {
-      try { rec.start(); setMicOn(true) }
-      catch { setSupported(false) }
+      safeStart()
+      setMicOn(true)
     } else {
       setMicOn(false)
     }
+
+    // Watchdog — relance si Chromium tue le rec silencieusement (toutes les 8s)
+    const watchdog = setInterval(() => {
+      const stillEnabled = localStorage.getItem("lynaris-voice-enabled") !== "0"
+      const p = phaseRef.current
+      if (stillEnabled && !isRunning && (p === "idle" || p === "listening")) {
+        safeStart()
+        setMicOn(true)
+      }
+    }, 8000)
 
     // Écoute le toggle depuis VoiceLynarisCard
     function onToggle(e: Event) {
       const detail = (e as CustomEvent<{ enabled: boolean }>).detail
       if (detail.enabled) {
-        try {
-          rec.start()
-          setMicOn(true)
-        } catch { /* déjà actif */ }
+        safeStart()
+        setMicOn(true)
       } else {
         intentionalAbort.current = true
         try { rec.abort() } catch { /* */ }
+        isRunning = false
         setMicOn(false)
-        // Si une conversation est ouverte, on la ferme
         if (phaseRef.current !== "idle") {
-          updatePhase("idle")
+          updatePhaseRef.current("idle")
           setIsOpen(false)
           setMsgs([])
           setInterim("")
@@ -323,12 +357,28 @@ export function VoiceLynaris() {
     }
     window.addEventListener("lynaris:voice-toggle", onToggle)
 
+    // Sync micOn à l'event de visibilité (au retour sur l'onglet, vérifie l'état)
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        const stillEnabled = localStorage.getItem("lynaris-voice-enabled") !== "0"
+        if (stillEnabled && !isRunning) {
+          safeStart()
+          setMicOn(true)
+        }
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+
     return () => {
       window.removeEventListener("lynaris:voice-toggle", onToggle)
-      rec.abort()
+      document.removeEventListener("visibilitychange", onVisibility)
+      clearInterval(watchdog)
+      try { rec.abort() } catch { /* */ }
+      isRunning = false
       setMicOn(false)
     }
-  }, [updatePhase, scheduleSend])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!supported) return null
   // Masqué pour les plans sans minutes voix (Essentiel, Trial)

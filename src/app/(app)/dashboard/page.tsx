@@ -117,13 +117,29 @@ export default function DashboardPage() {
     return () => clearInterval(id)
   }, [])
 
+  // Stats — sync live : fetch initial + polling 60s + refetch sur reprise d'onglet
   useEffect(() => {
-    fetch("/api/analytics")
-      .then((r) => r.json())
-      .then((d: { totals?: { conversations: number; actions: number } }) => {
-        if (d.totals) setStats({ conversations: d.totals.conversations, actions: d.totals.actions })
-      })
-      .catch(() => {})
+    let cancelled = false
+    function load() {
+      fetch("/api/analytics")
+        .then((r) => r.json())
+        .then((d: { totals?: { conversations: number; actions: number } }) => {
+          if (cancelled) return
+          if (d.totals) setStats({ conversations: d.totals.conversations, actions: d.totals.actions })
+        })
+        .catch(() => {})
+    }
+    load()
+    const id = setInterval(load, 60_000)
+    function onVisibility() {
+      if (document.visibilityState === "visible") load()
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
   }, [])
 
   useEffect(() => {

@@ -72,15 +72,31 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
     })()
   }, [])
 
+  // Notifications — sync live : fetch initial + polling 30s + refetch sur reprise d'onglet
   useEffect(() => {
-    fetch("/api/notifications")
-      .then((r) => (r.ok ? (r.json() as Promise<{ notifications: NotificationItem[] }>) : null))
-      .then((data) => {
-        if (data?.notifications && data.notifications.length > 0) {
-          setNotifications(data.notifications)
-        }
-      })
-      .catch(() => {})
+    let cancelled = false
+    function load() {
+      fetch("/api/notifications")
+        .then((r) => (r.ok ? (r.json() as Promise<{ notifications: NotificationItem[] }>) : null))
+        .then((data) => {
+          if (cancelled) return
+          if (data?.notifications) {
+            setNotifications(data.notifications)
+          }
+        })
+        .catch(() => {})
+    }
+    load()
+    const id = setInterval(load, 30_000)
+    function onVisibility() {
+      if (document.visibilityState === "visible") load()
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
   }, [])
 
   useEffect(() => {
