@@ -20,7 +20,7 @@ import { GlassCard, GlassPanel, GlassChip, KpiTile } from "@/components/app/glas
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 import {
-  PLANS as PRICING_PLANS,
+  PLAN_LIST as PRICING_PLANS,
   type Plan as PricingPlan,
   type PlanId as PricingPlanId,
   type PlanFeatures,
@@ -39,33 +39,32 @@ const PLAN_DISPLAY_COLORS: Readonly<Record<PricingPlanId, string>> = {
 }
 
 function fmtAgents(f: PlanFeatures): string {
-  switch (f.agents) {
-    case "all":                  return "Tous les agents (essai)"
-    case "limited":              return typeof f.agentsCount === "number" ? `${f.agentsCount} agents (hors Marine)` : "Agents limités"
-    case "all_no_custom":        return "Tous les 9 agents Lynaris"
-    case "all_plus_custom":      return "Tous + 1 custom"
-    case "all_plus_dedicated":   return "Agent dédié + tous"
+  switch (f.agentsAccess) {
+    case "trial_all":           return "Tous les agents (essai)"
+    case "limited_3":           return typeof f.maxAgents === "number" ? `${f.maxAgents} agents (hors Marine)` : "Agents limités"
+    case "all":                 return "Tous les 9 agents Lynaris"
+    case "all_plus_custom":     return "Tous + 1 custom"
+    case "all_plus_dedicated":  return "Agent dédié + tous"
   }
 }
 
-function fmtQuota(q: number | "unlimited", suffix: string): string {
-  if (q === "unlimited") return "Illimité"
-  return `${q.toLocaleString("fr-FR")}${suffix}`
+function fmtActions(monthlyActions: number): string {
+  if (monthlyActions === -1) return "Illimité"
+  return `${monthlyActions.toLocaleString("fr-FR")}/mois`
 }
 
 function fmtVoice(f: PlanFeatures): string {
-  if (f.voiceMinutes === "unlimited") return "Illimité"
-  if (f.voiceMinutes === 0) return "En option"
-  return `${f.voiceMinutes.toLocaleString("fr-FR")} min`
+  if (f.marineVoiceMinutes === -1) return "Illimité"
+  if (f.marineVoiceMinutes === 0) return "En option"
+  return `${f.marineVoiceMinutes.toLocaleString("fr-FR")} min`
 }
 
 function fmtSupport(f: PlanFeatures): string {
   switch (f.supportSla) {
-    case "j2":            return "Email"
-    case "j1":            return "Email J+1"
-    case "j1_priority":   return "Email prioritaire J+1"
-    case "j0_dedicated":  return "Slack/WhatsApp J+0"
-    case "manager":       return "Manager dédié 7j/7"
+    case "email_j1":           return "Email J+1"
+    case "email_j1_priority":  return "Email prioritaire J+1"
+    case "slack_j0":           return "Slack/WhatsApp J+0"
+    case "manager_7d":         return "Manager dédié 7j/7"
   }
 }
 
@@ -93,7 +92,7 @@ function toDisplay(plan: PricingPlan): PlanDisplay {
     annual: plan.priceAnnualMonthly,
     color: PLAN_DISPLAY_COLORS[plan.id],
     agents: fmtAgents(plan.features),
-    actions: fmtQuota(plan.features.actions, "/mois"),
+    actions: fmtActions(plan.features.monthlyActions),
     voice: fmtVoice(plan.features),
     support: fmtSupport(plan.features),
     setupFee: plan.setupFee,

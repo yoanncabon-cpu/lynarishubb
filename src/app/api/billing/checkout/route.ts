@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getStripeClient } from "@/lib/integrations/stripe"
 import { z } from "zod"
-import { PLANS, type PlanId } from "@/lib/pricing/plans"
+import { PLANS, planSchema, type PlanId } from "@/lib/pricing/plans"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 
@@ -50,10 +50,11 @@ export async function POST(request: NextRequest) {
   let priceId: string | null = null
 
   if (planId) {
-    const plan = PLANS.find((p) => p.id === (planId as PlanId))
-    if (!plan) {
+    const planParsed = planSchema.safeParse(planId)
+    if (!planParsed.success) {
       return NextResponse.json({ error: "Plan introuvable" }, { status: 400 })
     }
+    const plan = PLANS[planParsed.data]
     priceId = isAnnual ? plan.stripePriceIdAnnual : plan.stripePriceIdMonthly
     if (!priceId) {
       return NextResponse.json(

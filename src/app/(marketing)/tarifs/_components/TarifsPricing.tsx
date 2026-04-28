@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
+import { PLAN_LIST as PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
 import { RoiCalculatorSection } from "@/components/marketing/RoiCalculatorSection"
 
 function CheckIcon() {
@@ -159,9 +159,6 @@ export function TarifsPricing() {
                         </span>
                       ) : (
                         <>
-                          {plan.pricePrefix && (
-                            <p className="text-xs text-[#71717A] mb-1">{plan.pricePrefix}</p>
-                          )}
                           <span style={{ fontSize: 48, fontWeight: 700, letterSpacing: "-0.04em", color: "#F5F5F7" }}>
                             {monthlyPrice}
                           </span>

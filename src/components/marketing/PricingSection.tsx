@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import { PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
+import { PLAN_LIST as PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
 
 gsap.registerPlugin(ScrollTrigger)
 
