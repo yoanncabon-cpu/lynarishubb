@@ -26,11 +26,18 @@ const vector = (name: string, config: { dimensions: number }) =>
   })(name)
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
+// Note : `plan` legacy préservé pour rétrocompat des anciennes orgs.
+// Le nouveau pricing 5 paliers utilise `planId` (text + contrainte TS via PLAN_IDS).
+// Voir src/lib/pricing/plans.ts pour la source de vérité UI.
 export const planEnum = pgEnum("plan", [
   "trial",
   "starter",
   "pro",
   "scale",
+])
+export const planBillingCycleEnum = pgEnum("plan_billing_cycle", [
+  "monthly",
+  "annual",
 ])
 export const roleEnum = pgEnum("role", ["owner", "admin", "member"])
 export const integrationStatusEnum = pgEnum("integration_status", [
@@ -79,7 +86,16 @@ export const organizations = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
+    // ── Plan legacy (rétrocompat — sera retiré après migration code) ──
     plan: planEnum("plan").notNull().default("trial"),
+    // ── Nouveau pricing 5 paliers (source de vérité courante) ──────────
+    // Type: discovery | starter | pro | business | custom (cf. PLAN_IDS)
+    planId: text("plan_id").notNull().default("discovery"),
+    planBillingCycle: planBillingCycleEnum("plan_billing_cycle")
+      .notNull()
+      .default("monthly"),
+    planActivatedAt: timestamp("plan_activated_at", { withTimezone: true }),
+    // ── Essai / Stripe ─────────────────────────────────────────────────
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     stripeCustomerId: text("stripe_customer_id").unique(),
     stripeSubscriptionId: text("stripe_subscription_id"),
@@ -656,3 +672,186 @@ export const documentsRelations = relations(documents, ({ one }) => ({
     references: [organizations.id],
   }),
 }))
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Usage tracking (côté client : compteurs visibles dashboard /billing)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Compteurs courants par org (1 ligne par org).
+ * Reset chaque mois par le cron `monthly-reset` (étape 10).
+ *
+ * RLS : user "own org" — l'utilisateur peut lire uniquement les compteurs
+ * de son organisation.
+ */
+export const orgUsageCounters = pgTable("org_usage_counters", {
+  orgId: uuid("org_id")
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+
+  actionsUsed: integer("actions_used").notNull().default(0),
+  voiceMinutesUsed: integer("voice_minutes_used").notNull().default(0),
+  ragDocsCount: integer("rag_docs_count").notNull().default(0),
+  teamMembersCount: integer("team_members_count").notNull().default(1),
+
+  // Solde Marine option (Starter) — minutes restantes des packs achetés
+  voicePackMinutesRemaining: integer("voice_pack_minutes_remaining")
+    .notNull()
+    .default(0),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+/**
+ * Ledger immuable : 1 ligne par action consommée par un agent.
+ * Sert pour les stats client + audit interne.
+ *
+ * RLS : user "own org" (lecture seule, écriture API serveur uniquement).
+ */
+export const usageLedger = pgTable(
+  "usage_ledger",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    agentSlug: text("agent_slug"),
+    actionType: text("action_type").notNull(),
+    count: integer("count").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("usage_ledger_org_id_idx").on(t.orgId),
+    index("usage_ledger_org_created_idx").on(t.orgId, t.createdAt),
+  ]
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cost protection (interne — RLS admin only, jamais exposé client)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Ledger immuable du coût RÉEL pour Lynaris (Anthropic, Replicate, Twilio…).
+ *
+ * ⚠️ INTERNE — RLS `is_lynaris_admin()` only. JAMAIS exposé via API publique.
+ * Sert au dashboard admin /protection (étape 13).
+ */
+export const usageCosts = pgTable(
+  "usage_costs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+
+    agentSlug: text("agent_slug"),
+    actionType: text("action_type").notNull(),
+    /** Coût réel en euros HT, précision 4 décimales pour micro-coûts API. */
+    costEuros: numeric("cost_euros", { precision: 10, scale: 4 }).notNull(),
+    provider: text("provider").notNull(), // "anthropic" | "replicate" | "twilio" | "elevenlabs" | "deepgram"
+
+    providerRef: text("provider_ref"), // request_id / call_sid / etc.
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    durationSeconds: integer("duration_seconds"),
+    modelUsed: text("model_used"),
+    economyMode: boolean("economy_mode").notNull().default(false),
+
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("usage_costs_org_id_idx").on(t.orgId),
+    index("usage_costs_org_created_idx").on(t.orgId, t.createdAt),
+    index("usage_costs_agent_idx").on(t.orgId, t.agentSlug),
+    index("usage_costs_provider_idx").on(t.provider, t.createdAt),
+  ]
+)
+
+/**
+ * État courant de protection de marge (1 ligne par org).
+ * Lock atomique `SELECT FOR UPDATE` pour éviter les races sur les flags.
+ *
+ * ⚠️ INTERNE — RLS admin only.
+ * Utilisé par le service `cost-protection/service.ts` (étape 5).
+ */
+export const orgProtectionState = pgTable("org_protection_state", {
+  orgId: uuid("org_id")
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+
+  /** Cumul du coût réel sur la période courante. */
+  currentCostEuros: numeric("current_cost_euros", { precision: 10, scale: 4 })
+    .notNull()
+    .default("0"),
+  /** Budget max pour la période (calculé selon plan via PLAN_COST_BUDGET_EUROS). */
+  budgetEuros: numeric("budget_euros", { precision: 10, scale: 2 }).notNull(),
+
+  // Flags d'idempotence des notifications
+  notifiedAdmin70: boolean("notified_admin_70").notNull().default(false),
+  notifiedClient90: boolean("notified_client_90").notNull().default(false),
+  alertedAdmin100: boolean("alerted_admin_100").notNull().default(false),
+  alertedAdmin130: boolean("alerted_admin_130").notNull().default(false),
+
+  // Bascules automatiques (utilisées en mode ACTIF — désactivées en ALERTE)
+  economyModeActive: boolean("economy_mode_active").notNull().default(false),
+  hardCapActive: boolean("hard_cap_active").notNull().default(false),
+  economyModeActivatedAt: timestamp("economy_mode_activated_at", {
+    withTimezone: true,
+  }),
+  hardCapActivatedAt: timestamp("hard_cap_activated_at", {
+    withTimezone: true,
+  }),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+// ─── Relations usage / cost-protection ───────────────────────────────────────
+
+export const orgUsageCountersRelations = relations(
+  orgUsageCounters,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [orgUsageCounters.orgId],
+      references: [organizations.id],
+    }),
+  })
+)
+
+export const usageLedgerRelations = relations(usageLedger, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [usageLedger.orgId],
+    references: [organizations.id],
+  }),
+}))
+
+export const usageCostsRelations = relations(usageCosts, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [usageCosts.orgId],
+    references: [organizations.id],
+  }),
+}))
+
+export const orgProtectionStateRelations = relations(
+  orgProtectionState,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [orgProtectionState.orgId],
+      references: [organizations.id],
+    }),
+  })
+)
