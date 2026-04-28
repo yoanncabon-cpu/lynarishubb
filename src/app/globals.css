@@ -803,3 +803,22 @@ h1, h2, h3, h4 {
   border-color: rgba(255,255,255,0.13) !important;
   background: rgba(255,255,255,0.065) !important;
 }
+
+/* ─── Pricing : animations cards ────────────────────────────── */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-gradient {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-"] {
+    animation: none !important;
+  }
+}

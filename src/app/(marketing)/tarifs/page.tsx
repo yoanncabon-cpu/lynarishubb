@@ -1,206 +1,101 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Check, Minus, ArrowRight, Shield } from "lucide-react"
 import { TarifsPricing } from "./_components/TarifsPricing"
+import { ReassuranceStrip } from "./_components/ReassuranceStrip"
+import { PricingFAQ } from "./_components/PricingFAQ"
+import { FinalCTA } from "./_components/FinalCTA"
 
 export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: "Tarifs — Lynaris",
-  description: "Plans Lynaris : Découverte, Pro, Sur-mesure. Sans engagement, annulation en 1 clic.",
+  description:
+    "5 plans Lynaris : Découverte (essai 14j), Starter 149€, Pro 449€, Business 1190€, Sur-mesure. Tous les agents IA inclus, sans engagement.",
   openGraph: {
     title: "Tarifs — Lynaris",
-    description: "Plans Lynaris : Découverte, Pro, Sur-mesure. Sans engagement, annulation en 1 clic.",
+    description:
+      "5 plans qui s'adaptent à ton entreprise. Tous les agents IA inclus, essai gratuit 14 jours sans CB.",
     type: "website",
     locale: "fr_FR",
     siteName: "Lynaris",
   },
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Hero (Server Component) ──────────────────────────────────────────────────
 
-interface FeatureRow {
-  feature: string
-  decouverte: string | boolean
-  pro: string | boolean
-  custom: string | boolean
+function PricingHero() {
+  return (
+    <section className="relative overflow-hidden px-4 pt-32 pb-12 md:pt-40 md:pb-16">
+      {/* Background décoratif : conic gradient flouté */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(ellipse 1000px 500px at 50% 0%, rgba(124,58,237,0.18) 0%, transparent 70%)",
+        }}
+      />
+      {/* Grid pattern subtil */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        aria-hidden
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
+
+      <div className="relative mx-auto max-w-3xl text-center">
+        {/* Eyebrow */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-500/20 bg-violet-500/5 mb-6">
+          <span
+            className="size-1.5 rounded-full"
+            style={{ background: "#7C3AED", boxShadow: "0 0 8px #7C3AED" }}
+            aria-hidden
+          />
+          <span className="text-xs uppercase tracking-widest font-semibold text-violet-300">
+            Des tarifs qui s'adaptent
+          </span>
+        </div>
+
+        {/* Titre H1 avec gradient */}
+        <h1
+          className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6"
+          style={{
+            letterSpacing: "-0.04em",
+            background:
+              "linear-gradient(135deg, #FFFFFF 0%, #C4B5FD 50%, #67E8F9 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            lineHeight: 1.1,
+          }}
+        >
+          Choisis le plan qui transforme ton entreprise.
+        </h1>
+
+        {/* Sous-titre */}
+        <p
+          className="text-lg md:text-xl text-[#A1A1AA] max-w-2xl mx-auto leading-relaxed"
+        >
+          Tous tes agents IA inclus. Essai gratuit de 14 jours, sans carte
+          bancaire, sans engagement.
+        </p>
+      </div>
+    </section>
+  )
 }
 
-// ── Static data ────────────────────────────────────────────────────────────
-// 3 plans : Découverte (essai 14j) / Pro / Sur-mesure (custom)
-
-const comparisonTable: FeatureRow[] = [
-  { feature: "Agents actifs",               decouverte: "Tous",         pro: "Tous",        custom: "Agent dédié" },
-  { feature: "Actions / mois",              decouverte: "50 / 14 j",     pro: "1 500",       custom: "Illimité" },
-  { feature: "Minutes voix / mois",         decouverte: false,           pro: "300 min",     custom: "Illimité" },
-  { feature: "Numéro Twilio dédié",         decouverte: false,           pro: false,         custom: true },
-  { feature: "Voix ElevenLabs sur-mesure",  decouverte: false,           pro: false,         custom: true },
-  { feature: "Onboarding personnalisé",     decouverte: false,           pro: false,         custom: true },
-  { feature: "Intégrations",                decouverte: "Basique",       pro: "Google + Stripe", custom: "Sur-mesure" },
-  { feature: "Support email",               decouverte: true,            pro: "J+1",         custom: "Dédié 7j/7" },
-  { feature: "Sans CB requise",             decouverte: true,            pro: false,         custom: false },
-  { feature: "Sans engagement",             decouverte: true,            pro: true,          custom: true },
-]
-
-const faqs = [
-  {
-    question: "Comment fonctionne la facturation ?",
-    answer:
-      "La facturation est mensuelle ou annuelle (économisez jusqu'à 15 %). Vous pouvez annuler à tout moment depuis votre espace client. Aucun engagement minimum.",
-  },
-  {
-    question: "Puis-je changer de plan à tout moment ?",
-    answer:
-      "Oui, à tout moment et sans frais. Un passage à un plan supérieur est immédiat. Un downgrade prend effet à la fin de la période en cours. Le prorata est calculé automatiquement via Stripe.",
-  },
-  {
-    question: "La facturation annuelle, comment ça marche ?",
-    answer:
-      "En choisissant l'annuel, vous économisez ~15 % par rapport au mensuel. La somme est prélevée en une fois pour 12 mois. Vos factures sont disponibles directement depuis le dashboard.",
-  },
-  {
-    question: "Les agents en bêta sont-ils inclus dans mon plan ?",
-    answer:
-      "Oui. Les agents en bêta (Charles, Lou, Elio, Mae) sont accessibles gratuitement pendant leur phase de développement pour tous les plans Pro et supérieurs.",
-  },
-]
-
-// ── Sub-components ─────────────────────────────────────────────────────────
-
-function CellValue({ value }: { value: string | boolean }) {
-  if (value === true) {
-    return <Check className="h-4 w-4 text-[#10B981] mx-auto" aria-label="Inclus" />
-  }
-  if (value === false) {
-    return <Minus className="h-4 w-4 text-[#52525B] mx-auto" aria-label="Non inclus" />
-  }
-  return <span className="text-sm text-[#A1A1AA]">{value}</span>
-}
-
-// ── Page ───────────────────────────────────────────────────────────────────
+// ── Page assemblage ──────────────────────────────────────────────────────────
 
 export default function TarifsPage() {
   return (
-    <div className="bg-[var(--ly-bg)]">
-      {/* ── Hero ── */}
-      <section className="pt-32 pb-4 text-center px-4">
-        <div
-          className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-          style={{
-            top: 80,
-            width: 600,
-            height: 300,
-            background: "radial-gradient(ellipse at center, rgba(124,58,237,0.1) 0%, transparent 70%)",
-          }}
-          aria-hidden
-        />
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#71717A] mb-4">
-          Tarifs
-        </p>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F5F7] mb-4">
-          Un plan pour chaque étape
-        </h1>
-        <p className="text-lg text-[#A1A1AA] max-w-xl mx-auto mb-4">
-          Sans engagement. Annulation en 1 clic. Résultats dès la première semaine.
-        </p>
-        <p className="text-sm text-[#71717A] max-w-xl mx-auto mb-8">
-          Les agents en bêta et roadmap sont accessibles gratuitement pendant leur phase de développement.
-        </p>
-
-        {/* Guarantee badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/30 bg-[#10B981]/8 px-4 py-1.5 text-sm text-[#10B981] mb-10">
-          <Shield className="h-4 w-4" aria-hidden />
-          30 jours satisfait ou remboursé
-        </div>
-      </section>
-
-      {/* ── Toggle + ROI + Plan cards (client, état annual) ── */}
+    <main className="min-h-screen bg-[#0A0A0F]">
+      <PricingHero />
       <TarifsPricing />
-
-      {/* ── Comparison table ── */}
-      <section className="py-20 bg-[rgba(20,20,28,0.5)]" aria-labelledby="comparison-heading">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 space-y-3">
-            <h2
-              id="comparison-heading"
-              className="text-3xl sm:text-4xl font-bold text-[#F5F5F7] tracking-tight"
-            >
-              Comparaison détaillée
-            </h2>
-            <p className="text-[#A1A1AA]">Toutes les fonctionnalités par plan, en un coup d&apos;œil.</p>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)]">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-[rgba(255,255,255,0.08)] bg-[#14141C]">
-                  <th className="py-4 px-5 text-sm font-semibold text-[#F5F5F7]">Fonctionnalité</th>
-                  <th className="py-4 px-4 text-sm font-semibold text-[#22D3EE] text-center">Découverte</th>
-                  <th className="py-4 px-4 text-sm font-semibold text-center" style={{ color: "#A78BFA" }}>Pro</th>
-                  <th className="py-4 px-4 text-sm font-semibold text-center" style={{ color: "#F59E0B" }}>Sur-mesure</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonTable.map((row, i) => (
-                  <tr
-                    key={row.feature}
-                    className="border-b border-[rgba(255,255,255,0.05)]"
-                    style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}
-                  >
-                    <td className="py-3 px-5 text-sm text-[#F5F5F7]">{row.feature}</td>
-                    <td className="py-3 px-4 text-center"><CellValue value={row.decouverte} /></td>
-                    <td className="py-3 px-4 text-center"><CellValue value={row.pro} /></td>
-                    <td className="py-3 px-4 text-center"><CellValue value={row.custom} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FAQ ── */}
-      <section className="py-20" aria-labelledby="faq-heading">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <h2
-            id="faq-heading"
-            className="text-2xl sm:text-3xl font-bold text-[#F5F5F7] tracking-tight text-center mb-10"
-          >
-            Questions fréquentes
-          </h2>
-          <div className="space-y-4">
-            {faqs.map((faq) => (
-              <div
-                key={faq.question}
-                className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#14141C] p-6"
-              >
-                <h3 className="text-base font-semibold text-[#F5F5F7] mb-2">{faq.question}</h3>
-                <p className="text-sm text-[#A1A1AA] leading-relaxed">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Contact CTA ── */}
-      <section className="py-16 border-t border-[rgba(255,255,255,0.06)]">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-[#F5F5F7] mb-3">
-            Questions&nbsp;? On t&apos;appelle.
-          </h2>
-          <p className="text-[#A1A1AA] mb-6">
-            Explique-nous ton besoin, on te rappelle sous 24&nbsp;h pour trouver le plan adapté.
-          </p>
-          <Link
-            href="/contact"
-            className="inline-flex items-center gap-2 h-11 px-6 rounded-xl text-sm font-semibold transition-colors"
-            style={{ background: "rgba(255,255,255,0.06)", color: "#F5F5F7", border: "1px solid rgba(255,255,255,0.1)" }}
-          >
-            Nous contacter
-            <ArrowRight className="h-4 w-4 transition-transform" aria-hidden />
-          </Link>
-        </div>
-      </section>
-    </div>
+      <ReassuranceStrip />
+      <PricingFAQ />
+      <FinalCTA />
+    </main>
   )
 }
