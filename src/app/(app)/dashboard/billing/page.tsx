@@ -20,7 +20,7 @@ import { GlassCard, GlassPanel, GlassChip, KpiTile } from "@/components/app/glas
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 import {
-  PLAN_LIST as PRICING_PLANS,
+  PLAN_LIST,
   type Plan as PricingPlan,
   type PlanId as PricingPlanId,
   type PlanFeatures,
@@ -102,7 +102,7 @@ function toDisplay(plan: PricingPlan): PlanDisplay {
   }
 }
 
-const PLAN_DISPLAY: readonly PlanDisplay[] = PRICING_PLANS.map(toDisplay)
+const PLAN_DISPLAY: readonly PlanDisplay[] = PLAN_LIST.map(toDisplay)
 
 // Garde PLANS pour compatibilité avec le code existant
 const PLANS = PLAN_DISPLAY

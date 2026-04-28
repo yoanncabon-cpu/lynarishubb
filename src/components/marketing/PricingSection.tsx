@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import { PLAN_LIST as PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
+import { PLAN_LIST, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -151,7 +151,7 @@ export function PricingSection() {
 
         {/* Plans — 2+3 responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
-          {PLANS.map((plan) => {
+          {PLAN_LIST.map((plan) => {
             const price = annual ? plan.priceAnnualMonthly : plan.priceMonthly
             const badge = getPlanBadge(plan)
             const features = getFeatureList(plan)

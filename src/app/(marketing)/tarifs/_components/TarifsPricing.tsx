@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { PLAN_LIST as PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
+import { PLAN_LIST, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
 import { RoiCalculatorSection } from "@/components/marketing/RoiCalculatorSection"
 
 function CheckIcon() {
@@ -87,7 +87,7 @@ export function TarifsPricing() {
           {/* est traitée à l'étape 7. Cette version étend la grille à 5 colonnes */}
           {/* avec un fallback responsive 1/2/3/5 selon viewport. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 items-stretch">
-            {PLANS.map((plan) => {
+            {PLAN_LIST.map((plan) => {
               const isFree = plan.priceMonthly === 0
               const isCustom = plan.priceMonthly === null || plan.id === "custom"
               const monthlyPrice = annual ? plan.priceAnnualMonthly : plan.priceMonthly
