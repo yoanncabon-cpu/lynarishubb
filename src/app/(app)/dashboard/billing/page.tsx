@@ -42,8 +42,8 @@ const PLAN_DISPLAY = [
   {
     id: "pro",
     name: "Pro",
-    monthly: PRICING_PLANS.find(p => p.id === "pro")?.priceMonthly ?? 149,
-    annual: PRICING_PLANS.find(p => p.id === "pro")?.priceYearly ?? 127,
+    monthly: PRICING_PLANS.find(p => p.id === "pro")?.priceMonthly ?? 449,
+    annual: PRICING_PLANS.find(p => p.id === "pro")?.priceAnnualMonthly ?? 382,
     color: "#E86F4D",
     agents: "Tous les agents Lynaris",
     actions: "1 500/mois",
@@ -359,9 +359,11 @@ export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null | undefined>(undefined)
   const [toast, setToastState] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null)
-  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null)
   const plansRef = useRef<HTMLDivElement>(null)
-  const { limits } = usePlan()
+  const { limits, plan: contextPlan } = usePlan()
+  // Le plan vient du PlanProvider (Server Component layout) — pas de fetch nécessaire.
+  // Mapping UI → DB : "custom" → "scale" pour rester compatible avec PLAN_COLORS / CURRENT_PLAN_LABEL.
+  const currentPlanId = contextPlan === "custom" ? "scale" : contextPlan
 
   // Labels par plan DB.
   // Migration douce : ancien "starter" reste valide en DB et s'affiche comme "Pro".
@@ -371,7 +373,7 @@ export default function BillingPage() {
     pro: "Pro",
     scale: "Sur-mesure",
   }
-  const planMeta = PLAN_COLORS[currentPlanId ?? "trial"] ?? PLAN_COLORS["trial"]!
+  const planMeta = PLAN_COLORS[currentPlanId] ?? PLAN_COLORS["trial"]!
   const [usageData, setUsageData] = useState<{ actions: number; voice: number; agents: number } | null>(null)
 
   useEffect(() => {
@@ -447,14 +449,6 @@ export default function BillingPage() {
         })
         .catch(() => showToast("Erreur réseau", "error"))
     }
-  }, [])
-
-  // Fetch plan réel depuis la DB
-  useEffect(() => {
-    fetch("/api/settings/billing")
-      .then(r => r.ok ? r.json() : null)
-      .then((d: { plan?: string } | null) => { if (d?.plan) setCurrentPlanId(d.plan) })
-      .catch(() => {})
   }, [])
 
   // Fetch credits balance
@@ -586,24 +580,20 @@ export default function BillingPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {currentPlanId === null ? (
-                  <div style={{ width: 64, height: 22, borderRadius: 8, background: "rgba(255,255,255,0.07)", animation: "pulse 1.5s ease-in-out infinite" }} />
-                ) : (
-                  <span
-                    style={{
-                      background: planMeta.chipBg,
-                      color: planMeta.text,
-                      border: `1px solid ${planMeta.chipBorder}`,
-                      borderRadius: 8,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      padding: "3px 10px",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    {CURRENT_PLAN_LABEL[currentPlanId] ?? currentPlanId}
-                  </span>
-                )}
+                <span
+                  style={{
+                    background: planMeta.chipBg,
+                    color: planMeta.text,
+                    border: `1px solid ${planMeta.chipBorder}`,
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "3px 10px",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {CURRENT_PLAN_LABEL[currentPlanId] ?? currentPlanId}
+                </span>
                 <span style={{ fontSize: 18, fontWeight: 700, color: "#FAFAFA" }}>
                   Ton plan actuel
                 </span>

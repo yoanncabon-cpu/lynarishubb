@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import { PLANS } from "@/lib/pricing/plans"
+import { PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -152,34 +152,29 @@ export function PricingSection() {
         {/* Plans — 2+3 responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
           {PLANS.map((plan) => {
-            const price = annual ? plan.priceYearly : plan.priceMonthly
-            const isEarlyAdopter = plan.earlyAdopter
+            const price = annual ? plan.priceAnnualMonthly : plan.priceMonthly
+            const badge = getPlanBadge(plan)
+            const features = getFeatureList(plan)
 
             return (
               <div
                 key={plan.id}
                 className={`pricing-card group relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all duration-500 overflow-hidden ${
-                  plan.highlighted
+                  plan.featured
                     ? "bg-[#14141C]"
-                    : isEarlyAdopter
-                    ? "bg-[#1C1608]/60"
                     : "bg-[#14141C]/50 hover:bg-[#14141C]"
                 }`}
                 style={{
-                  border: plan.highlighted
+                  border: plan.featured
                     ? "1px solid rgba(124,58,237,0.4)"
-                    : isEarlyAdopter
-                    ? "1px solid rgba(245,158,11,0.3)"
                     : "1px solid rgba(255,255,255,0.08)",
-                  ...(plan.highlighted
+                  ...(plan.featured
                     ? { boxShadow: "0 0 0 1px rgba(124,58,237,0.15), 0 0 60px rgba(124,58,237,0.12)" }
-                    : isEarlyAdopter
-                    ? { boxShadow: "0 0 40px rgba(245,158,11,0.06)" }
                     : {}),
                 }}
               >
                 {/* Animated conic border for Pro */}
-                {plan.highlighted && (
+                {plan.featured && (
                   <div
                     className="absolute inset-0 rounded-2xl pointer-events-none"
                     style={{
@@ -195,7 +190,7 @@ export function PricingSection() {
                 )}
 
                 {/* Glow for Pro */}
-                {plan.highlighted && (
+                {plan.featured && (
                   <div
                     className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
                     style={{
@@ -210,24 +205,20 @@ export function PricingSection() {
                 )}
 
                 {/* Badge */}
-                {plan.badge && (
+                {badge && (
                   <div className="relative z-10 flex justify-center" style={{ marginBottom: 16 }}>
                     <span
                       className="inline-flex items-center gap-1.5 rounded-full text-white"
                       style={{
-                        background: isEarlyAdopter
-                          ? "linear-gradient(90deg, #92400e, #F59E0B)"
-                          : "linear-gradient(90deg, #7C3AED, #22D3EE)",
+                        background: "linear-gradient(90deg, #7C3AED, #22D3EE)",
                         fontSize: 11,
                         fontWeight: 700,
                         padding: "4px 14px",
-                        boxShadow: isEarlyAdopter
-                          ? "0 0 20px rgba(245,158,11,0.4)"
-                          : "0 0 24px rgba(124,58,237,0.6), 0 0 8px rgba(34,211,238,0.3)",
+                        boxShadow: "0 0 24px rgba(124,58,237,0.6), 0 0 8px rgba(34,211,238,0.3)",
                         letterSpacing: "0.08em",
                       }}
                     >
-                      {isEarlyAdopter ? "Early adopter — setup offert" : plan.badge}
+                      {badge}
                     </span>
                   </div>
                 )}
@@ -288,7 +279,7 @@ export function PricingSection() {
                   </div>
 
                   <ul className="space-y-3.5 flex-1">
-                    {plan.features.map((feature) => (
+                    {features.map((feature) => (
                       <li
                         key={feature}
                         className="flex items-start gap-3 text-sm"
@@ -304,7 +295,7 @@ export function PricingSection() {
                     <Button
                       asChild
                       size="lg"
-                      variant={plan.highlighted ? "primary" : "secondary"}
+                      variant={plan.featured ? "primary" : "secondary"}
                       className="w-full group/btn"
                     >
                       <Link href={plan.cta.href}>

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { PLANS } from "@/lib/pricing/plans"
+import { PLANS, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
 import { RoiCalculatorSection } from "@/components/marketing/RoiCalculatorSection"
 
 function CheckIcon() {
@@ -82,15 +82,16 @@ export function TarifsPricing() {
       <section className="pb-24 px-4" aria-label="Plans tarifaires">
         <div className="mx-auto max-w-6xl space-y-5">
 
-          {/* ── 3 plans : Découverte / Pro / Sur-mesure ── */}
+          {/* ── 5 plans : Découverte / Starter / Pro ⭐ / Business / Sur-mesure ── */}
+          {/* Note : la refonte UI complète des 5 cards est traitée à l'étape 7. */}
+          {/* Cette version maintient la compat avec les nouveaux types `Plan`. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
             {PLANS.map((plan) => {
-              // Découverte : prix toujours 0 (essai gratuit, pas d'annuel)
-              // Sur-mesure : prix toujours null (devis, pas d'annuel)
-              // Pro : bascule mensuel/annuel
               const isFree = plan.priceMonthly === 0
-              const isCustom = plan.priceMonthly === null
-              const price = annual ? plan.priceYearly : plan.priceMonthly
+              const isCustom = plan.priceMonthly === null || plan.id === "custom"
+              const monthlyPrice = annual ? plan.priceAnnualMonthly : plan.priceMonthly
+              const badge = getPlanBadge(plan)
+              const features = getFeatureList(plan)
 
               return (
                 <div
@@ -98,13 +99,13 @@ export function TarifsPricing() {
                   className="relative rounded-2xl p-6 flex flex-col"
                   style={{
                     background: "#14141C",
-                    border: plan.highlighted
+                    border: plan.featured
                       ? "1px solid rgba(124,58,237,0.4)"
                       : "1px solid rgba(255,255,255,0.08)",
                   }}
                 >
-                  {/* Animated conic border for Pro (highlighted) */}
-                  {plan.highlighted && (
+                  {/* Animated conic border for Pro (featured) */}
+                  {plan.featured && (
                     <div
                       className="absolute inset-0 rounded-2xl pointer-events-none"
                       style={{
@@ -120,7 +121,7 @@ export function TarifsPricing() {
                   )}
 
                   {/* Badge */}
-                  {plan.badge && (
+                  {badge && (
                     <span
                       className="absolute left-1/2 rounded-full text-white"
                       style={{
@@ -134,7 +135,7 @@ export function TarifsPricing() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {plan.badge}
+                      {badge}
                     </span>
                   )}
 
@@ -151,7 +152,7 @@ export function TarifsPricing() {
                           </span>
                           <p className="text-xs mt-1 text-[#71717A]">14 jours, sans CB</p>
                         </>
-                      ) : isCustom ? (
+                      ) : isCustom && plan.priceMonthly === null ? (
                         <span style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.04em", color: "#F5F5F7" }}>
                           Sur devis
                         </span>
@@ -161,16 +162,21 @@ export function TarifsPricing() {
                             <p className="text-xs text-[#71717A] mb-1">{plan.pricePrefix}</p>
                           )}
                           <span style={{ fontSize: 48, fontWeight: 700, letterSpacing: "-0.04em", color: "#F5F5F7" }}>
-                            {price}
+                            {monthlyPrice}
                           </span>
                           <span className="text-sm ml-1 text-[#A1A1AA]">€/mois</span>
-                          {annual && plan.priceYearly !== null && plan.priceYearly > 0 && (
+                          {annual && plan.priceAnnualMonthly !== null && plan.priceAnnualMonthly > 0 && (
                             <p className="text-xs mt-1 text-[#71717A]">
                               soit{" "}
                               <span className="font-semibold text-[#A1A1AA]">
-                                {plan.priceYearly * 12}€
+                                {plan.priceAnnualMonthly * 12}€
                               </span>{" "}
                               / an
+                            </p>
+                          )}
+                          {plan.setupFee > 0 && (
+                            <p className="text-xs mt-1 text-[#71717A]">
+                              + {plan.setupFee}€ de frais de mise en service
                             </p>
                           )}
                         </>
@@ -179,7 +185,7 @@ export function TarifsPricing() {
 
                     {/* Features */}
                     <ul className="space-y-3 flex-1 mb-7">
-                      {plan.features.map((feature) => (
+                      {features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2.5 text-sm text-[#A1A1AA]">
                           <CheckIcon />
                           {feature}
@@ -192,7 +198,7 @@ export function TarifsPricing() {
                       href={plan.cta.href}
                       className="inline-flex items-center justify-center gap-2 h-10 rounded-xl px-4 text-sm font-semibold transition-colors"
                       style={
-                        plan.highlighted
+                        plan.featured
                           ? { background: "linear-gradient(135deg,#7C3AED,#22D3EE)", color: "#fff" }
                           : {
                               background: "rgba(255,255,255,0.06)",

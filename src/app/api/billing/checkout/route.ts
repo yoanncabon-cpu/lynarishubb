@@ -47,14 +47,14 @@ export async function POST(request: NextRequest) {
   const isAnnual = annual || billing === "annual"
 
   // Resolve priceId: prefer planId lookup over legacy price_id
-  let priceId: string | undefined
+  let priceId: string | null = null
 
   if (planId) {
     const plan = PLANS.find((p) => p.id === (planId as PlanId))
     if (!plan) {
       return NextResponse.json({ error: "Plan introuvable" }, { status: 400 })
     }
-    priceId = isAnnual ? plan.stripePriceIdYearly : plan.stripePriceIdMonthly
+    priceId = isAnnual ? plan.stripePriceIdAnnual : plan.stripePriceIdMonthly
     if (!priceId) {
       return NextResponse.json(
         { error: "Plan ou période non disponible — Stripe price ID manquant" },
