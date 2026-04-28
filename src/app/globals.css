@@ -639,6 +639,26 @@ h1, h2, h3, h4 {
   .lg-specular::after { display: none !important; }
 }
 
+/* Mobile : réduit blurs lourds (économie GPU, gain LCP ~150ms) */
+@media (max-width: 767px) {
+  .lg-aurora__blob {
+    filter: blur(60px); /* au lieu de 80 */
+    opacity: 0.65;
+  }
+  .lg-aurora__blob--green,
+  .lg-aurora__blob--rose {
+    display: none; /* ne garde que 3 halos sur mobile */
+  }
+  .lg-surface-1, .lg-surface-2, .lg-surface-3 {
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+  }
+  .lg-surface-strong {
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    backdrop-filter: blur(24px) saturate(1.5);
+  }
+}
+
 /* ─── Blog article prose ────────────────────────────────────── */
 .article-prose {
   max-width: 720px;

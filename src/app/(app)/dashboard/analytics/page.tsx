@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { MessageSquare, Zap, Phone, Mail } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { MessageSquare, Zap, Phone, Mail, RotateCcw, AlertTriangle, Check } from "lucide-react"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
-import { GlassCard, GlassChip, KpiTile } from "@/components/app/glass"
+import { GlassCard, GlassChip, GlassPanel, KpiTile } from "@/components/app/glass"
 
 // ─── SVG Line Chart ───────────────────────────────────────────────────────────
 
@@ -454,14 +454,48 @@ export default function AnalyticsPage() {
   const [range, setRange] = useState(30)
   const [apiData, setApiData] = useState<ApiAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [resetSummary, setResetSummary] = useState<string | null>(null)
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     setLoading(true)
     fetch(`/api/analytics?range=${range}`)
-      .then(r => r.json())
+      .then((r) => r.json())
       .then((d: ApiAnalytics) => { setApiData(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [range])
+
+  useEffect(() => {
+    reload()
+  }, [reload])
+
+  async function handleReset() {
+    setResetting(true)
+    try {
+      const res = await fetch("/api/analytics/reset", { method: "POST" })
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; deleted?: { actionLogs: number; conversations: number; messages: number } }
+        | null
+      if (res.ok && data?.ok && data.deleted) {
+        const { actionLogs, conversations, messages } = data.deleted
+        setResetSummary(
+          `${conversations} conversation${conversations > 1 ? "s" : ""}, ${actionLogs} action${actionLogs > 1 ? "s" : ""}, ${messages} message${messages > 1 ? "s" : ""} supprimés.`
+        )
+        // Recharge les stats (devrait revenir à 0)
+        reload()
+        // Auto-hide message après 5s
+        setTimeout(() => setResetSummary(null), 5000)
+      } else {
+        setResetSummary("Erreur lors de la réinitialisation.")
+      }
+    } catch {
+      setResetSummary("Erreur réseau lors de la réinitialisation.")
+    } finally {
+      setResetting(false)
+      setConfirmReset(false)
+    }
+  }
 
   // Utilise uniquement les données de l'API — jamais de fallback local
   const convData = apiData?.dailyConversations ?? []
@@ -562,20 +596,259 @@ export default function AnalyticsPage() {
           </p>
         </div>
 
-        {/* Date range selector — chips verre */}
-        <div role="tablist" aria-label="Période" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {DATE_RANGES.map((r) => (
-            <GlassChip
-              key={r.value}
-              onClick={() => setRange(r.value)}
-              active={range === r.value}
-              ariaLabel={`Voir ${r.label}`}
-            >
-              {r.label}
-            </GlassChip>
-          ))}
+        {/* Actions header : reset + range */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {/* Bouton Réinitialiser */}
+          <button
+            type="button"
+            onClick={() => setConfirmReset(true)}
+            disabled={resetting || !apiData}
+            aria-label="Réinitialiser les statistiques"
+            className="lg-chip lg-focus"
+            style={{
+              padding: "6px 12px",
+              fontSize: 12,
+              cursor: resetting || !apiData ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              opacity: resetting || !apiData ? 0.5 : 1,
+              borderColor: "rgba(239,68,68,0.32)",
+              background: "rgba(239,68,68,0.08)",
+              color: "rgba(252,165,165,0.95)",
+            }}
+            onMouseEnter={(e) => {
+              if (!resetting && apiData) {
+                ;(e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.14)"
+                ;(e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.45)"
+              }
+            }}
+            onMouseLeave={(e) => {
+              ;(e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"
+              ;(e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.32)"
+            }}
+          >
+            <RotateCcw size={11} />
+            Réinitialiser
+          </button>
+
+          {/* Date range selector — chips verre */}
+          <div role="tablist" aria-label="Période" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {DATE_RANGES.map((r) => (
+              <GlassChip
+                key={r.value}
+                onClick={() => setRange(r.value)}
+                active={range === r.value}
+                ariaLabel={`Voir ${r.label}`}
+              >
+                {r.label}
+              </GlassChip>
+            ))}
+          </div>
         </div>
       </header>
+
+      {/* Toast de confirmation après reset */}
+      {resetSummary && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 80,
+            padding: "12px 16px",
+            background: "rgba(52,211,153,0.14)",
+            border: "1px solid rgba(52,211,153,0.40)",
+            borderRadius: 12,
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            color: "#FAFAFA",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            boxShadow: "0 12px 28px -8px rgba(0,0,0,0.45)",
+            animation: "lgSlideUp 280ms cubic-bezier(0.32,0.72,0,1)",
+            maxWidth: 360,
+          }}
+        >
+          <Check size={15} style={{ color: "#34D399", flexShrink: 0 }} />
+          <span>{resetSummary}</span>
+        </div>
+      )}
+
+      {/* Modale de confirmation */}
+      {confirmReset && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 90,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(7,7,10,0.55)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            padding: 16,
+            animation: "lgFadeIn 200ms ease-out",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !resetting) setConfirmReset(false)
+          }}
+        >
+          <GlassPanel
+            level={1}
+            strong
+            radius={20}
+            aria-label="Confirmation réinitialisation"
+            style={{
+              maxWidth: 460,
+              width: "100%",
+              boxShadow: "0 32px 80px -25px rgba(0,0,0,0.75)",
+              animation: "lgSlideUp 240ms cubic-bezier(0.32,0.72,0,1)",
+            }}
+            contentStyle={{ padding: 24 }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 16 }}>
+              <div
+                aria-hidden
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  background: "rgba(239,68,68,0.14)",
+                  border: "1px solid rgba(239,68,68,0.32)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#FCA5A5",
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={20} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2
+                  id="reset-title"
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: "#FAFAFA",
+                    margin: 0,
+                    letterSpacing: "-0.015em",
+                  }}
+                >
+                  Réinitialiser les statistiques ?
+                </h2>
+                <p style={{ fontSize: 13, color: "rgba(250,250,250,0.65)", margin: "6px 0 0", lineHeight: 1.5 }}>
+                  Cette action est <strong style={{ color: "#FCA5A5" }}>irréversible</strong>. Toutes les conversations, messages et actions de tes agents seront définitivement supprimés.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setConfirmReset(false)}
+                disabled={resetting}
+                className="lg-focus"
+                style={{
+                  padding: "9px 16px",
+                  borderRadius: 11,
+                  border: "1px solid var(--glass-border)",
+                  background: "transparent",
+                  color: "rgba(250,250,250,0.78)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: resetting ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                  transition: "background 220ms var(--ease-apple)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!resetting) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.background = "transparent"
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={resetting}
+                className="lg-focus"
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: 11,
+                  border: "none",
+                  background: resetting
+                    ? "rgba(239,68,68,0.4)"
+                    : "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: resetting ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  boxShadow: resetting
+                    ? "none"
+                    : "0 8px 22px -6px rgba(239,68,68,0.5), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  transition: "transform 220ms var(--ease-apple)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!resetting) (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.transform = "translateY(0)"
+                }}
+              >
+                {resetting ? (
+                  <>
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 12,
+                        height: 12,
+                        border: "1.5px solid rgba(255,255,255,0.3)",
+                        borderTopColor: "#fff",
+                        borderRadius: "50%",
+                        animation: "lgSpin 0.7s linear infinite",
+                      }}
+                    />
+                    Suppression…
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw size={13} />
+                    Réinitialiser
+                  </>
+                )}
+              </button>
+            </div>
+          </GlassPanel>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes lgSlideUp {
+          from { opacity: 0; transform: translateY(12px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes lgFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes lgSpin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
 
       {/* Row 1 — 4 KPI Cards */}
       <div className="ly-analytics-kpi-grid" style={{ marginBottom: 22 }}>

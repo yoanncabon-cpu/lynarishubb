@@ -1587,15 +1587,19 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: "20px 16px",
+          padding: "24px clamp(12px, 3vw, 24px)",
           display: "flex",
           flexDirection: "column",
-          gap: 16,
+          gap: 18,
           minHeight: 0,
-          background: "rgba(255,255,255,0.03)",
+          background: "transparent",
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(255,255,255,0.12) transparent",
         }}
       >
-        {messages.map((msg, msgIndex) => (
+        {messages.map((msg, msgIndex) => {
+          const agentRgb = `${parseInt(agent.color.slice(1,3),16)},${parseInt(agent.color.slice(3,5),16)},${parseInt(agent.color.slice(5,7),16)}`
+          return (
           <div
             key={msg.id}
             style={{
@@ -1603,11 +1607,34 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
               gap: 10,
               flexDirection: msg.role === "user" ? "row-reverse" : "row",
               alignItems: "flex-end",
+              animation: "msgFadeIn 320ms cubic-bezier(0.32,0.72,0,1) both",
             }}
           >
-            {/* Avatar */}
+            {/* Avatar agent avec halo couleur */}
             {msg.role === "assistant" && (
-              <AgentAvatar slug={agent.slug} size={30} />
+              <div
+                style={{
+                  position: "relative",
+                  flexShrink: 0,
+                  filter: `drop-shadow(0 4px 12px rgba(${agentRgb},0.35))`,
+                }}
+              >
+                <AgentAvatar slug={agent.slug} size={32} />
+                <span
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    bottom: -1,
+                    right: -1,
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    background: "#34D399",
+                    border: "2px solid #0C0C0F",
+                    boxShadow: "0 0 6px rgba(52,211,153,0.55)",
+                  }}
+                />
+              </div>
             )}
 
             {/* Bubble + meta */}
@@ -1616,55 +1643,82 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 3,
-                maxWidth: "75%",
+                gap: 4,
+                maxWidth: "min(75%, 640px)",
                 alignItems: msg.role === "user" ? "flex-end" : "flex-start",
               }}
             >
               <div
                 style={{
-                  padding: "10px 14px",
-                  fontSize: 13,
+                  position: "relative",
+                  padding: "12px 16px",
+                  fontSize: 14,
                   lineHeight: 1.6,
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
                   userSelect: "text",
                   WebkitUserSelect: "text",
                   cursor: "text",
+                  letterSpacing: "-0.005em",
+                  WebkitBackdropFilter: "blur(20px) saturate(1.5)",
+                  backdropFilter: "blur(20px) saturate(1.5)",
                   ...(msg.role === "user"
                     ? {
-                        background: "#111827",
-                        color: "#F5F5F7",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        background:
+                          "linear-gradient(135deg, rgba(232,111,77,0.20) 0%, rgba(232,111,77,0.10) 100%)",
+                        color: "#FAFAFA",
+                        border: "1px solid rgba(232,111,77,0.32)",
                         borderRadius: "18px 18px 4px 18px",
+                        boxShadow:
+                          "0 8px 22px -8px rgba(232,111,77,0.32), inset 0 1px 0 rgba(255,255,255,0.08)",
                       }
                     : msg.isError
                     ? {
-                        background: "rgba(239,68,68,0.08)",
-                        border: "1px solid rgba(239,68,68,0.2)",
-                        color: "#DC2626",
+                        background:
+                          "linear-gradient(135deg, rgba(239,68,68,0.16) 0%, rgba(239,68,68,0.06) 100%)",
+                        border: "1px solid rgba(239,68,68,0.30)",
+                        color: "#FCA5A5",
                         borderRadius: "18px 18px 18px 4px",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
                       }
                     : {
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: "#F5F5F7",
+                        background: `linear-gradient(135deg, rgba(${agentRgb},0.16) 0%, rgba(28,28,36,0.55) 60%)`,
+                        color: "#FAFAFA",
+                        border: `1px solid rgba(${agentRgb},0.26)`,
                         borderRadius: "18px 18px 18px 4px",
+                        boxShadow: `0 10px 26px -10px rgba(${agentRgb},0.26), inset 0 1px 0 rgba(255,255,255,0.06)`,
                       }),
                 }}
               >
+                {/* Bord supérieur lumineux pour les messages agent */}
+                {msg.role === "assistant" && !msg.isError && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 16,
+                      right: 16,
+                      height: 1,
+                      background: `linear-gradient(90deg, transparent, rgba(${agentRgb},0.55), transparent)`,
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
                 {msg.content}
                 {msg.isStreaming && msg.content.length > 0 && (
                   <span
+                    aria-hidden
                     style={{
                       display: "inline-block",
-                      width: 2,
+                      width: 7,
                       height: 14,
-                      background: "currentColor",
-                      opacity: 0.7,
-                      marginLeft: 2,
+                      background: msg.role === "user" ? "var(--accent)" : agent.color,
+                      borderRadius: 2,
+                      marginLeft: 4,
                       verticalAlign: "middle",
-                      animation: "blink 1s step-end infinite",
+                      animation: "msgCursor 1s ease-in-out infinite",
+                      boxShadow: `0 0 8px rgba(${agentRgb},0.6)`,
                     }}
                   />
                 )}
@@ -1715,7 +1769,7 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
                 )}
               </div>
 
-              {/* Quick suggestions — only after greeting message (index 0) when no user messages yet */}
+              {/* Quick suggestions — chips verre couleur agent */}
               {msgIndex === 0 &&
                 msg.role === "assistant" &&
                 messages.length === 1 &&
@@ -1725,8 +1779,8 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
-                      gap: 6,
-                      marginTop: 8,
+                      gap: 7,
+                      marginTop: 10,
                       maxWidth: "100%",
                     }}
                   >
@@ -1735,36 +1789,37 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
                         key={suggestion}
                         type="button"
                         onClick={() => handleSuggestionClick(suggestion)}
+                        className="lg-focus"
                         style={{
                           fontSize: 12,
-                          padding: "6px 14px",
+                          fontWeight: 500,
+                          padding: "7px 13px",
                           borderRadius: 999,
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          background: "rgba(255,255,255,0.06)",
-                          color: "rgba(245,245,247,0.7)",
+                          border: `1px solid rgba(${agentRgb},0.22)`,
+                          background: `linear-gradient(135deg, rgba(${agentRgb},0.10) 0%, rgba(36,36,46,0.32) 100%)`,
+                          color: "rgba(250,250,250,0.78)",
                           cursor: "pointer",
-                          transition: "background 0.15s, border-color 0.15s, color 0.15s",
+                          transition: "background 220ms var(--ease-apple), border-color 220ms var(--ease-apple), color 220ms var(--ease-apple), transform 220ms var(--ease-apple)",
                           outline: "none",
                           fontFamily: "inherit",
                           whiteSpace: "nowrap",
+                          WebkitBackdropFilter: "blur(16px)",
+                          backdropFilter: "blur(16px)",
+                          letterSpacing: "-0.005em",
                         }}
                         onMouseEnter={(e) => {
-                          ;(e.currentTarget as HTMLButtonElement).style.background =
-                            "rgba(255,255,255,0.12)"
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor =
-                            "rgba(255,255,255,0.2)"
-                          ;(e.currentTarget as HTMLButtonElement).style.color = "#F5F5F7"
-                          ;(e.currentTarget as HTMLButtonElement).style.boxShadow =
-                            `0 0 0 1px rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.2)`
+                          const el = e.currentTarget as HTMLButtonElement
+                          el.style.background = `linear-gradient(135deg, rgba(${agentRgb},0.22) 0%, rgba(${agentRgb},0.08) 100%)`
+                          el.style.borderColor = `rgba(${agentRgb},0.45)`
+                          el.style.color = "#FAFAFA"
+                          el.style.transform = "translateY(-1px)"
                         }}
                         onMouseLeave={(e) => {
-                          ;(e.currentTarget as HTMLButtonElement).style.background =
-                            "rgba(255,255,255,0.06)"
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor =
-                            "rgba(255,255,255,0.1)"
-                          ;(e.currentTarget as HTMLButtonElement).style.color =
-                            "rgba(245,245,247,0.7)"
-                          ;(e.currentTarget as HTMLButtonElement).style.boxShadow = "none"
+                          const el = e.currentTarget as HTMLButtonElement
+                          el.style.background = `linear-gradient(135deg, rgba(${agentRgb},0.10) 0%, rgba(36,36,46,0.32) 100%)`
+                          el.style.borderColor = `rgba(${agentRgb},0.22)`
+                          el.style.color = "rgba(250,250,250,0.78)"
+                          el.style.transform = "translateY(0)"
                         }}
                       >
                         {suggestion}
@@ -1774,30 +1829,40 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
                 )}
             </div>
           </div>
-        ))}
+          )
+        })}
 
-        {/* Typing indicator — shown during first 2s of streaming before text arrives */}
-        {showTyping && (
+        {/* Typing indicator — bulle verre + 3 dots animés couleur agent */}
+        {showTyping && (() => {
+          const agentRgb = `${parseInt(agent.color.slice(1,3),16)},${parseInt(agent.color.slice(3,5),16)},${parseInt(agent.color.slice(5,7),16)}`
+          return (
           <div
             style={{
               display: "flex",
               gap: 10,
               alignItems: "flex-end",
+              animation: "msgFadeIn 320ms cubic-bezier(0.32,0.72,0,1) both",
             }}
           >
-            <AgentAvatar slug={agent.slug} size={30} />
+            <div style={{ position: "relative", flexShrink: 0, filter: `drop-shadow(0 4px 12px rgba(${agentRgb},0.35))` }}>
+              <AgentAvatar slug={agent.slug} size={32} />
+            </div>
             <div
               style={{
-                padding: "10px 14px",
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                padding: "12px 16px",
+                background: `linear-gradient(135deg, rgba(${agentRgb},0.16) 0%, rgba(28,28,36,0.55) 60%)`,
+                border: `1px solid rgba(${agentRgb},0.26)`,
                 borderRadius: "18px 18px 18px 4px",
+                boxShadow: `0 10px 26px -10px rgba(${agentRgb},0.26), inset 0 1px 0 rgba(255,255,255,0.06)`,
+                WebkitBackdropFilter: "blur(20px) saturate(1.5)",
+                backdropFilter: "blur(20px) saturate(1.5)",
               }}
             >
               <TypingIndicator />
             </div>
           </div>
-        )}
+          )
+        })()}
 
         <div ref={bottomRef} />
       </div>
@@ -1805,12 +1870,15 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
       {/* Working panel — shown when streaming starts (empty assistant message) */}
       {showWorkingPanel && <WorkingPanel isStreaming={streaming} />}
 
-      {/* Input area */}
+      {/* Input area — verre flottant */}
       <div
         style={{
           flexShrink: 0,
-          borderTop: "1px solid rgba(255,255,255,0.1)",
-          background: "rgba(255,255,255,0.04)",
+          borderTop: "1px solid var(--glass-border)",
+          background: "rgba(22,22,28,0.55)",
+          WebkitBackdropFilter: "blur(28px) saturate(1.6)",
+          backdropFilter: "blur(28px) saturate(1.6)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
         }}
       >
         {/* Attachment previews */}
@@ -1977,31 +2045,41 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
             }}
             onKeyDown={handleKeyDown}
             disabled={streaming}
-            placeholder={`Envoie une instruction à ${agent.name}...`}
+            placeholder={`Envoie une instruction à ${agent.name}…`}
             aria-label={`Message à ${agent.name}`}
+            className="lg-focus"
             style={{
               flex: 1,
               resize: "none",
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.14)",
+              padding: "12px 16px",
+              borderRadius: 13,
+              border: "1px solid var(--glass-border)",
               background: "rgba(255,255,255,0.06)",
-              color: "#F5F5F7",
-              fontSize: 13,
+              color: "#FAFAFA",
+              fontSize: 14,
               lineHeight: 1.5,
               outline: "none",
-              transition: "border-color 0.15s",
-              minHeight: 40,
-              maxHeight: 96,
+              transition: "border-color 220ms var(--ease-apple), background 220ms var(--ease-apple), box-shadow 220ms var(--ease-apple)",
+              minHeight: 44,
+              maxHeight: 120,
               overflowY: "hidden",
               opacity: streaming ? 0.5 : 1,
               fontFamily: "inherit",
+              WebkitBackdropFilter: "blur(16px)",
+              backdropFilter: "blur(16px)",
+              letterSpacing: "-0.005em",
             }}
             onFocus={(e) => {
-              ;(e.currentTarget as HTMLTextAreaElement).style.borderColor = "#E86F4D"
+              const el = e.currentTarget as HTMLTextAreaElement
+              el.style.borderColor = "var(--accent)"
+              el.style.background = "rgba(255,255,255,0.10)"
+              el.style.boxShadow = "0 0 0 4px var(--accent-glow)"
             }}
             onBlur={(e) => {
-              ;(e.currentTarget as HTMLTextAreaElement).style.borderColor = "rgba(255,255,255,0.14)"
+              const el = e.currentTarget as HTMLTextAreaElement
+              el.style.borderColor = "var(--glass-border)"
+              el.style.background = "rgba(255,255,255,0.06)"
+              el.style.boxShadow = "none"
             }}
           />
 
@@ -2076,23 +2154,34 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
               type="button"
               onClick={handleStop}
               aria-label="Arrêter la génération"
+              className="lg-focus"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                border: "1px solid #EF4444",
-                background: "transparent",
+                width: 44,
+                height: 44,
+                borderRadius: 13,
+                border: "1px solid rgba(239,68,68,0.45)",
+                background: "rgba(239,68,68,0.12)",
                 color: "#EF4444",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
                 flexShrink: 0,
-                transition: "background 0.15s",
+                transition: "background 220ms var(--ease-apple), transform 220ms var(--ease-apple)",
                 outline: "none",
+                WebkitBackdropFilter: "blur(16px)",
+                backdropFilter: "blur(16px)",
+              }}
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.20)"
+                ;(e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)"
+                ;(e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"
               }}
             >
-              <StopCircle size={16} aria-hidden />
+              <StopCircle size={17} aria-hidden />
             </button>
           ) : (
             <button
@@ -2100,33 +2189,43 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
               onClick={() => void handleSend()}
               disabled={!input.trim() && attachments.length === 0}
               aria-label="Envoyer"
+              className="lg-focus"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
+                width: 44,
+                height: 44,
+                borderRadius: 13,
                 border: "none",
-                background: (input.trim() || attachments.length > 0) ? "#E86F4D" : "rgba(255,255,255,0.14)",
+                background: (input.trim() || attachments.length > 0)
+                  ? "linear-gradient(135deg, var(--accent) 0%, #C2552A 100%)"
+                  : "rgba(255,255,255,0.08)",
                 color: "#ffffff",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: (input.trim() || attachments.length > 0) ? "pointer" : "not-allowed",
                 flexShrink: 0,
-                transition: "background 0.15s",
+                transition: "background 220ms var(--ease-apple), transform 220ms var(--ease-apple), box-shadow 220ms var(--ease-apple)",
                 outline: "none",
+                boxShadow: (input.trim() || attachments.length > 0)
+                  ? "0 8px 22px -6px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.18)"
+                  : "none",
               }}
               onMouseEnter={(e) => {
                 if (input.trim() || attachments.length > 0) {
-                  ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(232,111,77,0.8)"
+                  ;(e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"
+                  ;(e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 12px 30px -8px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.22)"
                 }
               }}
               onMouseLeave={(e) => {
                 if (input.trim() || attachments.length > 0) {
-                  ;(e.currentTarget as HTMLButtonElement).style.background = "#E86F4D"
+                  ;(e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"
+                  ;(e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 8px 22px -6px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.18)"
                 }
               }}
             >
-              <Send size={15} aria-hidden />
+              <Send size={16} aria-hidden />
             </button>
           )}
         </div>
@@ -2171,6 +2270,14 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
           0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
           30% { transform: translateY(-4px); opacity: 1; }
         }
+        @keyframes msgFadeIn {
+          from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+          to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+        @keyframes msgCursor {
+          0%, 100% { opacity: 1; transform: scaleY(1); }
+          50%      { opacity: 0.4; transform: scaleY(0.7); }
+        }
         .copy-btn {
           opacity: 0.45;
         }
@@ -2178,7 +2285,7 @@ export function AgentChatTab({ agent }: { agent: Agent }) {
           opacity: 1 !important;
         }
         textarea::placeholder {
-          color: rgba(245,245,247,0.3);
+          color: rgba(250,250,250,0.42);
         }
       `}</style>
 

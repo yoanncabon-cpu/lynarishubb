@@ -734,39 +734,53 @@ export default function DashboardPage() {
       </div>
 
       <style>{`
+        /* ─── Bento Grid avec grid-template-areas (prévisible) ─── */
         .lg-bento {
           display: grid;
           grid-template-columns: 1fr;
           grid-auto-rows: minmax(140px, auto);
           gap: 14px;
         }
-        .lg-bento > div { min-width: 0; }
-        @media (min-width: 768px) {
+        .lg-bento > div { min-width: 0; min-height: 0; }
+        .lg-bento > div > * { height: 100%; }
+
+        /* Tablette : 2 colonnes, Charles full width en haut */
+        @media (min-width: 768px) and (max-width: 1279px) {
           .lg-bento {
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-areas:
+              "charles charles"
+              "travail croissance"
+              "plateforme voice"
+              "live activity";
             gap: 16px;
           }
-          .lg-bento__charles    { grid-column: span 6; grid-row: span 2; }
-          .lg-bento__travail    { grid-column: span 3; }
-          .lg-bento__croissance { grid-column: span 3; }
-          .lg-bento__plateforme { grid-column: span 3; }
-          .lg-bento__voice      { grid-column: span 3; }
-          .lg-bento__live       { grid-column: span 2; }
-          .lg-bento__activity   { grid-column: span 4; }
+          .lg-bento__charles    { grid-area: charles; min-height: 280px; }
+          .lg-bento__travail    { grid-area: travail; }
+          .lg-bento__croissance { grid-area: croissance; }
+          .lg-bento__plateforme { grid-area: plateforme; }
+          .lg-bento__voice      { grid-area: voice; }
+          .lg-bento__live       { grid-area: live; }
+          .lg-bento__activity   { grid-area: activity; }
         }
+
+        /* Desktop : 4 colonnes, Charles 2×2 (gauche), 4 hubs 2×2 (droite), Live + Activité bottom */
         @media (min-width: 1280px) {
           .lg-bento {
-            grid-template-columns: repeat(12, 1fr);
-            grid-auto-rows: minmax(168px, auto);
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-areas:
+              "charles charles travail croissance"
+              "charles charles plateforme voice"
+              "live live activity activity";
             gap: 18px;
           }
-          .lg-bento__charles    { grid-column: span 6; grid-row: span 2; }
-          .lg-bento__travail    { grid-column: span 3; grid-row: span 1; }
-          .lg-bento__croissance { grid-column: span 3; grid-row: span 1; }
-          .lg-bento__plateforme { grid-column: span 3; grid-row: span 1; }
-          .lg-bento__voice      { grid-column: span 3; grid-row: span 1; }
-          .lg-bento__live       { grid-column: span 4; grid-row: span 1; }
-          .lg-bento__activity   { grid-column: span 8; grid-row: span 1; }
+          .lg-bento__charles    { grid-area: charles; min-height: 380px; }
+          .lg-bento__travail    { grid-area: travail; }
+          .lg-bento__croissance { grid-area: croissance; }
+          .lg-bento__plateforme { grid-area: plateforme; }
+          .lg-bento__voice      { grid-area: voice; }
+          .lg-bento__live       { grid-area: live; }
+          .lg-bento__activity   { grid-area: activity; }
         }
       `}</style>
     </>
@@ -792,53 +806,94 @@ function BentoHubTile({
   icon: React.ReactNode
   entries: { label: string; icon: React.ReactNode; href: string }[]
 }) {
+  // Pas de Link wrapper sur la carte (évite Link-nested invalide).
+  // Header (icône + titre + arrow) = Link vers le hub principal.
+  // Chaque chip d'entry = Link vers sa sous-page (cliquable individuellement).
   return (
-    <Link href={href} style={{ textDecoration: "none", display: "block", height: "100%" }} className="lg-focus">
-      <GlassCard tint={tint} radius={20} padding={20} specular>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
-              aria-hidden
+    <GlassCard tint={tint} radius={20} padding={20} specular hover={false}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
+        {/* Header — clic = page principale du hub */}
+        <Link
+          href={href}
+          aria-label={`Aller à ${title}`}
+          className="lg-focus"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            textDecoration: "none",
+            borderRadius: 12,
+            margin: -4,
+            padding: 4,
+            transition: "background 220ms var(--ease-apple)",
+          }}
+          onMouseEnter={(e) => {
+            ;(e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLElement).style.background = "transparent"
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 13,
+              background: `${accent}28`,
+              border: `1px solid ${accent}55`,
+              color: accent,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: `0 4px 16px -6px ${accent}55, inset 0 1px 0 rgba(255,255,255,0.10)`,
+            }}
+          >
+            {icon}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#FAFAFA", margin: 0, letterSpacing: "-0.015em" }}>
+              {title}
+            </p>
+            <p style={{ fontSize: 11.5, color: "rgba(250,250,250,0.58)", margin: "2px 0 0" }}>
+              {tagline}
+            </p>
+          </div>
+          <ArrowUpRight size={15} style={{ color: "rgba(250,250,250,0.4)", flexShrink: 0 }} aria-hidden />
+        </Link>
+
+        {/* Chips entries — chacune cliquable vers sa sous-page */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: "auto" }}>
+          {entries.map((e) => (
+            <Link
+              key={e.href}
+              href={e.href}
+              aria-label={`Aller à ${e.label}`}
+              className="lg-chip lg-focus"
               style={{
-                width: 42,
-                height: 42,
-                borderRadius: 13,
-                background: `${accent}28`,
-                border: `1px solid ${accent}55`,
-                color: accent,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                boxShadow: `0 4px 16px -6px ${accent}55, inset 0 1px 0 rgba(255,255,255,0.10)`,
+                textDecoration: "none",
+                padding: "5px 10px",
+                fontSize: 11,
+                cursor: "pointer",
+              }}
+              onMouseEnter={(el) => {
+                ;(el.currentTarget as HTMLElement).style.borderColor = `${accent}55`
+                ;(el.currentTarget as HTMLElement).style.background = `${accent}14`
+                ;(el.currentTarget as HTMLElement).style.color = "#FAFAFA"
+              }}
+              onMouseLeave={(el) => {
+                ;(el.currentTarget as HTMLElement).style.borderColor = "var(--glass-border)"
+                ;(el.currentTarget as HTMLElement).style.background = "var(--glass-3-bg)"
+                ;(el.currentTarget as HTMLElement).style.color = "rgba(250,250,250,0.78)"
               }}
             >
-              {icon}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 16, fontWeight: 700, color: "#FAFAFA", margin: 0, letterSpacing: "-0.015em" }}>
-                {title}
-              </p>
-              <p style={{ fontSize: 11.5, color: "rgba(250,250,250,0.58)", margin: "2px 0 0" }}>
-                {tagline}
-              </p>
-            </div>
-            <ArrowUpRight size={15} style={{ color: "rgba(250,250,250,0.4)", flexShrink: 0 }} aria-hidden />
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: "auto" }}>
-            {entries.map((e) => (
-              <span
-                key={e.href}
-                className="lg-chip"
-                style={{ pointerEvents: "none", padding: "5px 10px", fontSize: 11 }}
-              >
-                <span style={{ color: accent, display: "inline-flex", flexShrink: 0 }}>{e.icon}</span>
-                {e.label}
-              </span>
-            ))}
-          </div>
+              <span style={{ color: accent, display: "inline-flex", flexShrink: 0 }}>{e.icon}</span>
+              {e.label}
+            </Link>
+          ))}
         </div>
-      </GlassCard>
-    </Link>
+      </div>
+    </GlassCard>
   )
 }

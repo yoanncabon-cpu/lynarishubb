@@ -1,8 +1,8 @@
 "use client"
 
 import { Bell, ChevronDown, Menu, Search, Settings, LogOut, CreditCard, X, Zap } from "lucide-react"
-import { useState, useEffect, useRef } from "react"
-import { usePathname } from "next/navigation"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { motion, LayoutGroup } from "framer-motion"
@@ -28,7 +28,17 @@ interface Props {
 
 export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const { plan, limits } = usePlan()
+
+  // Prefetch agressif au hover : déclenche le téléchargement des assets
+  // dès que la souris approche du hub, avant même le clic.
+  const prefetchHub = useCallback(
+    (href: string) => {
+      try { router.prefetch(href) } catch { /* */ }
+    },
+    [router]
+  )
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -240,6 +250,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                   whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => {
+                  prefetchHub(hub.href)
                   if (!isActive) {
                     ;(e.currentTarget as HTMLElement).style.color = "#FAFAFA"
                   }

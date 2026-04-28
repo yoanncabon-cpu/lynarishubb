@@ -22,11 +22,19 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({
-      completed: row?.onboardingCompleted ?? false,
-      currentStep: row?.onboardingCurrentStep ?? 0,
-      skipped: row?.onboardingSkipped ?? false,
-    })
+    return NextResponse.json(
+      {
+        completed: row?.onboardingCompleted ?? false,
+        currentStep: row?.onboardingCurrentStep ?? 0,
+        skipped: row?.onboardingSkipped ?? false,
+      },
+      {
+        headers: {
+          // Statut onboarding change rarement → cache 60s suffit
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+        },
+      }
+    )
   } catch (err) {
     console.error("[onboarding/status] DB error:", err instanceof Error ? err.message : err)
     return NextResponse.json({ completed: false, currentStep: 0, skipped: false })

@@ -4,9 +4,14 @@ export const runtime = "nodejs"
 import { db } from "@/lib/db"
 import { actionLogs, agentInstances } from "@/lib/db/schema"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
-import { desc, eq, gt } from "drizzle-orm"
+import { and, desc, eq, gt } from "drizzle-orm"
 
 async function fetchLogs(orgId: string, since?: Date) {
+  // ⚠️ Filtre SQL réel sur `since` (avant : la condition était identique des 2 côtés → bug)
+  const whereClause = since
+    ? and(eq(actionLogs.orgId, orgId), gt(actionLogs.createdAt, since))
+    : eq(actionLogs.orgId, orgId)
+
   const logs = await db
     .select({
       id: actionLogs.id,
@@ -16,11 +21,7 @@ async function fetchLogs(orgId: string, since?: Date) {
       payload: actionLogs.payload,
     })
     .from(actionLogs)
-    .where(
-      since
-        ? eq(actionLogs.orgId, orgId)
-        : eq(actionLogs.orgId, orgId)
-    )
+    .where(whereClause)
     .orderBy(desc(actionLogs.createdAt))
     .limit(since ? 20 : 10)
 
@@ -38,28 +39,27 @@ async function fetchLogs(orgId: string, since?: Date) {
 
   const slugMap = new Map(instances.map((i) => [i.id, i.agentSlug]))
 
-  return logs
-    .filter((l) => !since || l.createdAt > since)
-    .map((l) => {
-      const payloadObj =
-        l.payload && typeof l.payload === "object"
-          ? (l.payload as Record<string, unknown>)
-          : null
-      const payloadSlug =
-        payloadObj && typeof payloadObj.agentSlug === "string"
-          ? payloadObj.agentSlug
-          : undefined
-      return {
-        type: "activity" as const,
-        agent:
-          (l.agentInstanceId ? slugMap.get(l.agentInstanceId) : undefined) ??
-          payloadSlug ??
-          "charles",
-        action: l.type,
-        time: l.createdAt.toISOString(),
-        payload: payloadObj,
-      }
-    })
+  return logs.map((l) => {
+    const payloadObj =
+      l.payload && typeof l.payload === "object"
+        ? (l.payload as Record<string, unknown>)
+        : null
+    const payloadSlug =
+      payloadObj && typeof payloadObj.agentSlug === "string"
+        ? payloadObj.agentSlug
+        : undefined
+    return {
+      type: "activity" as const,
+      id: l.id, // ✅ Identifiant unique pour déduplication client
+      agent:
+        (l.agentInstanceId ? slugMap.get(l.agentInstanceId) : undefined) ??
+        payloadSlug ??
+        "charles",
+      action: l.type,
+      time: l.createdAt.toISOString(),
+      payload: payloadObj,
+    }
+  })
 }
 
 export async function GET() {
@@ -84,12 +84,15 @@ export async function GET() {
       // Ping immédiat — force onopen côté client
       safeEnqueue(encoder.encode(`data: ${JSON.stringify({ type: "ping", ts: Date.now() })}\n\n`))
 
-      // Snapshot initial — envoyé immédiatement
+      // Snapshot initial — événements envoyés en bloc avec flag `snapshot: true`
+      // Le client REMPLACE sa liste au reçu d'un snapshot (au lieu d'append)
       try {
         const initial = await fetchLogs(orgId)
-        for (const ev of initial) {
-          safeEnqueue(encoder.encode(`data: ${JSON.stringify(ev)}\n\n`))
-        }
+        safeEnqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ type: "snapshot", events: initial, ts: Date.now() })}\n\n`
+          )
+        )
       } catch { /* DB indisponible */ }
 
       // Ping keepalive toutes les 30s
@@ -99,7 +102,7 @@ export async function GET() {
         )
       }, 30_000)
 
-      // Polling nouveaux logs toutes les 60s
+      // Polling nouveaux logs toutes les 30s (live append)
       let lastCheck = new Date()
       pollInterval = setInterval(async () => {
         try {
@@ -109,7 +112,7 @@ export async function GET() {
           }
           lastCheck = new Date()
         } catch { /* ignore */ }
-      }, 60_000)
+      }, 30_000)
     },
     cancel() {
       clearInterval(pingInterval)

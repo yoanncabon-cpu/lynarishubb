@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { SpotlightTopBar } from "@/components/app/SpotlightTopBar"
 import { SpotlightSubNav } from "@/components/app/SpotlightSubNav"
 import { SpotlightMobileDrawer } from "@/components/app/SpotlightMobileDrawer"
+import { NavigationProgress } from "@/components/app/NavigationProgress"
 import { NotificationProvider } from "@/components/app/NotificationProvider"
 import { VoiceLynaris } from "@/components/app/VoiceLynaris"
 import { OnboardingLoader } from "@/components/onboarding/OnboardingLoader"
@@ -34,14 +35,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("keydown", onKeyDown)
   }, [])
 
+  // Check admin — cache sessionStorage 5min pour éviter un fetch à chaque mount
   useEffect(() => {
+    const KEY = "lynaris-is-admin"
+    const TS_KEY = "lynaris-is-admin-ts"
+    const TTL = 5 * 60 * 1000 // 5 minutes
+
+    const cached = sessionStorage.getItem(KEY)
+    const cachedTs = parseInt(sessionStorage.getItem(TS_KEY) ?? "0", 10)
+    if (cached !== null && Date.now() - cachedTs < TTL) {
+      setIsAdmin(cached === "1")
+      return
+    }
+
     fetch("/api/admin/tickets?limit=1")
-      .then((r) => setIsAdmin(r.ok))
+      .then((r) => {
+        const result = r.ok
+        setIsAdmin(result)
+        sessionStorage.setItem(KEY, result ? "1" : "0")
+        sessionStorage.setItem(TS_KEY, String(Date.now()))
+      })
       .catch(() => {})
   }, [])
 
   return (
     <NotificationProvider>
+      <NavigationProgress />
       <div
         className="lg-canvas"
         style={{
@@ -53,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             "var(--font-jakarta, var(--font-geist-sans), -apple-system, sans-serif)",
         }}
       >
-        {/* Aurora background — calque vivant */}
+        {/* Aurora background — mount différé après FCP (idle callback) */}
         <AuroraBackground />
 
         {/* Charpente flex column flottante — padding fluide selon viewport */}

@@ -66,40 +66,44 @@ export async function GET(request: NextRequest) {
     const callsMinutes = callsLogs ? Math.round(callsLogs.c * 2.5) : 0
     const emailsProcessed = emailLogs?.c ?? 0
 
-    // ── Per-agent breakdown ──────────────────────────────────────────────────
-    const instances = await db.query.agentInstances.findMany({
-      where: (ai, { eq: e }) => e(ai.orgId, orgId),
-      columns: { id: true, agentSlug: true },
-    })
+    // ── Per-agent breakdown — 2 queries GROUP BY au lieu de 2×N ─────────────
+    // Avant : 2 × nb_agents queries en parallèle (~26 queries pour 9 agents)
+    // Après : 3 queries totales (instances + 2 GROUP BY) → gain ~70%
+    const [instances, convGrouped, actionGrouped] = await Promise.all([
+      db.query.agentInstances.findMany({
+        where: (ai, { eq: e }) => e(ai.orgId, orgId),
+        columns: { id: true, agentSlug: true },
+      }),
+      db
+        .select({ agentInstanceId: conversations.agentInstanceId, c: count() })
+        .from(conversations)
+        .where(and(eq(conversations.orgId, orgId), gte(conversations.startedAt, since)))
+        .groupBy(conversations.agentInstanceId),
+      db
+        .select({ agentInstanceId: actionLogs.agentInstanceId, c: count() })
+        .from(actionLogs)
+        .where(and(eq(actionLogs.orgId, orgId), gte(actionLogs.createdAt, since)))
+        .groupBy(actionLogs.agentInstanceId),
+    ])
 
-    const agentConvCounts = await Promise.all(
-      instances.map(inst =>
-        db.select({ c: count() }).from(conversations)
-          .where(and(eq(conversations.orgId, orgId), eq(conversations.agentInstanceId, inst.id), gte(conversations.startedAt, since)))
-          .then(r => ({ slug: inst.agentSlug, convs: r[0]?.c ?? 0 }))
-      )
-    )
+    const convCountByInstance = new Map(convGrouped.map((r) => [r.agentInstanceId, r.c]))
+    const actionCountByInstance = new Map(actionGrouped.map((r) => [r.agentInstanceId, r.c]))
 
-    const agentActionCounts = await Promise.all(
-      instances.map(inst =>
-        db.select({ c: count() }).from(actionLogs)
-          .where(and(eq(actionLogs.orgId, orgId), eq(actionLogs.agentInstanceId, inst.id), gte(actionLogs.createdAt, since)))
-          .then(r => ({ slug: inst.agentSlug, actions: r[0]?.c ?? 0 }))
-      )
-    )
+    const totalConvs = instances.reduce((acc, inst) => acc + (convCountByInstance.get(inst.id) ?? 0), 0) || 1
 
-    const actionMap = Object.fromEntries(agentActionCounts.map(a => [a.slug, a.actions]))
-    const totalConvs = agentConvCounts.reduce((a, b) => a + b.convs, 0) || 1
-
-    const agentBreakdown = agentConvCounts
-      .map(a => ({
-        slug: a.slug,
-        name: a.slug.charAt(0).toUpperCase() + a.slug.slice(1),
-        conversations: a.convs,
-        actions: actionMap[a.slug] ?? 0,
-        pct: Math.round((a.convs / totalConvs) * 100),
-        color: AGENT_COLORS[a.slug] ?? "#6B7280",
-      }))
+    const agentBreakdown = instances
+      .map((inst) => {
+        const convs = convCountByInstance.get(inst.id) ?? 0
+        const actions = actionCountByInstance.get(inst.id) ?? 0
+        return {
+          slug: inst.agentSlug,
+          name: inst.agentSlug.charAt(0).toUpperCase() + inst.agentSlug.slice(1),
+          conversations: convs,
+          actions,
+          pct: Math.round((convs / totalConvs) * 100),
+          color: AGENT_COLORS[inst.agentSlug] ?? "#6B7280",
+        }
+      })
       .sort((a, b) => b.conversations - a.conversations)
 
     // ── Daily series (SQL GROUP BY date) ────────────────────────────────────
@@ -149,21 +153,29 @@ export async function GET(request: NextRequest) {
       count: a.c,
     }))
 
-    return NextResponse.json({
-      totals: {
-        conversations: convTotal,
-        actions: actionTotal,
-        callsMinutes,
-        emailsProcessed,
-        deltaConversations: deltaConv,
-        deltaActions: deltaAction,
+    return NextResponse.json(
+      {
+        totals: {
+          conversations: convTotal,
+          actions: actionTotal,
+          callsMinutes,
+          emailsProcessed,
+          deltaConversations: deltaConv,
+          deltaActions: deltaAction,
+        },
+        dailyConversations: finalConvSeries,
+        dailyActions: finalActionSeries,
+        agentBreakdown: agentBreakdown.length > 0 ? agentBreakdown : null,
+        topActionTypes: topActionTypes.length > 0 ? topActionTypes : null,
+        hasRealData,
       },
-      dailyConversations: finalConvSeries,
-      dailyActions: finalActionSeries,
-      agentBreakdown: agentBreakdown.length > 0 ? agentBreakdown : null,
-      topActionTypes: topActionTypes.length > 0 ? topActionTypes : null,
-      hasRealData,
-    })
+      {
+        headers: {
+          // Cache 30s — les stats agrégées changent lentement
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      }
+    )
   } catch (err) {
     console.error("Analytics API error:", err)
     // Fallback gracieux

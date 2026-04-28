@@ -73,7 +73,14 @@ export async function GET(req: Request): Promise<NextResponse> {
           )
         : rows
 
-    return NextResponse.json({ tickets: filtered })
+    return NextResponse.json(
+      { tickets: filtered },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      }
+    )
   } catch (err) {
     console.error("[admin/tickets] DB error:", err)
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 })

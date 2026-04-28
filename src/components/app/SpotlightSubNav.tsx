@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useCallback } from "react"
 import { motion, LayoutGroup } from "framer-motion"
 import { GlassPanel } from "@/components/app/glass"
 import { findActiveHub } from "./SpotlightNavConfig"
@@ -17,9 +18,18 @@ interface Props {
  */
 export function SpotlightSubNav({ isAdmin }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const { plan } = usePlan()
   const activeHub = findActiveHub(pathname)
   const isPro = plan === "pro" || plan === "custom"
+
+  // Prefetch agressif au hover sur les chips de sous-navigation
+  const prefetchItem = useCallback(
+    (href: string) => {
+      try { router.prefetch(href) } catch { /* */ }
+    },
+    [router]
+  )
 
   if (!activeHub || activeHub.items.length === 0) return null
   if (activeHub.adminOnly && !isAdmin) return null
@@ -72,6 +82,7 @@ export function SpotlightSubNav({ isAdmin }: Props) {
                 letterSpacing: "-0.005em",
               }}
               onMouseEnter={(e) => {
+                prefetchItem(target)
                 if (!isActive) {
                   ;(e.currentTarget as HTMLElement).style.color = "#FAFAFA"
                 }

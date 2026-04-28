@@ -70,7 +70,14 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       }
     })
 
-    return NextResponse.json({ notifications })
+    return NextResponse.json(
+      { notifications },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+        },
+      }
+    )
   } catch (err) {
     console.error("[notifications] DB error:", err instanceof Error ? err.message : err)
     return NextResponse.json({ notifications: [] })
