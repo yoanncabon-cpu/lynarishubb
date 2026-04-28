@@ -6,6 +6,7 @@ import { detectProvider, streamOpenAI, streamGemini, type ProviderMessage } from
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
+import { getOrgPlanId, instrumentTurnComplete } from "./instrumentation"
 
 const anthropic = new Anthropic({
   apiKey: process.env["ANTHROPIC_API_KEY"],
@@ -156,6 +157,9 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
 
   const systemPrompt = augmentSystemPrompt(agentDef.systemPromptFn(effectiveConfig), effectiveConfig)
 
+  // Plan résolu une fois par appel (cache mémoire pendant la durée du run)
+  const planId = await getOrgPlanId(orgId)
+
   let currentMessages: MessageParam[] = [...messages]
   let totalInputTokens = 0
   let totalOutputTokens = 0
@@ -175,6 +179,17 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
 
     totalInputTokens += response.usage.input_tokens
     totalOutputTokens += response.usage.output_tokens
+
+    // Instrumentation : tracking coût réel + compteur client (fire-and-forget)
+    void instrumentTurnComplete({
+      orgId,
+      agentSlug,
+      planId,
+      model: agentDef.model,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      providerRef: response.id,
+    })
 
     // Extract text content
     const textBlocks = response.content.filter((b) => b.type === "text")
@@ -297,6 +312,9 @@ export async function* streamAgent(
   }
 
   // ── Anthropic : flow complet avec tool use ────────────────────────────────────
+  // Plan résolu une fois pour le run (utilisé par instrumentTurnComplete)
+  const turnPlanId = await getOrgPlanId(orgId)
+
   let currentMessages: MessageParam[] = [...messages]
   let iteration = 0
 
@@ -363,6 +381,25 @@ export async function* streamAgent(
         stopReason = event.delta.stop_reason ?? null
       }
     }
+
+    // Instrumentation : tracking coût + compteur après fin du stream
+    // (fire-and-forget, ne bloque pas le yield des chunks suivants)
+    void (async () => {
+      try {
+        const finalMsg = await stream.finalMessage()
+        await instrumentTurnComplete({
+          orgId,
+          agentSlug,
+          planId: turnPlanId,
+          model: effectiveModel,
+          inputTokens: finalMsg.usage.input_tokens,
+          outputTokens: finalMsg.usage.output_tokens,
+          providerRef: finalMsg.id,
+        })
+      } catch (err) {
+        console.error("[executor] streamAgent instrumentation failed", err)
+      }
+    })()
 
     // Finalize tool use blocks into allContent
     for (const tu of toolUseInputs) {
