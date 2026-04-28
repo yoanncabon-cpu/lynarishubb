@@ -13,7 +13,7 @@ describe("getPlanFromStripePriceId", () => {
     STRIPE_PRICE_PRO_ANNUAL: "price_pro_a",
     STRIPE_PRICE_BUSINESS_MONTHLY: "price_business_m",
     STRIPE_PRICE_BUSINESS_ANNUAL: "price_business_a",
-  } as NodeJS.ProcessEnv
+  } as unknown as NodeJS.ProcessEnv
 
   it("résout les prix Starter", () => {
     expect(getPlanFromStripePriceId("price_starter_m", env)).toBe("starter")
@@ -39,7 +39,7 @@ describe("getPlanFromStripePriceId", () => {
   })
 
   it("ignore les env vars vides", () => {
-    const emptyEnv = {} as NodeJS.ProcessEnv
+    const emptyEnv = {} as unknown as NodeJS.ProcessEnv
     expect(getPlanFromStripePriceId("price_starter_m", emptyEnv)).toBeNull()
   })
 })
@@ -48,7 +48,7 @@ describe("isStripeSetupFeePriceId", () => {
   const env = {
     STRIPE_PRICE_PRO_SETUP: "price_pro_setup",
     STRIPE_PRICE_BUSINESS_SETUP: "price_business_setup",
-  } as NodeJS.ProcessEnv
+  } as unknown as NodeJS.ProcessEnv
 
   it("détecte les setup fees Pro et Business", () => {
     expect(isStripeSetupFeePriceId("price_pro_setup", env)).toBe(true)
@@ -62,7 +62,7 @@ describe("isStripeSetupFeePriceId", () => {
 
 describe("isVoicePackPriceId", () => {
   it("détecte le voice pack", () => {
-    const env = { STRIPE_PRICE_VOICE_PACK: "price_voice_pack" } as NodeJS.ProcessEnv
+    const env = { STRIPE_PRICE_VOICE_PACK: "price_voice_pack" } as unknown as NodeJS.ProcessEnv
     expect(isVoicePackPriceId("price_voice_pack", env)).toBe(true)
     expect(isVoicePackPriceId("price_other", env)).toBe(false)
   })
