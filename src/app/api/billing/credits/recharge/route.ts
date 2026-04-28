@@ -28,6 +28,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const stripe = getStripeClient()
+    const productName = type === "phone"
+      ? `Recharge crédits téléphoniques — ${amount.toFixed(2)} €`
+      : `Recharge crédits API — ${amount.toFixed(2)} €`
+    const productDescription = type === "phone"
+      ? "Crédits utilisables pour les appels Marine (entrants/sortants)"
+      : "Crédits utilisables pour les appels API agents Lynaris"
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -37,18 +44,29 @@ export async function POST(request: NextRequest) {
             currency: "eur",
             unit_amount: Math.round(amount * 100),
             product_data: {
-              name: type === "phone"
-                ? "Credits telephoniques Lynaris - " + amount + " EUR"
-                : "Credits API Lynaris - " + amount + " EUR",
-              description: type === "phone"
-                ? "Recharge credits telephoniques"
-                : "Recharge credits API",
+              name: productName,
+              description: productDescription,
             },
           },
           quantity: 1,
         },
       ],
-      success_url: appUrl + "/dashboard/billing?recharge=success&amount=" + amount + "&type=" + type,
+      // Génère une invoice Stripe pour ce paiement one-shot — apparaît
+      // dans /api/billing/invoices comme l'historique des abonnements.
+      invoice_creation: {
+        enabled: true,
+        invoice_data: {
+          description: productName,
+          metadata: {
+            org_id: orgId,
+            credit_type: type,
+            amount_eur: String(amount),
+            action: "credit_recharge",
+          },
+          footer: "Merci pour ta confiance — équipe Lynaris",
+        },
+      },
+      success_url: appUrl + "/dashboard/billing?recharge=success&session_id={CHECKOUT_SESSION_ID}&amount=" + amount + "&type=" + type,
       cancel_url: appUrl + "/dashboard/billing",
       client_reference_id: orgId,
       customer_email: org_email,

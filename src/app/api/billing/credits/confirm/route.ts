@@ -43,15 +43,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Paiement non confirmé" }, { status: 400 })
     }
 
-    // Mettre à jour les crédits en DB
+    // Mettre à jour les crédits en DB — idempotent via processed_recharges
     const org = await db.query.organizations.findFirst({
       where: eq(organizations.id, orgId),
       columns: { settings: true },
     })
-    const settings = ((org?.settings ?? {}) as Record<string, number>)
+    const settings = (org?.settings ?? {}) as Record<string, unknown>
+    const processed = Array.isArray(settings["processed_recharges"])
+      ? (settings["processed_recharges"] as string[])
+      : []
+
     const key = type === "phone" ? "phone_credits" : "api_credits"
-    const current = (settings[key] ?? 0) as number
-    const updated = { ...settings, [key]: Math.round((current + amount) * 100) / 100 }
+    const current = (typeof settings[key] === "number" ? settings[key] : 0) as number
+
+    // Si déjà traité (webhook arrivé avant), on retourne le solde sans re-créditer
+    if (processed.includes(sessionId)) {
+      return NextResponse.json({ success: true, newBalance: current, alreadyProcessed: true })
+    }
+
+    const newBalance = Math.round((current + amount) * 100) / 100
+    const updated = {
+      ...settings,
+      [key]: newBalance,
+      processed_recharges: [...processed, sessionId],
+    }
 
     await db.update(organizations).set({ settings: updated }).where(eq(organizations.id, orgId))
 
@@ -63,7 +78,6 @@ export async function POST(req: NextRequest) {
     if (customerEmail) {
       const name = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? customerEmail.split("@")[0]
       const dateStr = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
-      const newBalance = updated[key]
 
       // Import dynamique du layout email
       const { emailLayout, emailButton } = await import("@/lib/emails/base-layout")
@@ -89,7 +103,7 @@ export async function POST(req: NextRequest) {
             </tr>
             <tr>
               <td style="font-size:13px;color:rgba(250,250,250,0.5);padding:6px 0">Nouveau solde</td>
-              <td style="font-size:13px;color:#FAFAFA;text-align:right;padding:6px 0;font-weight:700">${(newBalance as number).toFixed(2)} €</td>
+              <td style="font-size:13px;color:#FAFAFA;text-align:right;padding:6px 0;font-weight:700">${newBalance.toFixed(2)} €</td>
             </tr>
             <tr>
               <td style="font-size:13px;color:rgba(250,250,250,0.5);padding:6px 0">Date</td>
@@ -103,12 +117,12 @@ export async function POST(req: NextRequest) {
 
       await sendEmail({
         to: customerEmail,
-        template: { subject: `✓ Recharge ${label} — ${amount.toFixed(2)} €`, html, text: `Recharge ${label} de ${amount}€ confirmée. Nouveau solde : ${(newBalance as number).toFixed(2)}€.` },
+        template: { subject: `✓ Recharge ${label} — ${amount.toFixed(2)} €`, html, text: `Recharge ${label} de ${amount}€ confirmée. Nouveau solde : ${newBalance.toFixed(2)}€.` },
         tags: ["credit-recharge"],
       }).catch(e => console.error("[credits/confirm] email failed:", e))
     }
 
-    return NextResponse.json({ success: true, newBalance: updated[key] })
+    return NextResponse.json({ success: true, newBalance })
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erreur"
     return NextResponse.json({ error: msg }, { status: 500 })

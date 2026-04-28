@@ -84,6 +84,12 @@ export async function POST(request: NextRequest) {
       console.info("[Stripe] Checkout completed", { orgId, sessionId: session.id, action })
 
       // ── Credit recharge (phone or API) ──────────────────────────────
+      // Filet de sécurité : si l'utilisateur ferme l'onglet avant le retour
+      // sur /dashboard/billing, le flow primaire (`/api/billing/credits/confirm`)
+      // n'est pas appelé. Le webhook prend alors le relais.
+      // Idempotence : `settings.processed_recharges` stocke les session.id
+      // déjà traités, pour éviter le double-crédit + double-email si les deux
+      // flows s'exécutent.
       if (action === "credit_recharge" && orgId) {
         const creditType = session.metadata?.["credit_type"] as "phone" | "api" | undefined
         const amountEur = parseFloat(session.metadata?.["amount_eur"] ?? "0")
@@ -98,18 +104,88 @@ export async function POST(request: NextRequest) {
               where: eq(organizations.id, orgId),
               columns: { settings: true },
             })
-            const settings = ((org?.settings ?? {}) as Record<string, number>)
+            const settings = (org?.settings ?? {}) as Record<string, unknown>
+            const processed = Array.isArray(settings["processed_recharges"])
+              ? (settings["processed_recharges"] as string[])
+              : []
+
+            if (processed.includes(session.id)) {
+              console.info("[Stripe] Recharge déjà traitée — skip", { orgId, sessionId: session.id })
+              break
+            }
+
             const key = creditType === "phone" ? "phone_credits" : "api_credits"
-            const current = (settings[key] ?? 0) as number
-            const updated = { ...settings, [key]: Math.round((current + amountEur) * 100) / 100 }
+            const current = (typeof settings[key] === "number" ? settings[key] : 0) as number
+            const newBalance = Math.round((current + amountEur) * 100) / 100
+            const updated = {
+              ...settings,
+              [key]: newBalance,
+              processed_recharges: [...processed, session.id],
+            }
 
             await db.update(organizations)
               .set({ settings: updated })
               .where(eq(organizations.id, orgId))
 
-            console.info("[Stripe] Credits added", { orgId, creditType, amountEur, newBalance: updated[key] })
+            console.info("[Stripe] Credits added (webhook)", { orgId, creditType, amountEur, newBalance })
+
+            // Email de confirmation — même template que le flow client
+            if (customerEmail) {
+              try {
+                const { emailLayout, emailButton } = await import("@/lib/emails/base-layout")
+                const label = creditType === "phone" ? "Crédits Téléphoniques" : "Crédits API"
+                const name = customerEmail.split("@")[0] ?? "Client"
+                const dateStr = new Date().toLocaleDateString("fr-FR", {
+                  day: "numeric", month: "long", year: "numeric",
+                })
+                const html = emailLayout(`
+                  <h2 style="font-size:20px;font-weight:700;color:#FAFAFA;margin:0 0 8px">
+                    Recharge confirmée ✓
+                  </h2>
+                  <p style="font-size:14px;color:rgba(250,250,250,0.6);margin:0 0 24px;line-height:1.6">
+                    Bonjour ${name},<br>
+                    Ta recharge de <strong style="color:#FAFAFA">${label}</strong> a bien été effectuée.
+                  </p>
+
+                  <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:24px">
+                    <table style="width:100%;border-collapse:collapse">
+                      <tr>
+                        <td style="font-size:13px;color:rgba(250,250,250,0.5);padding:6px 0">Type</td>
+                        <td style="font-size:13px;color:#FAFAFA;text-align:right;padding:6px 0;font-weight:600">${label}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:rgba(250,250,250,0.5);padding:6px 0">Montant rechargé</td>
+                        <td style="font-size:13px;color:#34D399;text-align:right;padding:6px 0;font-weight:700">+${amountEur.toFixed(2)} €</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:rgba(250,250,250,0.5);padding:6px 0">Nouveau solde</td>
+                        <td style="font-size:13px;color:#FAFAFA;text-align:right;padding:6px 0;font-weight:700">${newBalance.toFixed(2)} €</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:rgba(250,250,250,0.5);padding:6px 0">Date</td>
+                        <td style="font-size:13px;color:rgba(250,250,250,0.6);text-align:right;padding:6px 0">${dateStr}</td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  ${emailButton("Voir mon solde", `${appUrl}/dashboard/billing`)}
+                `)
+
+                await sendEmail({
+                  to: customerEmail,
+                  template: {
+                    subject: `✓ Recharge ${label} — ${amountEur.toFixed(2)} €`,
+                    html,
+                    text: `Recharge ${label} de ${amountEur}€ confirmée. Nouveau solde : ${newBalance.toFixed(2)}€.`,
+                  },
+                  tags: ["credit-recharge"],
+                })
+              } catch (err) {
+                console.error("[Stripe] Failed to send recharge email", err)
+              }
+            }
           } catch (err) {
-            console.error("[Stripe] Failed to update credits", err)
+            console.error("[Stripe] Failed to process recharge", err)
           }
         }
         break

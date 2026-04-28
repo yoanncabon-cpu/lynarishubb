@@ -4,23 +4,11 @@
  * Design : thème sombre du site (#0C0C0F, #111114, accent #E86F4D).
  */
 
-// URL du logo dans les emails — priorité : var d'env > URL app > fallback Supabase
-// Gmail refuse les data:URI — l'image doit être hébergée sur une URL publique HTTPS.
-// Configurer EMAIL_LOGO_URL dans .env avec une URL publique (Supabase Storage, Vercel, CDN).
-const LOGO_URL = (
-  process.env["EMAIL_LOGO_URL"] ??
-  (() => {
-    const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? ""
-    // Ne pas utiliser localhost — non accessible depuis les serveurs email
-    if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
-      return `${appUrl}/logo.png`
-    }
-    // Fallback : Supabase Storage public (à configurer)
-    const supabaseUrl = process.env["NEXT_PUBLIC_SUPABASE_URL"] ?? ""
-    if (supabaseUrl) return `${supabaseUrl}/storage/v1/object/public/assets/logo.png`
-    return "https://lynarisai.com/logo.png"
-  })()
-)
+// URL absolue prod du logo — Gmail refuse les data:URI et les URLs localhost.
+// On force l'asset prod (cross-env : dev local enverra aussi un logo qui charge).
+// Override possible via EMAIL_LOGO_URL si CDN dédié plus tard.
+const LOGO_URL =
+  process.env["EMAIL_LOGO_URL"] ?? "https://lynarisai.com/logo.png"
 
 export function emailLayout(content: string, footer?: string): string {
   const resolvedFooter =
