@@ -53,6 +53,12 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
+    // React en dev mode a besoin de 'unsafe-eval' pour reconstruire les
+    // callstacks de debug. En prod, React n'utilise jamais eval() — on
+    // peut donc le retirer uniquement pour le build de production.
+    const isDev = process.env.NODE_ENV !== "production"
+    const scriptSrcEval = isDev ? " 'unsafe-eval'" : ""
+
     return [
       {
         source: "/(.*)",
@@ -70,10 +76,11 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // 'unsafe-eval' retiré (vecteur XSS connu).
+              // 'unsafe-eval' présent en DEV uniquement (React debug callstacks).
+              // En PROD : retiré → renforce CSP contre XSS.
               // 'unsafe-inline' conservé pour les inline scripts Next.js
-              // (à durcir avec nonce-based CSP en v2).
-              "script-src 'self' 'unsafe-inline' https://js.stripe.com https://pipedream.com https://*.pipedream.com",
+              // (à durcir avec nonce-based CSP en v2 long terme).
+              `script-src 'self' 'unsafe-inline'${scriptSrcEval} https://js.stripe.com https://pipedream.com https://*.pipedream.com`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https: blob: https://lynarisai.com",
               "font-src 'self' data: https://fonts.gstatic.com",
