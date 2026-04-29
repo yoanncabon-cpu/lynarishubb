@@ -10,7 +10,6 @@ import {
   CreditCard,
   Phone,
   X,
-  Shield,
   TrendingUp,
   Bot,
   Mic,
@@ -30,6 +29,34 @@ import {
 // Affichage des 5 paliers : Découverte / Starter / Pro ⭐ / Business / Sur-mesure
 
 // Couleur d'accent par plan pour l'UI (chip, prix, bordure card)
+// Mapping plan courant → cible d'upgrade pour le bouton "Passer X" en header.
+// custom n'a pas de successeur (bouton masqué).
+const PLAN_UPGRADE_PATH: Readonly<
+  Record<PricingPlanId, { target: PricingPlanId; label: string; gradient: string } | null>
+> = {
+  discovery: {
+    target: "pro",
+    label: "Passer Pro",
+    gradient: "linear-gradient(90deg, #7C3AED, #22D3EE)",
+  },
+  starter: {
+    target: "pro",
+    label: "Passer Pro",
+    gradient: "linear-gradient(90deg, #7C3AED, #22D3EE)",
+  },
+  pro: {
+    target: "business",
+    label: "Passer Business",
+    gradient: "linear-gradient(90deg, #6366F1, #22D3EE)",
+  },
+  business: {
+    target: "custom",
+    label: "Passer Sur-mesure",
+    gradient: "linear-gradient(90deg, #FBBF24, #F59E0B)",
+  },
+  custom: null,
+}
+
 const PLAN_DISPLAY_COLORS: Readonly<Record<PricingPlanId, string>> = {
   discovery: "#22D3EE",
   starter:   "#A78BFA",
@@ -129,8 +156,9 @@ const RECHARGE_AMOUNTS = [5, 10, 25, 50, 100, 200]
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function progressColor(pct: number) {
-  if (pct > 90) return "#EF4444"
-  if (pct > 70) return "#F59E0B"
+  // Seuils visuels : vert < 50%, orange 50-80%, rouge > 80%
+  if (pct > 80) return "#EF4444"
+  if (pct >= 50) return "#F59E0B"
   return "#10B981"
 }
 
@@ -390,15 +418,36 @@ export default function BillingPage() {
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [rechargeModal, setRechargeModal] = useState<"phone" | null>(null)
-  const [autoRechargePhone, setAutoRechargePhone] = useState(false)
-  const [credits, setCredits] = useState<{ phone: number } | null>(null)
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null | undefined>(undefined)
   const [toast, setToastState] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null)
   const plansRef = useRef<HTMLDivElement>(null)
-  const { limits, plan: contextPlan } = usePlan()
-  // Le plan vient du PlanProvider (Server Component layout) — pas de fetch nécessaire.
-  // Mapping UI → DB : "custom" → "scale" pour rester compatible avec PLAN_COLORS / CURRENT_PLAN_LABEL.
+  const { limits, plan: contextPlanRaw } = usePlan()
+  const [realPlanId, setRealPlanId] = useState<PricingPlanId | null>(null)
+
+  // PlanProvider expose un PlanId legacy (trial|decouverte|pro|custom).
+  // On normalise + on complète via /api/billing/plan pour avoir aussi
+  // "starter" et "business" (absents du legacy enum).
+  useEffect(() => {
+    fetch("/api/billing/plan")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { planId?: PricingPlanId } | null) => {
+        if (d?.planId) setRealPlanId(d.planId)
+      })
+      .catch(() => {})
+  }, [])
+
+  const contextPlan: PricingPlanId =
+    realPlanId ??
+    (contextPlanRaw === "trial" || contextPlanRaw === "decouverte"
+      ? "discovery"
+      : contextPlanRaw === "pro"
+        ? "pro"
+        : contextPlanRaw === "custom"
+          ? "custom"
+          : "discovery")
+
+  // Mapping pour rester compatible avec PLAN_COLORS / CURRENT_PLAN_LABEL existants
   const currentPlanId = contextPlan === "custom" ? "scale" : contextPlan
 
   // Labels par plan DB.
@@ -485,14 +534,6 @@ export default function BillingPage() {
         })
         .catch(() => showToast("Erreur réseau", "error"))
     }
-  }, [])
-
-  // Fetch credits balance
-  useEffect(() => {
-    fetch("/api/billing/credits/balance")
-      .then((r) => r.json())
-      .then((d) => setCredits(d as { phone: number; api: number }))
-      .catch(() => {})
   }, [])
 
   // Fetch vraies factures Stripe + date de renouvellement
@@ -668,13 +709,12 @@ export default function BillingPage() {
               }}
             >
               {usageStats.map(({ label, used, max, icon, accent }) => {
-                const isLoading = used === null
+                // 0 par défaut si pas encore chargé : on affiche toujours "0 / limite"
+                // au lieu d'un skeleton — meilleur UX, l'utilisateur voit la jauge
                 const safeUsed = used ?? 0
                 const pct = max > 0 ? Math.min(Math.round((safeUsed / max) * 100), 100) : 0
                 const color = progressColor(pct)
-                const valueStr = isLoading
-                  ? null
-                  : `${safeUsed.toLocaleString("fr-FR")} / ${max > 0 ? max.toLocaleString("fr-FR") : "—"}`
+                const valueStr = `${safeUsed.toLocaleString("fr-FR")} / ${max > 0 ? max.toLocaleString("fr-FR") : "∞"}`
                 return (
                   <div key={label} style={{ display: "flex", flexDirection: "column" }}>
                     <KpiTile
@@ -683,10 +723,12 @@ export default function BillingPage() {
                       icon={icon}
                       accent={accent}
                     />
-                    {!isLoading && max > 0 && (
+                    {max > 0 && (
                       <div style={{ marginTop: 8, paddingLeft: 4, paddingRight: 4 }}>
                         <ProgressBar used={safeUsed} max={max} />
-                        <p style={{ fontSize: 10, color, margin: "4px 0 0", fontWeight: 600 }}>{pct}%</p>
+                        <p style={{ fontSize: 10, color, margin: "4px 0 0", fontWeight: 600 }}>
+                          {pct}%
+                        </p>
                       </div>
                     )}
                   </div>
@@ -728,177 +770,124 @@ export default function BillingPage() {
                 <CreditCard size={13} />
                 Gérer ma méthode de paiement
               </button>
-              <button
-                type="button"
-                onClick={() => plansRef.current?.scrollIntoView({ behavior: "smooth" })}
-                style={{
-                  height: 36,
-                  padding: "0 16px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: "var(--accent)",
-                  color: "white",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  boxShadow: "0 8px 24px -6px var(--accent-glow)",
-                  transition: "transform 220ms var(--ease-apple), box-shadow 220ms var(--ease-apple)",
-                }}
-              >
-                <Zap size={13} />
-                Passer Pro
-              </button>
+              {(() => {
+                const upgradePath = PLAN_UPGRADE_PATH[contextPlan]
+                if (upgradePath === null) return null
+                return (
+                  <button
+                    type="button"
+                    onClick={() => plansRef.current?.scrollIntoView({ behavior: "smooth" })}
+                    style={{
+                      height: 36,
+                      padding: "0 16px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: upgradePath.gradient,
+                      color: "white",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      boxShadow: "0 8px 24px -6px rgba(124,58,237,0.4)",
+                      transition: "transform 220ms var(--ease-apple), box-shadow 220ms var(--ease-apple)",
+                    }}
+                  >
+                    <Zap size={13} />
+                    {upgradePath.label}
+                  </button>
+                )
+              })()}
             </div>
           </GlassCard>
         </section>
 
-        {/* ── Section 2 — Crédits ─────────────────────────────────────────── */}
-        <section style={{ marginBottom: 28 }}>
-          <SectionLabel>Crédits</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, maxWidth: 480 }}>
-
-            {/* Crédits Téléphoniques */}
-            <GlassCard
-              tint="rgba(34,211,238,0.10)"
-              radius={22}
-              padding={24}
-              hover={false}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 16,
-                  position: "relative",
-                  zIndex: 1,
-                }}
+        {/* ── Section 2 — Option Marine (Starter uniquement) ─────────────── */}
+        {contextPlan === "starter" && (
+          <section style={{ marginBottom: 28 }}>
+            <SectionLabel>Option Marine</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, maxWidth: 480 }}>
+              <GlassCard
+                tint="rgba(34,211,238,0.08)"
+                radius={22}
+                padding={24}
+                hover={false}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    marginBottom: 16,
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
                   <div
                     style={{
-                      width: 36,
-                      height: 36,
+                      width: 40,
+                      height: 40,
                       borderRadius: 10,
                       background: "rgba(34,211,238,0.12)",
                       border: "1px solid rgba(34,211,238,0.22)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                    }}
-                  >
-                    <Phone size={15} style={{ color: "#22D3EE" }} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: "#FAFAFA", margin: 0 }}>
-                      Crédits Téléphoniques
-                    </p>
-                    <p style={{ fontSize: 11, color: "rgba(250,250,250,0.55)", margin: "2px 0 0" }}>
-                      Marine · Appels entrants/sortants
-                    </p>
-                  </div>
-                </div>
-                {/* Auto-recharge toggle */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span
-                    className="ly-badge"
-                    style={{
-                      color: autoRechargePhone ? "#22D3EE" : "rgba(250,250,250,0.45)",
-                      borderColor: autoRechargePhone ? "rgba(34,211,238,0.3)" : undefined,
-                      fontSize: 10,
-                      padding: "2px 6px",
-                    }}
-                  >
-                    Auto-recharge {autoRechargePhone ? "ON" : "OFF"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setAutoRechargePhone((v) => !v)}
-                    style={{
-                      width: 36,
-                      height: 20,
-                      borderRadius: 999,
-                      border: "none",
-                      background: autoRechargePhone ? "#22D3EE" : "rgba(255,255,255,0.12)",
-                      cursor: "pointer",
-                      position: "relative",
-                      transition: "background 220ms var(--ease-apple)",
                       flexShrink: 0,
                     }}
-                    aria-label="Toggle auto-recharge téléphonique"
                   >
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 2,
-                        left: autoRechargePhone ? 18 : 2,
-                        width: 16,
-                        height: 16,
-                        borderRadius: "50%",
-                        background: "white",
-                        transition: "left 220ms var(--ease-apple)",
-                      }}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              {/* Solde */}
-              <div style={{ marginBottom: 16, position: "relative", zIndex: 1 }}>
-                <p style={{ fontSize: 11, color: "rgba(250,250,250,0.55)", margin: "0 0 4px" }}>Solde actuel</p>
-                {credits === null ? (
-                  <div
+                    <Phone size={16} style={{ color: "#22D3EE" }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "#FAFAFA", margin: 0 }}>
+                      Pack Marine — 200 minutes
+                    </p>
+                    <p style={{ fontSize: 11, color: "rgba(250,250,250,0.55)", margin: "2px 0 0" }}>
+                      Active Marine sur ton plan Starter
+                    </p>
+                  </div>
+                  <span
                     style={{
-                      height: 32,
-                      width: 100,
-                      background: "rgba(255,255,255,0.06)",
-                      borderRadius: 6,
-                      animation: "pulse 1.5s infinite",
-                    }}
-                  />
-                ) : (
-                  <p
-                    style={{
-                      fontSize: 30,
+                      fontSize: 22,
                       fontWeight: 700,
                       color: "#22D3EE",
-                      margin: 0,
                       letterSpacing: "-0.02em",
-                      fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    {(credits.phone ?? 0).toFixed(2).replace(".", ",")} €
-                  </p>
-                )}
-              </div>
+                    99 €
+                  </span>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setRechargeModal("phone")}
-                style={{
-                  width: "100%",
-                  height: 38,
-                  borderRadius: 10,
-                  border: "1px solid rgba(34,211,238,0.25)",
-                  background: "rgba(34,211,238,0.10)",
-                  color: "#22D3EE",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "background 220ms var(--ease-apple), border-color 220ms var(--ease-apple)",
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                Recharger
-              </button>
-            </GlassCard>
-
-          </div>
-        </section>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const res = await fetch("/api/billing/voice-pack", { method: "POST" })
+                    const data = (await res.json()) as { url?: string }
+                    if (data.url) window.location.assign(data.url)
+                    else showToast("Erreur lors de la création du paiement", "error")
+                  }}
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 10,
+                    border: "1px solid rgba(34,211,238,0.25)",
+                    background: "rgba(34,211,238,0.10)",
+                    color: "#22D3EE",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "background 220ms var(--ease-apple)",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
+                  Acheter le pack
+                </button>
+              </GlassCard>
+            </div>
+          </section>
+        )}
 
         {/* ── Section 3 — Changer de plan ────────────────────────────────── */}
         <section ref={plansRef} style={{ marginBottom: 28 }}>
@@ -1170,24 +1159,6 @@ export default function BillingPage() {
                       )}
                     </button>
 
-                    {/* Garantie */}
-                    {!plan.isFree && (
-                      <p
-                        style={{
-                          fontSize: 10,
-                          color: "rgba(250,250,250,0.45)",
-                          margin: "10px 0 0",
-                          textAlign: "center",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 4,
-                        }}
-                      >
-                        <Shield size={9} style={{ color: "rgba(250,250,250,0.45)" }} />
-                        30 jours satisfait ou remboursé
-                      </p>
-                    )}
                   </div>
                 </GlassCard>
               )
