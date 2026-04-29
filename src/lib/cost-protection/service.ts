@@ -39,10 +39,10 @@ import {
 } from "./criticality"
 import {
   dispatchNotification,
-  stubNotificationProvider,
   type NotificationContext,
   type NotificationProvider,
 } from "./notifications"
+import { resendNotificationProvider } from "./notifications-resend"
 
 // ─── Types publics ──────────────────────────────────────────────────────────
 
@@ -229,7 +229,7 @@ export function computeFlagUpdates(
  */
 export async function trackUsage(
   input: TrackUsageInput,
-  notificationProvider: NotificationProvider = stubNotificationProvider
+  notificationProvider: NotificationProvider = resendNotificationProvider
 ): Promise<TrackUsageResult> {
   const cost = computeCost(input.cost)
 
