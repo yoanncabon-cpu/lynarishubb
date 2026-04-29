@@ -82,9 +82,37 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 // ── POST : messages entrants ──────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // HMAC vérifié — Meta signe avec X-Hub-Signature-256 (sha256=...)
+  // Refus si signature invalide pour empêcher injection de messages.
+  const rawBody = await req.text()
+  const signature = req.headers.get("x-hub-signature-256") ?? ""
+  const appSecret = process.env["WHATSAPP_APP_SECRET"]
+
+  if (appSecret) {
+    if (!signature.startsWith("sha256=")) {
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+    }
+    const { createHmac, timingSafeEqual } = await import("node:crypto")
+    const expected = createHmac("sha256", appSecret).update(rawBody).digest("hex")
+    const provided = signature.slice("sha256=".length)
+    let valid = false
+    try {
+      valid =
+        expected.length === provided.length &&
+        timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(provided, "hex"))
+    } catch {
+      valid = false
+    }
+    if (!valid) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+    }
+  }
+  // Note : si WHATSAPP_APP_SECRET non défini, on accepte (mode dev sans HMAC).
+  // En prod, configurer cette variable est OBLIGATOIRE.
+
   let body: unknown
   try {
-    body = await req.json()
+    body = JSON.parse(rawBody)
   } catch {
     return NextResponse.json({ ok: true })
   }

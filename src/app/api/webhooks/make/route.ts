@@ -21,11 +21,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing X-Lynaris-Org header" }, { status: 400 })
   }
 
-  if (signature && process.env["MAKE_WEBHOOK_SECRET"]) {
-    const valid = await verifyMakeWebhook(body, signature, process.env["MAKE_WEBHOOK_SECRET"])
-    if (!valid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
-    }
+  // HMAC obligatoire — refuse si signature absente ou secret non configuré.
+  // Avant : `if (signature && secret)` permettait un bypass total si l'attaquant
+  // ne mettait simplement pas de header de signature. Trou de sécurité critique.
+  const makeSecret = process.env["MAKE_WEBHOOK_SECRET"]
+  if (!makeSecret) {
+    return NextResponse.json(
+      { error: "Webhook misconfigured" },
+      { status: 500 }
+    )
+  }
+  if (!signature) {
+    return NextResponse.json(
+      { error: "Missing X-Lynaris-Signature header" },
+      { status: 401 }
+    )
+  }
+  const valid = await verifyMakeWebhook(body, signature, makeSecret)
+  if (!valid) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
   }
 
   let payload: MakeCallbackPayload

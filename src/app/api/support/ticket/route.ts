@@ -7,6 +7,7 @@ import { supportTickets } from "@/lib/db/schema"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { sendGmail } from "@/lib/emails/gmail"
 import { emailLayout, emailButton, emailInfoRow, emailBadge } from "@/lib/emails/base-layout"
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_FILES = 5
@@ -130,6 +131,13 @@ function buildEmailHtml(
 // ─── Handler ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request): Promise<NextResponse> {
+  // Rate limiting : protège contre flood / DoS / spam de tickets
+  // (10 requêtes par minute par IP)
+  const rl = await checkRateLimit(req as never, "api")
+  if (rl !== null && !rl.success) {
+    return rateLimitResponse(rl.reset)
+  }
+
   // Parse FormData
   let fd: FormData
   try {

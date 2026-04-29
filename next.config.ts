@@ -70,13 +70,21 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://pipedream.com https://*.pipedream.com",
+              // 'unsafe-eval' retiré (vecteur XSS connu).
+              // 'unsafe-inline' conservé pour les inline scripts Next.js
+              // (à durcir avec nonce-based CSP en v2).
+              "script-src 'self' 'unsafe-inline' https://js.stripe.com https://pipedream.com https://*.pipedream.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: https: blob:",
+              "img-src 'self' data: https: blob: https://lynarisai.com",
               "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://api.anthropic.com https://api.elevenlabs.io https://api.deepgram.com https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.pipedream.com https://*.pipedream.com",
               "frame-src https://js.stripe.com https://hooks.stripe.com https://pipedream.com https://*.pipedream.com",
               "worker-src 'self' blob:",
+              "object-src 'none'",         // Bloque <object>, <embed>, <applet>
+              "base-uri 'self'",            // Bloque <base> injection
+              "form-action 'self'",         // Bloque submit forms vers domaine externe
+              "frame-ancestors 'none'",     // Renforce X-Frame-Options DENY
+              "upgrade-insecure-requests",  // Force HTTPS sur toutes les ressources
             ].join("; "),
           },
         ],
