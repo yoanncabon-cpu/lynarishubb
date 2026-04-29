@@ -11,8 +11,9 @@ import {
   Phone,
   X,
   TrendingUp,
-  Bot,
   Mic,
+  FileText,
+  Users,
 } from "lucide-react"
 import { GlassCard, GlassPanel, GlassChip, KpiTile } from "@/components/app/glass"
 
@@ -459,22 +460,56 @@ export default function BillingPage() {
     scale: "Sur-mesure",
   }
   const planMeta = PLAN_COLORS[currentPlanId] ?? PLAN_COLORS["trial"]!
-  const [usageData, setUsageData] = useState<{ actions: number; voice: number; agents: number } | null>(null)
+  const [usageData, setUsageData] = useState<{
+    actions: number
+    voice: number
+    agents: number
+    ragDocs: number
+    teamMembers: number
+  } | null>(null)
+  const [planLimits, setPlanLimits] = useState<{
+    actions: number | null
+    voiceMinutes: number | null
+    ragDocs: number | null
+    teamMembers: number | null
+  } | null>(null)
 
   useEffect(() => {
+    interface UsageResponse {
+      usage?: {
+        actions?: number
+        voiceMinutes?: number
+        ragDocs?: number
+        teamMembers?: number
+      }
+      limits?: {
+        actions: number | null
+        voiceMinutes: number | null
+        ragDocs: number | null
+        teamMembers: number | null
+      }
+    }
+    interface AnalyticsResponse {
+      agents?: { slug: string; conversations: number }[]
+    }
+
     Promise.all([
-      fetch("/api/billing/usage").then(r => r.json()),
-      fetch("/api/analytics?range=30").then(r => r.json()),
-    ]).then(([usageRes, analyticsRes]: [
-      { usage?: { metric: string; total: string | null }[] },
-      { agents?: { slug: string; conversations: number }[] }
-    ]) => {
-      const rows = usageRes.usage ?? []
-      const actions = Math.round(Number(rows.find(u => u.metric === "actions")?.total ?? 0))
-      const voice = Math.round(Number(rows.find(u => u.metric === "voice_minutes")?.total ?? 0))
-      const agents = (analyticsRes.agents ?? []).filter(a => a.conversations > 0).length
-      setUsageData({ actions, voice, agents })
-    }).catch(() => {})
+      fetch("/api/billing/usage").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/analytics?range=30").then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([usageRes, analyticsRes]: [UsageResponse | null, AnalyticsResponse | null]) => {
+        const u = usageRes?.usage ?? {}
+        const agents = (analyticsRes?.agents ?? []).filter((a) => a.conversations > 0).length
+        setUsageData({
+          actions: u.actions ?? 0,
+          voice: u.voiceMinutes ?? 0,
+          ragDocs: u.ragDocs ?? 0,
+          teamMembers: u.teamMembers ?? 0,
+          agents,
+        })
+        if (usageRes?.limits) setPlanLimits(usageRes.limits)
+      })
+      .catch(() => {})
   }, [])
 
   function showToast(msg: string, type: "success" | "error" | "info" = "info") {
@@ -608,6 +643,8 @@ export default function BillingPage() {
   }
 
   // KPI usage — utilisés via KpiTile dans la grille.
+  // Les limites viennent en priorité du nouveau endpoint /api/billing/usage,
+  // fallback sur le système legacy `limits` (usePlan) le temps de la migration.
   const usageStats: Array<{
     label: string
     used: number | null
@@ -615,9 +652,34 @@ export default function BillingPage() {
     icon: React.ReactNode
     accent: string
   }> = [
-    { label: "Actions utilisées", used: usageData?.actions ?? null, max: limits.actionsPerMonth, icon: <TrendingUp size={14} />, accent: "#E86F4D" },
-    { label: "Agents actifs",      used: usageData?.agents  ?? null, max: limits.agents.length,    icon: <Bot size={14} />,         accent: "#34D399" },
-    { label: "Minutes voix",       used: usageData?.voice   ?? null, max: limits.voiceMinutes,     icon: <Mic size={14} />,         accent: "#22D3EE" },
+    {
+      label: "Actions utilisées",
+      used: usageData?.actions ?? null,
+      max: planLimits?.actions ?? limits.actionsPerMonth,
+      icon: <TrendingUp size={14} />,
+      accent: "#E86F4D",
+    },
+    {
+      label: "Minutes voix",
+      used: usageData?.voice ?? null,
+      max: planLimits?.voiceMinutes ?? limits.voiceMinutes,
+      icon: <Mic size={14} />,
+      accent: "#22D3EE",
+    },
+    {
+      label: "Documents RAG",
+      used: usageData?.ragDocs ?? null,
+      max: planLimits?.ragDocs ?? 0,
+      icon: <FileText size={14} />,
+      accent: "#A78BFA",
+    },
+    {
+      label: "Membres équipe",
+      used: usageData?.teamMembers ?? null,
+      max: planLimits?.teamMembers ?? limits.agents.length,
+      icon: <Users size={14} />,
+      accent: "#34D399",
+    },
   ]
 
   return (
@@ -701,7 +763,7 @@ export default function BillingPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateColumns: "repeat(5, 1fr)",
                 gap: 12,
                 marginBottom: 24,
                 position: "relative",
