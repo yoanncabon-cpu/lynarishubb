@@ -2,25 +2,55 @@ import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import * as schema from "./schema"
 
-function createDb() {
+type DbInstance = ReturnType<typeof drizzle<typeof schema>>
+
+/**
+ * Crée le client postgres-js + drizzle.
+ * - max: 1 connexion par instance Next.js (Supabase transaction pooler
+ *   gère le multiplexing, on n'a pas besoin de pool côté app)
+ * - prepare: false (incompatible avec le pooler en mode transaction)
+ * - idle_timeout: 20s (libère les connexions idle rapidement)
+ */
+function createDb(): DbInstance {
   const connectionString = process.env["DATABASE_URL"]
   if (!connectionString) {
-    // Throw at call-time (not module-load time) so build doesn't crash
     throw new Error("DATABASE_URL is not set — add it to .env.local")
   }
-  // Disable prefetch: not supported in Supabase transaction mode pooler
-  const client = postgres(connectionString, { prepare: false })
+  const client = postgres(connectionString, {
+    prepare: false,
+    max: 1,
+    idle_timeout: 20,
+    connect_timeout: 10,
+  })
   return drizzle(client, { schema })
 }
 
-// Lazy singleton — initialised on first use, not at import time
-let _db: ReturnType<typeof createDb> | undefined
+// ─── HMR-safe singleton ──────────────────────────────────────────────────────
+//
+// En dev Next.js, chaque modif de fichier déclenche un hot module reload qui
+// ré-évalue ce module. Sans cache global, chaque reload crée un nouveau client
+// postgres + 10 connexions, et les anciennes ne sont jamais fermées → on
+// sature très vite le pool Supabase ("too many clients already").
+//
+// Solution : stocker l'instance dans globalThis. Le globalThis survit au HMR.
 
-export const db = new Proxy({} as ReturnType<typeof createDb>, {
+interface GlobalWithDb {
+  __lynaris_db?: DbInstance
+}
+const g = globalThis as unknown as GlobalWithDb
+
+function getDb(): DbInstance {
+  if (!g.__lynaris_db) {
+    g.__lynaris_db = createDb()
+  }
+  return g.__lynaris_db
+}
+
+export const db = new Proxy({} as DbInstance, {
   get(_target, prop) {
-    if (!_db) _db = createDb()
-    const value = (_db as unknown as Record<string | symbol, unknown>)[prop]
-    if (typeof value === "function") return value.bind(_db)
+    const inst = getDb()
+    const value = (inst as unknown as Record<string | symbol, unknown>)[prop]
+    if (typeof value === "function") return value.bind(inst)
     return value
   },
 })
