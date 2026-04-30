@@ -19,6 +19,22 @@ const nullableNumber = (min: number, max: number) =>
     z.number().int().min(min).max(max).optional()
   )
 
+const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
+const emailStyleSchema = z.object({
+  preset: z.enum(["lynaris", "minimal", "corporate"]).default("lynaris"),
+  accentColor: hex.optional(),
+  backgroundColor: hex.optional(),
+  cardBackgroundColor: hex.optional(),
+  textColor: hex.optional(),
+  sectionBackgroundColor: hex.optional(),
+  headerStyle: z.enum(["gradient", "solid", "minimal"]).optional(),
+  borderRadius: z.number().int().min(0).max(40).optional(),
+  fontFamily: z.enum(["system", "serif", "mono"]).optional(),
+  headerBadgeText: z.string().max(30).optional(),
+  footerText: z.string().max(200).optional(),
+  showFooter: z.boolean().optional(),
+}).nullable().optional()
+
 const patchSchema = z.object({
   isActive: z.boolean().optional(),
   name: z.string().min(1).max(100).optional(),
@@ -28,6 +44,8 @@ const patchSchema = z.object({
   frequency: z.enum(["daily", "weekly", "monthly"]).optional(),
   dayOfWeek: nullableNumber(0, 6),
   dayOfMonth: nullableNumber(1, 31),
+  category: z.enum(["communication", "reporting", "productivity", "growth"]).nullable().optional(),
+  emailStyle: emailStyleSchema,
 })
 
 export async function PATCH(

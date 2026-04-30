@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
+import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { actionLogs, agentInstances } from "@/lib/db/schema"
 import { agents } from "@/lib/agents/data"
 import { buildNotificationLabel, type ActionPayload } from "@/lib/agents/action-labels"
-import { desc, eq } from "drizzle-orm"
+import { desc, eq, and, isNull, inArray } from "drizzle-orm"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -48,7 +48,9 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       })
       .from(actionLogs)
       .leftJoin(agentInstances, eq(actionLogs.agentInstanceId, agentInstances.id))
-      .where(eq(actionLogs.orgId, orgId))
+      // Filtre les notifs effacées par l'utilisateur (notification_dismissed_at IS NULL).
+      // L'audit log complet reste accessible via dashboard/analytics qui ignore ce flag.
+      .where(and(eq(actionLogs.orgId, orgId), isNull(actionLogs.notificationDismissedAt)))
       .orderBy(desc(actionLogs.createdAt))
       .limit(10)
 
@@ -74,12 +76,68 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       { notifications },
       {
         headers: {
-          "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+          // Pas de cache : après un dismiss, le user attend que sa liste soit immédiatement à jour
+          "Cache-Control": "no-store",
         },
       }
     )
   } catch (err) {
     console.error("[notifications] DB error:", err instanceof Error ? err.message : err)
     return NextResponse.json({ notifications: [] })
+  }
+}
+
+/**
+ * DELETE /api/notifications
+ *   - body { id: string }  → efface 1 notification
+ *   - body { ids: string[] } → efface une liste
+ *   - body vide / { all: true } → efface TOUTES les notifs de l'org
+ *
+ * On ne supprime PAS la ligne action_logs (audit) — on set notification_dismissed_at = NOW().
+ * Multi-tenant safe : on filtre toujours par orgId pour bloquer la suppression cross-org.
+ */
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  const orgId = await getOrProvisionOrgId()
+  if (orgId === ANON_ORG_ID) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+  }
+
+  let body: { id?: string; ids?: string[]; all?: boolean } = {}
+  try {
+    body = await request.json()
+  } catch {
+    // body vide → considère comme "all"
+    body = { all: true }
+  }
+
+  const now = new Date()
+
+  try {
+    if (body.id) {
+      await db
+        .update(actionLogs)
+        .set({ notificationDismissedAt: now })
+        .where(and(eq(actionLogs.id, body.id), eq(actionLogs.orgId, orgId), isNull(actionLogs.notificationDismissedAt)))
+      return NextResponse.json({ ok: true, dismissed: 1 })
+    }
+
+    if (Array.isArray(body.ids) && body.ids.length > 0) {
+      await db
+        .update(actionLogs)
+        .set({ notificationDismissedAt: now })
+        .where(and(inArray(actionLogs.id, body.ids), eq(actionLogs.orgId, orgId), isNull(actionLogs.notificationDismissedAt)))
+      return NextResponse.json({ ok: true, dismissed: body.ids.length })
+    }
+
+    // Effacer toutes les notifs encore non-effacées de l'org
+    await db
+      .update(actionLogs)
+      .set({ notificationDismissedAt: now })
+      .where(and(eq(actionLogs.orgId, orgId), isNull(actionLogs.notificationDismissedAt)))
+
+    return NextResponse.json({ ok: true, dismissed: "all" })
+  } catch (err) {
+    console.error("[notifications DELETE] DB error:", err instanceof Error ? err.message : err)
+    return NextResponse.json({ error: "Échec de l'effacement" }, { status: 500 })
   }
 }

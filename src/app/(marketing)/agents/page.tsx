@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { agents } from "@/lib/agents/data"
 import { ArrowRight } from "lucide-react"
 import type { Metadata } from "next"
@@ -43,13 +44,23 @@ export default function AgentsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl"
+                    className="h-14 w-14 rounded-xl flex items-center justify-center text-2xl overflow-hidden"
                     style={{
                       backgroundColor: `${agent.color}20`,
                       border: `1px solid ${agent.color}30`,
                     }}
                   >
-                    {agent.emoji}
+                    {agent.avatar ? (
+                      <Image
+                        src={agent.avatar}
+                        alt={`Avatar 3D de ${agent.name}`}
+                        width={56}
+                        height={56}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span aria-hidden>{agent.emoji}</span>
+                    )}
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-[--ly-text]">{agent.name}</h2>

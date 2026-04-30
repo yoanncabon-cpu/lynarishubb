@@ -63,11 +63,21 @@ export async function POST(
       })
       .returning({ id: agentInstances.id })
 
+    // Même préfixe scheduled qu'en execute : pas d'humain en face → Charles doit agir seul,
+    // sans poser de question ni attendre de clarification.
+    const scheduledPrefix =
+      "[Exécution automatique planifiée — aucun humain n'est en face pour te répondre. " +
+      "Exécute la tâche immédiatement avec les informations dont tu disposes (mémoire, calendrier, " +
+      "Gmail, contacts, intégrations connectées). Ne demande JAMAIS de clarification, ne dis JAMAIS " +
+      "« j'ai besoin de plus d'infos », ne pose JAMAIS de question. Si une donnée manque, fais au " +
+      "mieux avec ce que tu as et indique simplement la limitation dans le résultat envoyé.]\n\n"
+
     const run = await runAgent({
       agentSlug: job.agentSlug,
-      messages: [{ role: "user", content: job.instruction }],
+      messages: [{ role: "user", content: scheduledPrefix + job.instruction }],
       orgId: job.orgId,
       maxIterations: 8,
+      emailStyle: job.emailStyle,
     })
 
     result = run.content.slice(0, 2000)

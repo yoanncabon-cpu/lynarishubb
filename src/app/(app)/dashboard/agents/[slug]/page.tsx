@@ -102,21 +102,28 @@ export default function AgentDetailPage() {
     ...(slug === "charles" ? [{ id: "memory" as Tab, label: "Mémoire", icon: Brain }] : []),
   ]
 
+  // Mode "grand chat" : sur l'onglet chat, on compacte radicalement le header
+  // (juste back link + tabs) pour donner toute la hauteur à la conversation.
+  // Sur les autres tabs (logs, paramètres, mémoire), on garde le hero card complet.
+  const isChatFullscreen = activeTab === "chat"
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "0" }}>
       {/* Back link */}
-      <div style={{ padding: "20px 24px 0", flexShrink: 0 }}>
+      <div style={{ padding: isChatFullscreen ? "12px 24px 0" : "20px 24px 0", flexShrink: 0 }}>
         <Link
           href="/dashboard/agents"
           style={{
             display: "inline-flex", alignItems: "center", gap: 5,
-            fontSize: 12, color: "#71717A", textDecoration: "none", marginBottom: 16,
+            fontSize: 12, color: "#71717A", textDecoration: "none",
+            marginBottom: isChatFullscreen ? 8 : 16,
           }}
         >
           <ArrowLeft size={13} aria-hidden /> Mes agents
         </Link>
 
-        {/* ── Hero glass card ────────────────────────────────────────────── */}
+        {/* ── Hero glass card — masqué en mode chat fullscreen ────────────── */}
+        {!isChatFullscreen && (
         <div
           style={{
             background: "rgba(20,20,28,0.7)",
@@ -238,8 +245,10 @@ export default function AgentDetailPage() {
             </button>
           </div>
         </div>
+        )}
 
-        {/* ── Quick stats pills ──────────────────────────────────────────── */}
+        {/* ── Quick stats pills — masquées en mode chat fullscreen ─────── */}
+        {!isChatFullscreen && (
         <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
           {/* Conversations */}
           <Glass radius={10} tint={0.04} padding="8px 14px">
@@ -349,6 +358,7 @@ export default function AgentDetailPage() {
             </p>
           </Glass>
         </div>
+        )}
 
         {/* ── Tabs ──────────────────────────────────────────────────────── */}
         <div

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { agents } from "@/lib/agents/data"
 import { ArrowRight, ArrowLeft } from "lucide-react"
@@ -222,20 +223,31 @@ export default async function AgentDetailPage({
           <div className="flex flex-col items-center text-center">
             {/* Avatar */}
             <div
-              className="flex items-center justify-center mb-8"
+              className="flex items-center justify-center mb-8 overflow-hidden"
               style={{
-                width: 120,
-                height: 120,
-                borderRadius: 28,
+                width: 140,
+                height: 140,
+                borderRadius: 32,
                 background: `${agent.color}1F`,
                 border: `1px solid ${agent.color}4D`,
                 color: agent.color,
                 fontWeight: 800,
-                fontSize: 56,
+                fontSize: 64,
                 boxShadow: `0 0 60px ${agent.color}40`,
               }}
             >
-              {agent.name[0]}
+              {agent.avatar ? (
+                <Image
+                  src={agent.avatar}
+                  alt={`Avatar 3D de ${agent.name}`}
+                  width={140}
+                  height={140}
+                  priority
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span aria-hidden>{agent.name[0]}</span>
+              )}
             </div>
 
             {/* Overline role */}

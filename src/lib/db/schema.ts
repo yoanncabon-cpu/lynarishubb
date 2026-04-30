@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 import { sql } from "drizzle-orm"
+import type { EmailStyleConfig } from "@/lib/emails/types"
 
 // ─── Custom pgvector type ────────────────────────────────────────────────────
 const vector = (name: string, config: { dimensions: number }) =>
@@ -242,10 +243,16 @@ export const actionLogs = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // Notifications : timestamp d'effacement utilisateur. Quand l'user clique sur le X
+    // ou "Effacer" dans le panneau notifications, on set cette colonne à NOW().
+    // Le GET /api/notifications filtre WHERE dismissed_at IS NULL.
+    // L'audit complet reste consultable via /dashboard/analytics qui ignore ce flag.
+    notificationDismissedAt: timestamp("notification_dismissed_at", { withTimezone: true }),
   },
   (t) => [
     index("action_logs_org_id_idx").on(t.orgId),
     index("action_logs_created_at_idx").on(t.createdAt),
+    index("action_logs_notif_dismissed_idx").on(t.notificationDismissedAt),
   ]
 )
 
@@ -551,11 +558,43 @@ export const scheduledJobs = pgTable(
     nextRunAt: timestamp("next_run_at", { withTimezone: true }),
     lastResult: text("last_result"),
     runCount: integer("run_count").notNull().default(0),
+    // Catégorie d'affichage dans le dashboard (communication, reporting, productivity, growth, ...)
+    category: text("category"),
+    // Style visuel des emails envoyés par ce job : { preset: 'lynaris'|'minimal'|'corporate', accentColor?: '#hex' }
+    emailStyle: jsonb("email_style").$type<EmailStyleConfig | null>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("scheduled_jobs_org_idx").on(t.orgId),
     index("scheduled_jobs_next_run_idx").on(t.nextRunAt),
+    index("scheduled_jobs_category_idx").on(t.category),
+  ]
+)
+
+// Re-export des types email depuis leur source neutre (évite de pull Drizzle côté client)
+export type { EmailStylePreset, EmailStyleConfig } from "@/lib/emails/types"
+
+// ─── Tasks (todo list utilisateur, accessible aux agents) ────────────────────
+
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    status: text("status").notNull().default("todo"),       // 'todo' | 'in_progress' | 'done'
+    priority: text("priority").notNull().default("medium"), // 'low' | 'medium' | 'high'
+    dueDate: timestamp("due_date", { withTimezone: true }),
+    createdBy: text("created_by").notNull().default("user"), // 'user' | 'agent:<slug>'
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("tasks_org_idx").on(t.orgId),
+    index("tasks_org_status_idx").on(t.orgId, t.status),
+    index("tasks_due_date_idx").on(t.dueDate),
   ]
 )
 

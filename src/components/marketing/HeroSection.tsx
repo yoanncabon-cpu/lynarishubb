@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { HeroTerminal } from "./HeroTerminal"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
 import dynamic from "next/dynamic"
-import gsap from "gsap"
+// gsap (~250kb) chargé en async dans useEffect → exclu du bundle initial de la landing
 
 const HeroScene = dynamic(
   () => import("./HeroScene").then((m) => ({ default: m.HeroScene })),
@@ -37,30 +37,39 @@ export function HeroSection() {
   }, [])
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (prefersReducedMotion) return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } })
+    // Import gsap async — sort le ~250kb de la lib du bundle initial de la home
+    let cleanup: (() => void) | null = null
+    let cancelled = false
 
-      tl.fromTo(badgeRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, 0.2)
-        .fromTo(h1Line1Ref.current, { opacity: 0, y: 40, skewY: 2 }, { opacity: 1, y: 0, skewY: 0, duration: 0.8 }, 0.4)
-        .fromTo(h1Line2Ref.current, { opacity: 0, y: 40, skewY: 2 }, { opacity: 1, y: 0, skewY: 0, duration: 0.8 }, 0.55)
-        .fromTo(subtitleRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, 0.8)
-        .fromTo(ctaRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, 0.95)
-        .fromTo(microRef.current, { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.1)
-        .fromTo(socialRef.current, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 1.2)
-        .fromTo(terminalRef.current, { opacity: 0, y: 30, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.8 }, 0.7)
+    void import("gsap").then(({ default: gsap }) => {
+      if (cancelled) return
+      const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: "power3.out" } })
 
-      // Animate the underline SVG path drawing
-      if (underlineRef.current) {
-        const length = underlineRef.current.getTotalLength?.() ?? 120
-        gsap.set(underlineRef.current, { strokeDasharray: length, strokeDashoffset: length })
-        tl.to(underlineRef.current, { strokeDashoffset: 0, duration: 0.7, ease: "power2.out" }, 1.1)
-      }
-    }, sectionRef)
+        tl.fromTo(badgeRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, 0.2)
+          .fromTo(h1Line1Ref.current, { opacity: 0, y: 40, skewY: 2 }, { opacity: 1, y: 0, skewY: 0, duration: 0.8 }, 0.4)
+          .fromTo(h1Line2Ref.current, { opacity: 0, y: 40, skewY: 2 }, { opacity: 1, y: 0, skewY: 0, duration: 0.8 }, 0.55)
+          .fromTo(subtitleRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, 0.8)
+          .fromTo(ctaRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, 0.95)
+          .fromTo(microRef.current, { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.1)
+          .fromTo(socialRef.current, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 1.2)
+          .fromTo(terminalRef.current, { opacity: 0, y: 30, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.8 }, 0.7)
 
-    return () => ctx.revert()
+        if (underlineRef.current) {
+          const length = underlineRef.current.getTotalLength?.() ?? 120
+          gsap.set(underlineRef.current, { strokeDasharray: length, strokeDashoffset: length })
+          tl.to(underlineRef.current, { strokeDashoffset: 0, duration: 0.7, ease: "power2.out" }, 1.1)
+        }
+      }, sectionRef)
+      cleanup = () => ctx.revert()
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   return (

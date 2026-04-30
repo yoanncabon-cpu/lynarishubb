@@ -19,6 +19,22 @@ const nullableNumber = (min: number, max: number) =>
     z.number().int().min(min).max(max).optional()
   )
 
+const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
+const emailStyleSchema = z.object({
+  preset: z.enum(["lynaris", "minimal", "corporate"]).default("lynaris"),
+  accentColor: hex.optional(),
+  backgroundColor: hex.optional(),
+  cardBackgroundColor: hex.optional(),
+  textColor: hex.optional(),
+  sectionBackgroundColor: hex.optional(),
+  headerStyle: z.enum(["gradient", "solid", "minimal"]).optional(),
+  borderRadius: z.number().int().min(0).max(40).optional(),
+  fontFamily: z.enum(["system", "serif", "mono"]).optional(),
+  headerBadgeText: z.string().max(30).optional(),
+  footerText: z.string().max(200).optional(),
+  showFooter: z.boolean().optional(),
+}).nullable().optional()
+
 const createSchema = z.object({
   agentSlug:   z.string().min(1),
   name:        z.string().min(1).max(100),
@@ -29,6 +45,8 @@ const createSchema = z.object({
   dayOfWeek:   nullableNumber(0, 6),
   dayOfMonth:  nullableNumber(1, 31),
   timezone:    z.string().default("Europe/Paris"),
+  category:    z.enum(["communication", "reporting", "productivity", "growth"]).nullable().optional(),
+  emailStyle:  emailStyleSchema,
 })
 
 export async function GET() {
@@ -109,6 +127,8 @@ export async function POST(req: NextRequest) {
       dayOfWeek:   d.dayOfWeek ?? null,
       dayOfMonth:  d.dayOfMonth ?? null,
       timezone:    d.timezone,
+      category:    d.category ?? null,
+      emailStyle:  d.emailStyle ?? null,
       nextRunAt,
     }).returning()
 

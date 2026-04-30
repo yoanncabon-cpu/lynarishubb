@@ -132,17 +132,53 @@ async function getOrCreateProtectionState(
     }
   }
 
-  // Création initiale
+  // Création initiale (race-safe : ON CONFLICT DO NOTHING + re-SELECT)
+  // Le SELECT FOR UPDATE plus haut ne verrouille rien quand la ligne n'existe pas,
+  // donc 2 transactions concurrentes (cas typique : cron qui dispatch plusieurs
+  // jobs en parallèle pour la même org) tombaient toutes deux dans cette branche
+  // et l'une violait la contrainte primary key. Avec onConflictDoNothing, l'insert
+  // perdant est silencieusement ignoré et on relit la ligne créée par le gagnant.
   const { start, end } = newPeriod()
   const budget = getBudgetForPlan(planId)
-  await tx.insert(orgProtectionState).values({
-    orgId,
-    periodStart: start,
-    periodEnd: end,
-    currentCostEuros: "0",
-    budgetEuros: String(budget),
-  })
+  await tx
+    .insert(orgProtectionState)
+    .values({
+      orgId,
+      periodStart: start,
+      periodEnd: end,
+      currentCostEuros: "0",
+      budgetEuros: String(budget),
+    })
+    .onConflictDoNothing({ target: orgProtectionState.orgId })
 
+  // Relit la ligne (nôtre ou celle d'une transaction concurrente) pour renvoyer
+  // les vraies valeurs courantes — sinon on retournerait des 0/false alors que
+  // le coût a peut-être déjà été incrémenté ailleurs.
+  const refetch = await tx.execute(
+    sql`SELECT current_cost_euros, budget_euros, notified_admin_70,
+        notified_client_90, alerted_admin_100, alerted_admin_130,
+        economy_mode_active, hard_cap_active, period_start, period_end
+        FROM org_protection_state
+        WHERE org_id = ${orgId}`
+  )
+  const fresh = (refetch as unknown as { rows?: Array<Record<string, unknown>> }).rows?.[0]
+
+  if (fresh) {
+    return {
+      currentCostEuros: String(fresh["current_cost_euros"] ?? "0"),
+      budgetEuros: String(fresh["budget_euros"] ?? String(budget)),
+      notifiedAdmin70: fresh["notified_admin_70"] === true,
+      notifiedClient90: fresh["notified_client_90"] === true,
+      alertedAdmin100: fresh["alerted_admin_100"] === true,
+      alertedAdmin130: fresh["alerted_admin_130"] === true,
+      economyModeActive: fresh["economy_mode_active"] === true,
+      hardCapActive: fresh["hard_cap_active"] === true,
+      periodStart: new Date(fresh["period_start"] as string),
+      periodEnd: new Date(fresh["period_end"] as string),
+    }
+  }
+
+  // Fallback ultra-improbable : ni l'insert ni la transaction concurrente n'ont créé de ligne.
   return {
     currentCostEuros: "0",
     budgetEuros: String(budget),

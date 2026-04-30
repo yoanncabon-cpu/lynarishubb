@@ -1,10 +1,7 @@
 "use client"
 
 import { useRef, useEffect } from "react"
-import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
-
-gsap.registerPlugin(ScrollTrigger)
+// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
 const stats = [
   {
@@ -40,29 +37,41 @@ export function StatsSection() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) return
 
-    const ctx = gsap.context(() => {
-      const cards = sectionRef.current?.querySelectorAll(".stat-card")
-      if (cards) {
-        gsap.fromTo(
-          cards,
-          { opacity: 0, y: 30 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top 85%",
-              once: true,
-            },
-          }
-        )
-      }
-    }, sectionRef)
+    let cleanup: (() => void) | null = null
+    let cancelled = false
 
-    return () => ctx.revert()
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
+      if (cancelled) return
+      const gsap = gsapMod.default
+      gsap.registerPlugin(stMod.ScrollTrigger)
+      const ctx = gsap.context(() => {
+        const cards = sectionRef.current?.querySelectorAll(".stat-card")
+        if (cards) {
+          gsap.fromTo(
+            cards,
+            { opacity: 0, y: 30 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: sectionRef.current,
+                start: "top 85%",
+                once: true,
+              },
+            }
+          )
+        }
+      }, sectionRef)
+      cleanup = () => ctx.revert()
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   return (

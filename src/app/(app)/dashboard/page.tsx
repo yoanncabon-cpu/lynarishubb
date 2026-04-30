@@ -206,7 +206,7 @@ export default function DashboardPage() {
       {vacation.active && <VacationModeBanner onDisable={vacation.disable} />}
       <div
         style={{
-          padding: "28px clamp(20px, 4vw, 32px) 32px",
+          padding: "clamp(18px, 3vw, 28px) clamp(14px, 4vw, 32px) clamp(20px, 3vw, 32px)",
           maxWidth: 1480,
           margin: "0 auto",
           boxSizing: "border-box",
@@ -873,8 +873,11 @@ function BentoHubTile({
               className="lg-chip lg-focus"
               style={{
                 textDecoration: "none",
-                padding: "5px 10px",
-                fontSize: 11,
+                padding: "8px 14px",
+                fontSize: 12,
+                minHeight: 32,
+                display: "inline-flex",
+                alignItems: "center",
                 cursor: "pointer",
               }}
               onMouseEnter={(el) => {

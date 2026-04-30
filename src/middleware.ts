@@ -20,6 +20,8 @@ const PUBLIC_PATHS = [
   "/api/webhooks",
   "/api/demo",
   "/api/admin/test-emails",
+  // Cron Vercel — la route /api/cron/* vérifie elle-même l'Authorization Bearer ${CRON_SECRET}
+  "/api/cron",
 ]
 
 /**
@@ -65,6 +67,15 @@ function isPublicPath(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Bypass total pour appels cron internes authentifiés via x-cron-secret.
+  // /api/cron/run-jobs dispatch en HTTP interne vers /api/scheduled-jobs/[id]/execute
+  // avec ce header → on laisse passer sans Supabase (la route vérifie le secret).
+  const cronSecretHeader = request.headers.get("x-cron-secret")
+  const expectedCronSecret = process.env["CRON_SECRET"]
+  if (cronSecretHeader && expectedCronSecret && cronSecretHeader === expectedCronSecret) {
+    return NextResponse.next()
+  }
 
   // Fast-path : routes marketing purement statiques — aucun appel Supabase
   if (isStaticPublicPath(pathname)) {

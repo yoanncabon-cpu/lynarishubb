@@ -4,11 +4,8 @@ import Link from "next/link"
 import { useRef, useState, useEffect } from "react"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { PLAN_LIST, getFeatureList, getPlanBadge } from "@/lib/pricing/plans"
-
-gsap.registerPlugin(ScrollTrigger)
+// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
 function CheckIcon() {
   return (
@@ -36,45 +33,57 @@ export function PricingSection() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) return
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headerRef.current,
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 80%",
-            once: true,
-          },
-        }
-      )
+    let cleanup: (() => void) | null = null
+    let cancelled = false
 
-      const cards = sectionRef.current?.querySelectorAll(".pricing-card")
-      if (cards) {
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
+      if (cancelled) return
+      const gsap = gsapMod.default
+      gsap.registerPlugin(stMod.ScrollTrigger)
+      const ctx = gsap.context(() => {
         gsap.fromTo(
-          cards,
+          headerRef.current,
           { opacity: 0, y: 40 },
           {
             opacity: 1,
             y: 0,
-            duration: 0.6,
-            stagger: 0.12,
+            duration: 0.8,
             ease: "power3.out",
             scrollTrigger: {
               trigger: sectionRef.current,
-              start: "top 70%",
+              start: "top 80%",
               once: true,
             },
           }
         )
-      }
-    }, sectionRef)
 
-    return () => ctx.revert()
+        const cards = sectionRef.current?.querySelectorAll(".pricing-card")
+        if (cards) {
+          gsap.fromTo(
+            cards,
+            { opacity: 0, y: 40 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              stagger: 0.12,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: sectionRef.current,
+                start: "top 70%",
+                once: true,
+              },
+            }
+          )
+        }
+      }, sectionRef)
+      cleanup = () => ctx.revert()
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   return (

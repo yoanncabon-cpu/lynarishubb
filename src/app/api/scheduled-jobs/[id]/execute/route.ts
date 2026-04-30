@@ -60,12 +60,22 @@ export async function POST(
       })
       .returning({ id: agentInstances.id })
 
-    // Exécute l'agent
+    // Exécute l'agent (propage emailStyle pour que send_email applique le bon template).
+    // Préfixe scheduled : sans ça, Charles cherche à dialoguer avec l'utilisateur (ex: "donne-moi
+    // la liste des tâches"), or il n'y a personne en face — le job échoue sans rien faire.
+    const scheduledPrefix =
+      "[Exécution automatique planifiée — aucun humain n'est en face pour te répondre. " +
+      "Exécute la tâche immédiatement avec les informations dont tu disposes (mémoire, calendrier, " +
+      "Gmail, contacts, intégrations connectées). Ne demande JAMAIS de clarification, ne dis JAMAIS " +
+      "« j'ai besoin de plus d'infos », ne pose JAMAIS de question. Si une donnée manque, fais au " +
+      "mieux avec ce que tu as et indique simplement la limitation dans le résultat envoyé.]\n\n"
+
     const run = await runAgent({
       agentSlug: job.agentSlug,
-      messages: [{ role: "user", content: job.instruction }],
+      messages: [{ role: "user", content: scheduledPrefix + job.instruction }],
       orgId: job.orgId,
       maxIterations: 8,
+      emailStyle: job.emailStyle,
     })
 
     result = run.content.slice(0, 2000)

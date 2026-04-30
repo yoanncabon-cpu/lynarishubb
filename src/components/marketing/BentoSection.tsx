@@ -1,11 +1,8 @@
 "use client"
 
 import { useRef, useEffect } from "react"
-import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Phone, Brain, PenTool, TrendingUp, BarChart3, type LucideIcon } from "lucide-react"
-
-gsap.registerPlugin(ScrollTrigger)
+// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
 interface BentoCard {
   title: string
@@ -67,30 +64,42 @@ export function BentoSection() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) return
 
-    const ctx = gsap.context(() => {
-      const items = gridRef.current?.querySelectorAll(".bento-card")
-      if (items) {
-        gsap.fromTo(
-          items,
-          { opacity: 0, y: 40, scale: 0.97 },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.7,
-            stagger: 0.1,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: gridRef.current,
-              start: "top 85%",
-              once: true,
-            },
-          }
-        )
-      }
-    }, sectionRef)
+    let cleanup: (() => void) | null = null
+    let cancelled = false
 
-    return () => ctx.revert()
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
+      if (cancelled) return
+      const gsap = gsapMod.default
+      gsap.registerPlugin(stMod.ScrollTrigger)
+      const ctx = gsap.context(() => {
+        const items = gridRef.current?.querySelectorAll(".bento-card")
+        if (items) {
+          gsap.fromTo(
+            items,
+            { opacity: 0, y: 40, scale: 0.97 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.7,
+              stagger: 0.1,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: gridRef.current,
+                start: "top 85%",
+                once: true,
+              },
+            }
+          )
+        }
+      }, sectionRef)
+      cleanup = () => ctx.revert()
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   return (

@@ -886,7 +886,7 @@ export default function ContenuPage() {
   const activeAgentData = activeAgent !== "all" ? agents.find((a) => a.slug === activeAgent) : null
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1100 }}>
+    <div style={{ padding: "clamp(18px, 3vw, 28px) clamp(14px, 4vw, 32px)", maxWidth: 1480, margin: "0 auto", boxSizing: "border-box" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

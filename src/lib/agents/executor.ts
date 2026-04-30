@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { getAgent, type AgentConfig } from "./registry"
 import { executeTool } from "./tools/index"
+import type { EmailStyleConfig } from "@/lib/db/schema"
 import { detectProvider, streamOpenAI, streamGemini, type ProviderMessage } from "./providers"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
@@ -122,6 +123,9 @@ export interface RunOptions {
   orgId: string
   conversationId?: string
   maxIterations?: number
+  // Style visuel à appliquer aux emails envoyés par les tools (send_email, send_email_draft).
+  // Récupéré du scheduled_job courant lors d'une exécution planifiée. null/undefined = preset Lynaris par défaut.
+  emailStyle?: EmailStyleConfig | null
 }
 
 export interface RunResult {
@@ -144,6 +148,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
     orgId,
     conversationId,
     maxIterations = 10,
+    emailStyle,
   } = options
 
   const agentDef = getAgent(agentSlug)
@@ -229,6 +234,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
           orgId,
           agentSlug,
           conversationId,
+          emailStyle,
         })
 
         return {
@@ -275,6 +281,7 @@ export async function* streamAgent(
     orgId,
     conversationId,
     maxIterations = 10,
+    emailStyle,
   } = options
 
   const agentDef = getAgent(agentSlug)
@@ -452,6 +459,7 @@ export async function* streamAgent(
           orgId,
           agentSlug,
           conversationId,
+          emailStyle,
         })
 
         return {

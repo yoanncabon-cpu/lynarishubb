@@ -10,6 +10,7 @@ import {
   FileText,
   LayoutGrid,
   Clock,
+  CheckSquare,
   MessageSquare,
   ContactRound,
   Users,
@@ -55,6 +56,7 @@ export const NAV_HUBS: NavHub[] = [
     icon: Briefcase,
     href: "/dashboard/contenus",
     items: [
+      { href: "/dashboard/taches", label: "Tâches", icon: CheckSquare },
       { href: "/dashboard/contenus", label: "Contenus", icon: Library, proOnly: true },
       { href: "/dashboard/documents", label: "Documents", icon: FileText },
       { href: "/dashboard/workspace", label: "Espace de travail", icon: LayoutGrid },

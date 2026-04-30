@@ -5,6 +5,7 @@
  */
 
 import React, { useId } from "react"
+import Image from "next/image"
 
 export interface AgentAvatarProps {
   slug: string
@@ -15,6 +16,28 @@ export interface AgentAvatarProps {
   glow?: boolean
   className?: string
   style?: React.CSSProperties
+  /**
+   * Force l'usage de la version SVG vectorielle même si une image 3D existe.
+   * Utile pour des contextes très petits où l'image bitmap pixelise ou pour
+   * les cas légacy. Par défaut on privilégie l'avatar 3D Higgsfield.
+   */
+  forceSvg?: boolean
+}
+
+/**
+ * Avatars 3D Higgsfield (générés en grille 3x3, voir scripts/slice-avatars.mjs).
+ * Si présent pour un slug, on l'affiche en priorité ; sinon on tombe sur le SVG.
+ */
+const AVATAR_3D_MAP: Record<string, string> = {
+  marine: "/agents/avatars/marine.webp",
+  charles: "/agents/avatars/charles.webp",
+  lou: "/agents/avatars/lou.webp",
+  elio: "/agents/avatars/elio.webp",
+  mae: "/agents/avatars/mae.webp",
+  max: "/agents/avatars/max.webp",
+  nova: "/agents/avatars/nova.webp",
+  alba: "/agents/avatars/alba.webp",
+  orion: "/agents/avatars/orion.webp",
 }
 
 // ─── Individual SVG characters ────────────────────────────────────────────────
@@ -389,11 +412,13 @@ export function AgentAvatar({
   glow = false,
   className,
   style,
+  forceSvg = false,
 }: AgentAvatarProps) {
   const uid = useId().replace(/:/g, "")
   const id = `av-${slug}-${uid}`
   const AvatarContent = AVATAR_MAP[slug]
   const agentColor = (AGENT_COLORS[slug] ?? ["#F4956E", "#E86F4D"])[1]
+  const image3DSrc = !forceSvg ? AVATAR_3D_MAP[slug] : undefined
 
   // Charles est l'agent orchestrateur (chef d'équipe) → couronne dorée affichée
   // partout où son avatar apparaît. Skip sur les très petits avatars (illisible)
@@ -426,19 +451,30 @@ export function AgentAvatar({
             : "0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
         }}
       >
-        <svg
-          viewBox="0 0 80 80"
-          width={size}
-          height={size}
-          xmlns="http://www.w3.org/2000/svg"
-          style={{ display: "block" }}
-        >
-          {AvatarContent ? (
-            <AvatarContent id={id} />
-          ) : (
-            <FallbackAvatar slug={slug} id={id} />
-          )}
-        </svg>
+        {image3DSrc ? (
+          <Image
+            src={image3DSrc}
+            alt={`Avatar ${slug}`}
+            width={size}
+            height={size}
+            sizes={`${size}px`}
+            style={{ display: "block", width: size, height: size, objectFit: "cover" }}
+          />
+        ) : (
+          <svg
+            viewBox="0 0 80 80"
+            width={size}
+            height={size}
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ display: "block" }}
+          >
+            {AvatarContent ? (
+              <AvatarContent id={id} />
+            ) : (
+              <FallbackAvatar slug={slug} id={id} />
+            )}
+          </svg>
+        )}
       </div>
 
       {/* Couronne dorée — réservée à Charles (agent orchestrateur Lynaris) */}

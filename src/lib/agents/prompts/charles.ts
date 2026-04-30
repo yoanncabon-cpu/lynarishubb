@@ -343,20 +343,9 @@ const tools: Tool[] = [
     },
   },
   // ── Tâches / Automatisation ───────────────────────────────────────────────
-  {
-    name: "create_task",
-    description: "Create a task in Notion or the task manager.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        title: { type: "string" },
-        description: { type: "string" },
-        due_date: { type: "string", description: "ISO 8601 date" },
-        priority: { type: "string", enum: ["low", "medium", "high"] },
-      },
-      required: ["title"],
-    },
-  },
+  // create_task / list_tasks / update_task / delete_task viennent de CORE_TOOLS
+  // (registry.ts les merge auto). Anciennement mock Notion ici → désormais wire
+  // sur la table tasks (DB), accessible aussi à tous les autres agents.
   {
     name: "analyze_data",
     description: "Analyze structured data, generate insights and recommendations.",

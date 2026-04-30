@@ -155,7 +155,7 @@ export function Navbar() {
                             backdropFilter: "blur(24px)",
                             WebkitBackdropFilter: "blur(24px)",
                             border: "1px solid rgba(124,58,237,0.2)",
-                            width: 380,
+                            width: "min(380px, calc(100vw - 32px))",
                             boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.1)",
                           }}
                           onMouseEnter={() => setAgentsOpen(true)}

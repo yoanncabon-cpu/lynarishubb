@@ -145,12 +145,36 @@ export function Topbar({ onMenuClick, onSearchClick }: TopbarProps) {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
   }
 
-  function removeNotif(id: string) {
+  async function removeNotif(id: string) {
+    const previous = notifications
     setNotifications((prev) => prev.filter((n) => n.id !== id))
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    } catch (err) {
+      console.error("[notifications] dismiss failed, rollback", err)
+      setNotifications(previous)
+    }
   }
 
-  function removeAllNotifs() {
+  async function removeAllNotifs() {
+    const previous = notifications
     setNotifications([])
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    } catch (err) {
+      console.error("[notifications] clear all failed, rollback", err)
+      setNotifications(previous)
+    }
   }
 
   async function handleSignOut() {

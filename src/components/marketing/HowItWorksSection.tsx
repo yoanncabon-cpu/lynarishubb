@@ -2,10 +2,7 @@
 
 import { useRef, useEffect } from "react"
 import { Plug, Cpu, BarChart3 } from "lucide-react"
-import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
-
-gsap.registerPlugin(ScrollTrigger)
+// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
 const steps = [
   {
@@ -41,67 +38,79 @@ export function HowItWorksSection() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) return
 
-    const ctx = gsap.context(() => {
-      // Header
-      gsap.fromTo(
-        headerRef.current,
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 80%",
-            once: true,
-          },
-        }
-      )
+    let cleanup: (() => void) | null = null
+    let cancelled = false
 
-      // Line draw animation (SVG)
-      if (lineRef.current) {
-        const lineLength = lineRef.current.getTotalLength()
-        gsap.set(lineRef.current, {
-          strokeDasharray: lineLength,
-          strokeDashoffset: lineLength,
-        })
-
-        gsap.to(lineRef.current, {
-          strokeDashoffset: 0,
-          duration: 1.5,
-          ease: "power2.inOut",
-          scrollTrigger: {
-            trigger: timelineRef.current,
-            start: "top 75%",
-            once: true,
-          },
-        })
-      }
-
-      // Steps stagger
-      const stepEls = timelineRef.current?.querySelectorAll(".step-item")
-      if (stepEls) {
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
+      if (cancelled) return
+      const gsap = gsapMod.default
+      gsap.registerPlugin(stMod.ScrollTrigger)
+      const ctx = gsap.context(() => {
+        // Header
         gsap.fromTo(
-          stepEls,
+          headerRef.current,
           { opacity: 0, y: 40 },
           {
             opacity: 1,
             y: 0,
-            duration: 0.7,
-            stagger: 0.2,
+            duration: 0.8,
             ease: "power3.out",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top 80%",
+              once: true,
+            },
+          }
+        )
+
+        // Line draw animation (SVG)
+        if (lineRef.current) {
+          const lineLength = lineRef.current.getTotalLength()
+          gsap.set(lineRef.current, {
+            strokeDasharray: lineLength,
+            strokeDashoffset: lineLength,
+          })
+
+          gsap.to(lineRef.current, {
+            strokeDashoffset: 0,
+            duration: 1.5,
+            ease: "power2.inOut",
             scrollTrigger: {
               trigger: timelineRef.current,
               start: "top 75%",
               once: true,
             },
-          }
-        )
-      }
-    }, sectionRef)
+          })
+        }
 
-    return () => ctx.revert()
+        // Steps stagger
+        const stepEls = timelineRef.current?.querySelectorAll(".step-item")
+        if (stepEls) {
+          gsap.fromTo(
+            stepEls,
+            { opacity: 0, y: 40 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              stagger: 0.2,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: timelineRef.current,
+                start: "top 75%",
+                once: true,
+              },
+            }
+          )
+        }
+      }, sectionRef)
+      cleanup = () => ctx.revert()
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   return (

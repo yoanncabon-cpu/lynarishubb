@@ -180,6 +180,50 @@ export function buildNotificationLabel(
 }
 
 /**
+ * Libellés courts pluriels pour les charts/agrégats (ex: "Top actions par type").
+ * On veut une formulation au pluriel (« 10 SMS envoyés ») et pas un verbe à l'infinitif.
+ */
+const ACTION_TYPE_SHORT: Record<string, string> = {
+  call_handled:        "Appels traités",
+  call_missed:         "Appels manqués",
+  appointment_created: "RDV créés",
+  sms_sent:            "SMS envoyés",
+  email_sent:          "Emails envoyés",
+  inbox_processed:     "Tris d'inbox",
+  draft_created:       "Brouillons rédigés",
+  prospect_contacted:  "Prospects contactés",
+  prospect_scored:     "Prospects scorés",
+  post_published:      "Posts publiés",
+  article_written:     "Articles rédigés",
+  image_generated:     "Images générées",
+  conversation:        "Échanges",
+  delegation:          "Délégations",
+  brief_generated:     "Briefs générés",
+  scheduled_job:       "Tâches planifiées",
+  workflow_triggered:  "Workflows déclenchés",
+  workflow_created:    "Workflows créés",
+  memory_saved:        "Mémoires mises à jour",
+  cv_analyzed:         "CV analysés",
+  report_generated:    "Rapports générés",
+}
+
+/**
+ * Convertit un type d'action brut (ex: "scheduled_job") en libellé français court
+ * adapté à un chart ou une légende (ex: "Tâches planifiées").
+ * Fallback : reformate snake_case → "Title Case".
+ */
+export function actionTypeShortLabel(type: string): string {
+  const known = ACTION_TYPE_SHORT[type]
+  if (known) return known
+  return type
+    .replace(/_/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
+}
+
+/**
  * Construit le libellé d'une activité (timeline) depuis le type + payload.
  */
 export function buildActivityLabel(

@@ -1,4 +1,4 @@
-"use client"
+// Composant pure-render sans hook ni event → SSR-friendly (pas de "use client")
 import React from "react"
 
 const BLOBS = [

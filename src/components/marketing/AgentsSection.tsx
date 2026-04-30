@@ -5,10 +5,7 @@ import { useRef, useEffect, useCallback } from "react"
 import { ArrowRight } from "lucide-react"
 import { agents, type AgentStatus } from "@/lib/agents/data"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
-import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
-
-gsap.registerPlugin(ScrollTrigger)
+// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
 function StatusBadge({ status }: { status: AgentStatus }) {
   if (status === "live") {
@@ -165,45 +162,57 @@ export function AgentsSection() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) return
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headerRef.current,
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 80%",
-            once: true,
-          },
-        }
-      )
+    let cleanup: (() => void) | null = null
+    let cancelled = false
 
-      const cards = gridRef.current?.querySelectorAll(".agent-card")
-      if (cards) {
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
+      if (cancelled) return
+      const gsap = gsapMod.default
+      gsap.registerPlugin(stMod.ScrollTrigger)
+      const ctx = gsap.context(() => {
         gsap.fromTo(
-          cards,
-          { opacity: 0, y: 50 },
+          headerRef.current,
+          { opacity: 0, y: 40 },
           {
             opacity: 1,
             y: 0,
-            duration: 0.6,
-            stagger: 0.08,
+            duration: 0.8,
             ease: "power3.out",
             scrollTrigger: {
-              trigger: gridRef.current,
-              start: "top 85%",
+              trigger: sectionRef.current,
+              start: "top 80%",
               once: true,
             },
           }
         )
-      }
-    }, sectionRef)
 
-    return () => ctx.revert()
+        const cards = gridRef.current?.querySelectorAll(".agent-card")
+        if (cards) {
+          gsap.fromTo(
+            cards,
+            { opacity: 0, y: 50 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              stagger: 0.08,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: gridRef.current,
+                start: "top 85%",
+                once: true,
+              },
+            }
+          )
+        }
+      }, sectionRef)
+      cleanup = () => ctx.revert()
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   return (

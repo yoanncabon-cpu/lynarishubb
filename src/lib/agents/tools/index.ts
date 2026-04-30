@@ -1,9 +1,12 @@
 import type { ToolResult } from "./types"
 import { db } from "@/lib/db"
-import { agentMemories, actionLogs, prospects, prospectingSequences } from "@/lib/db/schema"
-import { eq, and, like } from "drizzle-orm"
+import { agentMemories, actionLogs, prospects, prospectingSequences, tasks, organizations } from "@/lib/db/schema"
+import type { EmailStyleConfig } from "@/lib/db/schema"
+import { eq, and, like, desc, inArray } from "drizzle-orm"
 import { getIntegration } from "@/lib/integrations/manager"
 import { logContent } from "@/lib/content-logger"
+import { renderEmail, isAlreadyHtml } from "@/lib/emails/templates/branded"
+import { randomUUID } from "node:crypto"
 
 // ─── Supabase helper ──────────────────────────────────────────────────────────
 async function getSupabaseServer() {
@@ -43,12 +46,52 @@ async function getGoogleCreds(orgId: string): Promise<{ access_token: string } |
   return { access_token: creds["access_token"] }
 }
 
+// ─── Gmail RFC 822 builder ────────────────────────────────────────────────────
+// Encode subject en RFC 2047 base64 si non-ASCII (sinon Gmail/intermédiaires
+// peuvent l'interpréter en Latin-1 → mojibake "Ã©" au lieu de "é").
+function encodeRfc2047(str: string): string {
+  if (!/[^\x20-\x7E]/.test(str)) return str
+  return `=?UTF-8?B?${Buffer.from(str, "utf8").toString("base64")}?=`
+}
+
+// Encode le body en base64 + wrap à 76 chars (RFC 2045) pour transit propre
+// des multi-byte UTF-8 sans risque de troncature 8-bit.
+function wrapBase64(b64: string, width = 76): string {
+  const lines: string[] = []
+  for (let i = 0; i < b64.length; i += width) lines.push(b64.slice(i, i + width))
+  return lines.join("\r\n")
+}
+
+/**
+ * Construit un email RFC 822 propre encodé base64url pour l'API Gmail.
+ * Garantit le bon affichage des accents, emojis, tirets typographiques.
+ * Détecte HTML automatiquement (présence d'une balise) → text/html sinon text/plain.
+ */
+function buildGmailRaw(args: { to: string; subject: string; body: string }): string {
+  const isHtml = /<\/?[a-z][\s\S]*>/i.test(args.body)
+  const contentType = isHtml ? "text/html; charset=utf-8" : "text/plain; charset=utf-8"
+  const bodyB64 = wrapBase64(Buffer.from(args.body, "utf8").toString("base64"))
+  const headers = [
+    `To: ${args.to}`,
+    `Subject: ${encodeRfc2047(args.subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: ${contentType}`,
+    "Content-Transfer-Encoding: base64",
+    "",
+    bodyB64,
+  ]
+  return Buffer.from(headers.join("\r\n")).toString("base64url")
+}
+
 export interface ToolCallContext {
   toolName: string
   input: Record<string, unknown>
   orgId: string
   agentSlug: string
   conversationId?: string
+  // Style email à appliquer pour les tools send_email* — propagé depuis runAgent.
+  // Récupéré du scheduled_job courant lors d'une exécution planifiée.
+  emailStyle?: EmailStyleConfig | null
 }
 
 export async function executeTool(ctx: ToolCallContext): Promise<ToolResult> {
@@ -496,15 +539,10 @@ const toolHandlers: Record<
       }
     }
 
-    const emailLines = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      "MIME-Version: 1.0",
-      "Content-Type: text/plain; charset=utf-8",
-      "",
-      body,
-    ]
-    const raw = Buffer.from(emailLines.join("\r\n")).toString("base64url")
+    // Wrap automatique en template HTML branded (sauf si l'agent envoie déjà un HTML complet).
+    // Le style est résolu depuis ctx.emailStyle (propagé du scheduled_job en cours d'exécution).
+    const finalBody = isAlreadyHtml(body) ? body : renderEmail({ subject, body, style: ctx.emailStyle })
+    const raw = buildGmailRaw({ to, subject, body: finalBody })
 
     if (sendNow) {
       const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
@@ -1418,16 +1456,11 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     const subject = (input["subject"] as string | undefined) ?? ""
     const body = (input["body"] as string | undefined) ?? ""
 
-    // Construire email RFC 2822 encodé base64url
-    const emailLines = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      "MIME-Version: 1.0",
-      "Content-Type: text/plain; charset=utf-8",
-      "",
-      body,
-    ]
-    const raw = Buffer.from(emailLines.join("\r\n")).toString("base64url")
+    // Wrap automatique en template HTML branded (sauf si l'agent envoie déjà un HTML complet).
+    // Le style est résolu depuis ctx.emailStyle (propagé du scheduled_job en cours).
+    const finalBody = isAlreadyHtml(body) ? body : renderEmail({ subject, body, style: ctx.emailStyle })
+    // Construire email RFC 822 encodé base64url (subject RFC 2047 + body base64 si UTF-8)
+    const raw = buildGmailRaw({ to, subject, body: finalBody })
 
     const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
       method: "POST",
@@ -2287,12 +2320,408 @@ Réponds UNIQUEMENT avec le JSON du workflow, sans markdown ni explication.`
   },
 
   // ─── Aria tools ───────────────────────────────────────────────────────
-  create_task: async (input) => {
-    return {
-      success: false,
-      error: "Intégration Notion ou Trello non connectée. Configure-la dans Intégrations.",
-      title: input["title"],
+  // ─── CORE TOOLS — accessibles à tous les agents (todo list + contacts) ────
+
+  list_tasks: async (input, ctx) => {
+    const status = (input["status"] as string | undefined) ?? "all"
+    const priority = (input["priority"] as string | undefined) ?? "all"
+    const limit = Math.min(Math.max(Number(input["limit"]) || 20, 1), 100)
+
+    const conditions = [eq(tasks.orgId, ctx.orgId)]
+    if (status !== "all" && ["todo", "in_progress", "done"].includes(status)) {
+      conditions.push(eq(tasks.status, status))
     }
+    if (priority !== "all" && ["low", "medium", "high"].includes(priority)) {
+      conditions.push(eq(tasks.priority, priority))
+    }
+
+    const rows = await db
+      .select()
+      .from(tasks)
+      .where(and(...conditions))
+      .orderBy(desc(tasks.createdAt))
+      .limit(limit)
+
+    return {
+      success: true,
+      count: rows.length,
+      tasks: rows.map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        priority: t.priority,
+        due_date: t.dueDate?.toISOString() ?? null,
+        created_by: t.createdBy,
+      })),
+    }
+  },
+
+  create_task: async (input, ctx) => {
+    const title = (input["title"] as string | undefined)?.trim()
+    if (!title) return { success: false, error: "title requis" }
+    const description = (input["description"] as string | undefined) ?? null
+    const priority = (input["priority"] as string | undefined) ?? "medium"
+    if (!["low", "medium", "high"].includes(priority)) {
+      return { success: false, error: "priority doit être low|medium|high" }
+    }
+    const dueRaw = input["due_date"] as string | undefined
+    let dueDate: Date | null = null
+    if (dueRaw) {
+      const d = new Date(dueRaw)
+      if (isNaN(d.getTime())) return { success: false, error: "due_date invalide (ISO 8601 attendu)" }
+      dueDate = d
+    }
+
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        orgId: ctx.orgId,
+        title,
+        description,
+        status: "todo",
+        priority,
+        dueDate,
+        createdBy: `agent:${ctx.agentSlug}`,
+      })
+      .returning()
+
+    return { success: true, task_id: task?.id, title, status: "todo", priority }
+  },
+
+  update_task: async (input, ctx) => {
+    const taskId = input["task_id"] as string | undefined
+    if (!taskId) return { success: false, error: "task_id requis" }
+
+    const updates: Partial<typeof tasks.$inferInsert> = { updatedAt: new Date() }
+    const status = input["status"] as string | undefined
+    if (status !== undefined) {
+      if (!["todo", "in_progress", "done"].includes(status)) {
+        return { success: false, error: "status invalide" }
+      }
+      updates.status = status
+      updates.completedAt = status === "done" ? new Date() : null
+    }
+    const priority = input["priority"] as string | undefined
+    if (priority !== undefined) {
+      if (!["low", "medium", "high"].includes(priority)) {
+        return { success: false, error: "priority invalide" }
+      }
+      updates.priority = priority
+    }
+    if (typeof input["title"] === "string") updates.title = input["title"]
+    if (typeof input["description"] === "string") updates.description = input["description"]
+    if ("due_date" in input) {
+      const dueRaw = input["due_date"] as string | null
+      if (dueRaw === null) updates.dueDate = null
+      else if (typeof dueRaw === "string") {
+        const d = new Date(dueRaw)
+        if (isNaN(d.getTime())) return { success: false, error: "due_date invalide" }
+        updates.dueDate = d
+      }
+    }
+
+    const [updated] = await db
+      .update(tasks)
+      .set(updates)
+      .where(and(eq(tasks.id, taskId), eq(tasks.orgId, ctx.orgId)))
+      .returning()
+
+    if (!updated) return { success: false, error: "Tâche introuvable" }
+    return { success: true, task_id: updated.id, status: updated.status, priority: updated.priority }
+  },
+
+  delete_task: async (input, ctx) => {
+    const taskId = input["task_id"] as string | undefined
+    if (!taskId) return { success: false, error: "task_id requis" }
+
+    const result = await db
+      .delete(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.orgId, ctx.orgId)))
+      .returning({ id: tasks.id })
+
+    if (result.length === 0) return { success: false, error: "Tâche introuvable" }
+    return { success: true, task_id: taskId }
+  },
+
+  list_contacts: async (input, ctx) => {
+    const category = input["category"] as string | undefined
+    const limit = Math.min(Math.max(Number(input["limit"]) || 50, 1), 200)
+
+    const [org] = await db
+      .select({ settings: organizations.settings })
+      .from(organizations)
+      .where(eq(organizations.id, ctx.orgId))
+      .limit(1)
+
+    const settings = (org?.settings ?? {}) as Record<string, unknown>
+    const all = Array.isArray(settings["contacts"]) ? (settings["contacts"] as Array<Record<string, unknown>>) : []
+    const filtered = category
+      ? all.filter((c) => typeof c["category"] === "string" && (c["category"] as string).toLowerCase() === category.toLowerCase())
+      : all
+
+    return { success: true, count: filtered.length, contacts: filtered.slice(0, limit) }
+  },
+
+  search_contact: async (input, ctx) => {
+    const query = (input["query"] as string | undefined)?.toLowerCase().trim()
+    if (!query) return { success: false, error: "query requis" }
+
+    const [org] = await db
+      .select({ settings: organizations.settings })
+      .from(organizations)
+      .where(eq(organizations.id, ctx.orgId))
+      .limit(1)
+
+    const settings = (org?.settings ?? {}) as Record<string, unknown>
+    const all = Array.isArray(settings["contacts"]) ? (settings["contacts"] as Array<Record<string, unknown>>) : []
+
+    const matches = all.filter((c) => {
+      const fields = ["name", "email", "phone", "company", "role"]
+      return fields.some((f) => typeof c[f] === "string" && (c[f] as string).toLowerCase().includes(query))
+    })
+
+    return { success: true, count: matches.length, contacts: matches.slice(0, 10) }
+  },
+
+  add_contact: async (input, ctx) => {
+    const name = (input["name"] as string | undefined)?.trim()
+    if (!name) return { success: false, error: "name requis" }
+
+    const newContact: Record<string, unknown> = {
+      id: randomUUID(),
+      name,
+      createdAt: new Date().toISOString(),
+    }
+    for (const k of ["email", "phone", "company", "role", "category", "notes"]) {
+      if (typeof input[k] === "string" && input[k]) newContact[k] = input[k]
+    }
+
+    const [org] = await db
+      .select({ settings: organizations.settings })
+      .from(organizations)
+      .where(eq(organizations.id, ctx.orgId))
+      .limit(1)
+
+    const settings = (org?.settings ?? {}) as Record<string, unknown>
+    const existing = Array.isArray(settings["contacts"]) ? (settings["contacts"] as Array<Record<string, unknown>>) : []
+    const next = [...existing, newContact]
+
+    await db
+      .update(organizations)
+      .set({ settings: { ...settings, contacts: next } })
+      .where(eq(organizations.id, ctx.orgId))
+
+    return { success: true, contact_id: newContact["id"], name }
+  },
+
+  update_contact: async (input, ctx) => {
+    const contactId = input["contact_id"] as string | undefined
+    if (!contactId) return { success: false, error: "contact_id requis" }
+
+    const [org] = await db
+      .select({ settings: organizations.settings })
+      .from(organizations)
+      .where(eq(organizations.id, ctx.orgId))
+      .limit(1)
+
+    const settings = (org?.settings ?? {}) as Record<string, unknown>
+    const existing = Array.isArray(settings["contacts"]) ? (settings["contacts"] as Array<Record<string, unknown>>) : []
+    const idx = existing.findIndex((c) => c["id"] === contactId)
+    if (idx === -1) return { success: false, error: "Contact introuvable" }
+
+    const updated = { ...existing[idx] }
+    for (const k of ["name", "email", "phone", "company", "role", "category", "notes"]) {
+      if (typeof input[k] === "string") updated[k] = input[k]
+    }
+    const next = [...existing]
+    next[idx] = updated
+
+    await db
+      .update(organizations)
+      .set({ settings: { ...settings, contacts: next } })
+      .where(eq(organizations.id, ctx.orgId))
+
+    return { success: true, contact_id: contactId, name: updated["name"] }
+  },
+
+  delete_contact: async (input, ctx) => {
+    const contactId = input["contact_id"] as string | undefined
+    if (!contactId) return { success: false, error: "contact_id requis" }
+
+    const [org] = await db
+      .select({ settings: organizations.settings })
+      .from(organizations)
+      .where(eq(organizations.id, ctx.orgId))
+      .limit(1)
+
+    const settings = (org?.settings ?? {}) as Record<string, unknown>
+    const existing = Array.isArray(settings["contacts"]) ? (settings["contacts"] as Array<Record<string, unknown>>) : []
+    const next = existing.filter((c) => c["id"] !== contactId)
+    if (next.length === existing.length) return { success: false, error: "Contact introuvable" }
+
+    await db
+      .update(organizations)
+      .set({ settings: { ...settings, contacts: next } })
+      .where(eq(organizations.id, ctx.orgId))
+
+    return { success: true, contact_id: contactId }
+  },
+
+  // ─── CRM (deals via table prospects partagée avec /dashboard/crm) ──────────
+
+  list_deals: async (input, ctx) => {
+    const stage = (input["stage"] as string | undefined) ?? "all"
+    const limit = Math.min(Math.max(Number(input["limit"]) || 30, 1), 200)
+
+    // Mapping stages tools (anglais) → enum DB
+    const STAGE_TO_DB: Record<string, string> = {
+      new: "new",
+      contacted: "contacted",
+      qualified: "qualified",
+      proposition: "replied", // /dashboard/crm utilise "Proposition" mappé sur "replied" en DB
+      won: "won",
+      lost: "lost",
+    }
+
+    const conditions = [eq(prospects.orgId, ctx.orgId)]
+    if (stage !== "all" && STAGE_TO_DB[stage]) {
+      conditions.push(eq(prospects.status, STAGE_TO_DB[stage] as "new" | "contacted" | "qualified" | "replied" | "lost" | "won"))
+    }
+
+    const rows = await db
+      .select()
+      .from(prospects)
+      .where(and(...conditions))
+      .orderBy(desc(prospects.createdAt))
+      .limit(limit)
+
+    const STAGE_FROM_DB: Record<string, string> = {
+      new: "new", contacted: "contacted", qualified: "qualified",
+      replied: "proposition", won: "won", lost: "lost",
+    }
+
+    return {
+      success: true,
+      count: rows.length,
+      deals: rows.map((r) => {
+        const meta = (r.metadata ?? {}) as Record<string, unknown>
+        return {
+          id: r.id,
+          full_name: r.fullName,
+          company: r.company,
+          email: r.email,
+          phone: meta["phone"] ?? null,
+          stage: STAGE_FROM_DB[r.status] ?? "new",
+          deal_value: meta["dealValue"] ?? null,
+          notes: meta["notes"] ?? null,
+          agent_slug: meta["agentSlug"] ?? null,
+          created_at: r.createdAt.toISOString(),
+        }
+      }),
+    }
+  },
+
+  create_deal: async (input, ctx) => {
+    const fullName = (input["full_name"] as string | undefined)?.trim()
+    if (!fullName) return { success: false, error: "full_name requis" }
+
+    const STAGE_TO_DB: Record<string, "new" | "contacted" | "qualified" | "replied" | "won" | "lost"> = {
+      new: "new", contacted: "contacted", qualified: "qualified",
+      proposition: "replied", won: "won", lost: "lost",
+    }
+    const inputStage = (input["stage"] as string | undefined) ?? "new"
+    const dbStage = STAGE_TO_DB[inputStage] ?? "new"
+
+    const [row] = await db
+      .insert(prospects)
+      .values({
+        orgId: ctx.orgId,
+        fullName,
+        email: (input["email"] as string | undefined) || undefined,
+        company: (input["company"] as string | undefined) || undefined,
+        status: dbStage,
+        metadata: {
+          phone: (input["phone"] as string | undefined) ?? "",
+          agentSlug: (input["agent_slug"] as string | undefined) ?? ctx.agentSlug,
+          tags: [],
+          notes: (input["notes"] as string | undefined) ?? "",
+          dealValue: typeof input["deal_value"] === "number" ? input["deal_value"] : undefined,
+          lastContact: new Date().toISOString(),
+          activity: [],
+          createdByAgent: ctx.agentSlug,
+        },
+      })
+      .returning()
+
+    return { success: true, deal_id: row?.id, full_name: fullName, stage: inputStage }
+  },
+
+  update_deal_stage: async (input, ctx) => {
+    const dealId = input["deal_id"] as string | undefined
+    const stage = input["stage"] as string | undefined
+    if (!dealId || !stage) return { success: false, error: "deal_id + stage requis" }
+
+    const STAGE_TO_DB: Record<string, "new" | "contacted" | "qualified" | "replied" | "won" | "lost"> = {
+      new: "new", contacted: "contacted", qualified: "qualified",
+      proposition: "replied", won: "won", lost: "lost",
+    }
+    const dbStage = STAGE_TO_DB[stage]
+    if (!dbStage) return { success: false, error: "stage invalide" }
+
+    const [updated] = await db
+      .update(prospects)
+      .set({ status: dbStage })
+      .where(and(eq(prospects.id, dealId), eq(prospects.orgId, ctx.orgId)))
+      .returning()
+
+    if (!updated) return { success: false, error: "Deal introuvable" }
+    return { success: true, deal_id: dealId, stage }
+  },
+
+  update_deal: async (input, ctx) => {
+    const dealId = input["deal_id"] as string | undefined
+    if (!dealId) return { success: false, error: "deal_id requis" }
+
+    // Lit la ligne existante pour merger metadata sans écraser ce qui n'est pas modifié
+    const [existing] = await db
+      .select()
+      .from(prospects)
+      .where(and(eq(prospects.id, dealId), eq(prospects.orgId, ctx.orgId)))
+      .limit(1)
+    if (!existing) return { success: false, error: "Deal introuvable" }
+
+    const updates: Partial<typeof prospects.$inferInsert> = {}
+    if (typeof input["full_name"] === "string") updates.fullName = input["full_name"]
+    if (typeof input["email"] === "string") updates.email = input["email"] || null
+    if (typeof input["company"] === "string") updates.company = input["company"] || null
+
+    const meta = { ...((existing.metadata ?? {}) as Record<string, unknown>) }
+    if (typeof input["phone"] === "string") meta["phone"] = input["phone"]
+    if (typeof input["notes"] === "string") meta["notes"] = input["notes"]
+    if (typeof input["agent_slug"] === "string") meta["agentSlug"] = input["agent_slug"]
+    if (typeof input["deal_value"] === "number") meta["dealValue"] = input["deal_value"]
+    updates.metadata = meta
+
+    await db
+      .update(prospects)
+      .set(updates)
+      .where(and(eq(prospects.id, dealId), eq(prospects.orgId, ctx.orgId)))
+
+    return { success: true, deal_id: dealId }
+  },
+
+  delete_deal: async (input, ctx) => {
+    const dealId = input["deal_id"] as string | undefined
+    if (!dealId) return { success: false, error: "deal_id requis" }
+
+    const result = await db
+      .delete(prospects)
+      .where(and(eq(prospects.id, dealId), eq(prospects.orgId, ctx.orgId)))
+      .returning({ id: prospects.id })
+
+    if (result.length === 0) return { success: false, error: "Deal introuvable" }
+    return { success: true, deal_id: dealId }
   },
 
   draft_presentation: async (input) => {

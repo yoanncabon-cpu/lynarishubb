@@ -1,11 +1,8 @@
 "use client"
 
 import { useRef, useEffect } from "react"
-import gsap from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
-
-gsap.registerPlugin(ScrollTrigger)
+// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
 // ─── Metrics data ─────────────────────────────────────────────────────────────
 // Promesses qualitatives — aucun chiffre tant qu'il n'est pas mesuré et signé client.
@@ -64,62 +61,74 @@ export function ResultsSection() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) return
 
-    const ctx = gsap.context(() => {
-      // Overline + heading
-      gsap.fromTo(
-        ".results-heading",
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.7,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 85%",
-            once: true,
-          },
-        }
-      )
+    let cleanup: (() => void) | null = null
+    let cancelled = false
 
-      // Metric cards staggered
-      gsap.fromTo(
-        ".results-metric",
-        { opacity: 0, y: 32 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          stagger: 0.1,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: ".results-grid",
-            start: "top 85%",
-            once: true,
-          },
-        }
-      )
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
+      if (cancelled) return
+      const gsap = gsapMod.default
+      gsap.registerPlugin(stMod.ScrollTrigger)
+      const ctx = gsap.context(() => {
+        // Overline + heading
+        gsap.fromTo(
+          ".results-heading",
+          { opacity: 0, y: 24 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.7,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top 85%",
+              once: true,
+            },
+          }
+        )
 
-      // Case cards staggered
-      gsap.fromTo(
-        ".results-case",
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.55,
-          stagger: 0.1,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: ".results-cases",
-            start: "top 88%",
-            once: true,
-          },
-        }
-      )
-    }, sectionRef)
+        // Metric cards staggered
+        gsap.fromTo(
+          ".results-metric",
+          { opacity: 0, y: 32 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.1,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: ".results-grid",
+              start: "top 85%",
+              once: true,
+            },
+          }
+        )
 
-    return () => ctx.revert()
+        // Case cards staggered
+        gsap.fromTo(
+          ".results-case",
+          { opacity: 0, y: 24 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.55,
+            stagger: 0.1,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: ".results-cases",
+              start: "top 88%",
+              once: true,
+            },
+          }
+        )
+      }, sectionRef)
+      cleanup = () => ctx.revert()
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   return (

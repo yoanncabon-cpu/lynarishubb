@@ -3,6 +3,7 @@ import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { conversations, actionLogs, agentInstances } from "@/lib/db/schema"
 import { eq, and, gte, lt, sql, count } from "drizzle-orm"
+import { actionTypeShortLabel } from "@/lib/agents/action-labels"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -147,9 +148,9 @@ export async function GET(request: NextRequest) {
     const finalConvSeries = dailyConversations
     const finalActionSeries = dailyActions
 
-    // Top action types for bar chart
+    // Top action types for bar chart — libellé français lisible (ex: "scheduled_job" → "Tâches planifiées")
     const topActionTypes = actionTypes.slice(0, 6).map(a => ({
-      label: a.type,
+      label: actionTypeShortLabel(a.type),
       count: a.c,
     }))
 
