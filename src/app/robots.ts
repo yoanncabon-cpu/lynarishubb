@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { getAppUrl } from "@/lib/app-url"
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/dashboard/", "/api/", "/onboarding/"],
       },
     ],
-    sitemap: "https://lynarisai.com/sitemap.xml",
+    sitemap: `${getAppUrl()}/sitemap.xml`,
   }
 }

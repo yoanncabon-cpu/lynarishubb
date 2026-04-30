@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next"
+import { getAppUrl } from "@/lib/app-url"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://lynarisai.com"
+  const base = getAppUrl()
   const now = new Date()
 
   const marketingRoutes: Array<{
