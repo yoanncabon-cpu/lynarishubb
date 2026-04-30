@@ -7,6 +7,7 @@ import { getIntegration } from "@/lib/integrations/manager"
 import { logContent } from "@/lib/content-logger"
 import { renderEmail, isAlreadyHtml } from "@/lib/emails/templates/branded"
 import { randomUUID } from "node:crypto"
+import { getAppUrl } from "@/lib/app-url"
 
 // ─── Supabase helper ──────────────────────────────────────────────────────────
 async function getSupabaseServer() {
@@ -400,7 +401,7 @@ const toolHandlers: Record<
     const task = (input["task"] as string | undefined) ?? (input["task_description"] as string | undefined) ?? ""
     const context = (input["context"] as Record<string, unknown> | undefined) ?? {}
 
-    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"
+    const baseUrl = getAppUrl()
     try {
       const res = await fetch(`${baseUrl}/api/agents/${agentSlug}/run`, {
         method: "POST",

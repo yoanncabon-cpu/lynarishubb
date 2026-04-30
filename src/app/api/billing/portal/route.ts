@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
 import { users, organizations } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
+import { getAppUrl } from "@/lib/app-url"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -32,7 +33,7 @@ export async function POST() {
     columns: { stripeCustomerId: true },
   })
 
-  const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"
+  const appUrl = getAppUrl()
 
   try {
     const stripe = getStripeClient()

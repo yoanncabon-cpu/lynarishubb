@@ -16,6 +16,7 @@ import {
   newFeaturesEmail,
   usageTipsEmail,
 } from "@/lib/emails/notification-templates"
+import { getAppUrl } from "@/lib/app-url"
 
 // Délai entre chaque envoi pour éviter le rate limiting Gmail
 function delay(ms: number): Promise<void> {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
   // Capture dans une constante typée pour que TS la suive dans la closure
   const recipient: string = to
   const results: EmailResult[] = []
+  const appUrl = getAppUrl()
 
   // Utilitaire : envoie un email et collecte le résultat
   async function send(name: string, subject: string, html: string, text: string) {
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
     customerEmail: to,
     customerName: "Yoann",
     trialEndDate: "dans 2 jours, le 27 avril",
-    upgradeUrl: "http://localhost:3000/dashboard/billing",
+    upgradeUrl: `${appUrl}/dashboard/billing`,
   })
   await send("trial_ending", trial.subject, trial.html, trial.text)
 
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
     amount: 149,
     planName: "Pro",
     retryDate: "dans 3 jours",
-    updatePaymentUrl: "http://localhost:3000/dashboard/billing",
+    updatePaymentUrl: `${appUrl}/dashboard/billing`,
   })
   await send("payment_failed", pFailed.subject, pFailed.html, pFailed.text)
 
@@ -119,7 +121,7 @@ export async function POST(request: Request) {
     customerName: "Yoann",
     planName: "Pro",
     accessUntil: "31 mai 2026",
-    reactivateUrl: "http://localhost:3000/dashboard/billing",
+    reactivateUrl: `${appUrl}/dashboard/billing`,
   })
   await send("subscription_cancelled", subCancelled.subject, subCancelled.html, subCancelled.text)
 
@@ -164,7 +166,7 @@ export async function POST(request: Request) {
     orgName: "Lynaris Test",
     inviterName: "Yoann",
     role: "admin",
-    signupUrl: "http://localhost:3000/signup?invite=test123",
+    signupUrl: `${appUrl}/signup?invite=test123`,
   })
   await send("team_invite", invite.subject, invite.html, invite.text)
 

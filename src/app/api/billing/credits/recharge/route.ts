@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic"
 import { type NextRequest, NextResponse } from "next/server"
 import { getStripeClient } from "@/lib/integrations/stripe"
+import { getAppUrl } from "@/lib/app-url"
 import { z } from "zod"
 
 const schema = z.object({
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const { amount, type, org_id, org_email } = parsed.data
   const orgId = org_id ?? request.headers.get("x-org-id") ?? "00000000-0000-0000-0000-000000000001"
-  const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"
+  const appUrl = getAppUrl()
 
   try {
     const stripe = getStripeClient()

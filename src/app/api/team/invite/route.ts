@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { sendEmail } from "@/lib/emails/send"
 import { teamInviteEmail } from "@/lib/emails/templates"
+import { getAppUrl } from "@/lib/app-url"
 
 const schema = z.object({
   email: z.string().email(),
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { email, role, message, inviterName, orgName } = parsed.data
-  const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"
+  const appUrl = getAppUrl()
 
   // Token unique d'invitation — servira à pré-remplir le rôle à l'inscription
   const token = crypto.randomUUID()
