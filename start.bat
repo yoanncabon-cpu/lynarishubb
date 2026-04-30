@@ -30,11 +30,40 @@ if not exist "node_modules" (
   )
 )
 
-REM Verifie .env
+REM Verifie .env — si absent, copie depuis .env.example
 if not exist ".env" (
-  echo [ATTENTION] Fichier .env manquant. Copie .env.example vers .env d'abord.
-  pause
-  exit /b 1
+  if exist ".env.example" (
+    echo [INFO] .env absent. Copie de .env.example -^> .env ...
+    copy /Y ".env.example" ".env" >nul
+    echo.
+    echo ========================================
+    echo   .env vient d'etre cree depuis .env.example
+    echo ========================================
+    echo.
+    echo Tu dois maintenant remplir tes vraies cles d'API dans .env :
+    echo   - SUPABASE (URL + anon key + service role key + DATABASE_URL)
+    echo   - ANTHROPIC_API_KEY
+    echo   - OPENAI_API_KEY
+    echo   - GOOGLE_CLIENT_ID / SECRET
+    echo   - STRIPE_SECRET_KEY / WEBHOOK_SECRET
+    echo   - GMAIL_USER / GMAIL_APP_PASSWORD
+    echo   - INTEGRATIONS_ENCRYPTION_KEY (genere via: openssl rand -base64 32)
+    echo   - etc. (voir tous les placeholders dans le fichier)
+    echo.
+    echo Recupere les valeurs depuis ton vault (1Password / Bitwarden / Google Keep).
+    echo.
+    echo Ouverture de .env dans Notepad...
+    start "" notepad ".env"
+    echo.
+    echo Quand tu as fini de remplir, relance start.bat.
+    pause
+    exit /b 0
+  ) else (
+    echo [ERREUR] .env ET .env.example sont absents.
+    echo Le repo n'est pas complet. Re-clone depuis GitHub.
+    pause
+    exit /b 1
+  )
 )
 
 echo [1/3] Lancement du serveur Next.js sur http://localhost:3000 ...

@@ -2,12 +2,19 @@ import pg from "../node_modules/pg/lib/index.js"
 import { readFileSync } from "fs"
 import { fileURLToPath } from "url"
 import { dirname, join } from "path"
+import "dotenv/config"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const sql = readFileSync(join(__dirname, "../supabase/migrations/0006_phone_numbers.sql"), "utf8")
 
+const connectionString = process.env.DATABASE_URL
+if (!connectionString) {
+  console.error("✗ DATABASE_URL manquante dans .env")
+  process.exit(1)
+}
+
 const client = new pg.Client({
-  connectionString: "postgresql://postgres:Yoann.C950410@db.wuadezvidxpzyjkmldba.supabase.co:5432/postgres",
+  connectionString,
   ssl: { rejectUnauthorized: false },
 })
 

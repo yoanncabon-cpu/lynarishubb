@@ -20,7 +20,20 @@
       "Bash(npx next *)",
       "Bash(npx eslint *)",
       "Bash(python3 *)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "PowerShell(git diff HEAD -- .env.example | Select-Object -First 30)",
+      "PowerShell(git log -1 --format=%H -- .env.example; git diff HEAD~1 HEAD -- .env.example | Select-Object -First 50)",
+      "Bash(git check-ignore *)",
+      "Bash(gh repo *)",
+      "PowerShell(try { Invoke-RestMethod -Uri \"https://api.github.com/repos/yoanncabon-cpu/lynarishubb\" -Method Get -ErrorAction Stop | Select-Object -Property private,visibility,html_url,description } catch { \"ERROR: $\\($_.Exception.Message\\)\" })",
+      "PowerShell($response = Invoke-WebRequest -Uri \"https://api.github.com/repos/yoanncabon-cpu/lynarishubb\" -ErrorAction SilentlyContinue; if \\($response\\) { \\($response.Content | ConvertFrom-Json\\) | Select-Object private, visibility, html_url, description, fork, archived } else { \"REPO NOT FOUND OR PRIVATE \\(404\\)\" })",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://api.github.com/repos/yoanncabon-cpu/lynarishubb)",
+      "Bash(curl -s https://api.github.com/repos/yoanncabon-cpu/lynarishubb)",
+      "Bash(npm install *)",
+      "Bash(git ls-tree *)",
+      "PowerShell(git diff 15d3ba5 -- .env.example | Select-Object -First 30)",
+      "Bash(git reset *)",
+      "Bash(git add *)"
     ]
   }
 }

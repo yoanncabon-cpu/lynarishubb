@@ -52,7 +52,7 @@ N'importe quel utilisateur non authentifié peut appeler cet endpoint et déclen
 
 **Fichier :** `.env.example`, ligne variable `GMAIL_APP_PASSWORD`
 
-Valeur `odabthgeckqnzkta` visible en clair dans le repo. Si le repo devient public ou est partagé, le mot de passe Gmail app est compromis.
+Valeur du Gmail App Password autrefois citée en clair dans ce document — désormais retirée. Le mot de passe a été révoqué et régénéré (rotation forcée).
 
 **Fix :** Remplacer par `GMAIL_APP_PASSWORD=your_gmail_app_password_here`. Révoquer l'app password actuel immédiatement.
 

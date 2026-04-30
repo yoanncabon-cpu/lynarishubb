@@ -1,5 +1,6 @@
 // Migration phone_numbers — node scripts/migrate-phone.cjs
 const postgres = require("../node_modules/postgres/cjs/src/index.js")
+require("dotenv").config()
 
 const SQL = `
 CREATE TABLE IF NOT EXISTS phone_numbers (
@@ -26,7 +27,12 @@ CREATE INDEX IF NOT EXISTS idx_phone_numbers_agent ON phone_numbers(agent_id) WH
 `
 
 async function run() {
-  const sql = postgres("postgresql://postgres:Yoann.C950410@db.wuadezvidxpzyjkmldba.supabase.co:5432/postgres", { ssl: "require", max: 1 })
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
+    console.error("✗ DATABASE_URL manquante dans .env")
+    process.exit(1)
+  }
+  const sql = postgres(connectionString, { ssl: "require", max: 1 })
   try {
     await sql.unsafe(SQL)
     console.log("✓ Migration phone_numbers OK")
