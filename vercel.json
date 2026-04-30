@@ -1,12 +1,38 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["cdg1"],
   "crons": [
     {
       "path": "/api/cron/run-jobs",
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/content-scheduler",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/daily-brief",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/trial-check",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/prospecting",
+      "schedule": "0 9,14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/cleanup-logs",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/weekly-summary",
+      "schedule": "0 9 * * 1"
+    },
+    {
       "path": "/api/cron/monthly-reset",
-      "schedule": "0 2 * * *"
+      "schedule": "0 2 1 * *"
     }
   ]
 }
