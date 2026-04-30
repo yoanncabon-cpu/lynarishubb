@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { getAppUrl } from "@/lib/app-url"
 
 export const metadata: Metadata = {
   title: "Conditions Générales d\u2019Utilisation",
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
 }
 
 export default function CguPage() {
+  const siteHost = getAppUrl().replace(/^https?:\/\//, "")
   return (
     <article className="space-y-8">
       <header className="mb-12">

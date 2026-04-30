@@ -1,13 +1,16 @@
 import type { Metadata } from "next"
 import { COMPANY } from "@/lib/legal/company"
+import { getAppUrl } from "@/lib/app-url"
 
 export const metadata: Metadata = {
   title: "Mentions légales",
-  description: "Mentions légales du site Lynaris — lynarisai.com.",
+  description: "Mentions légales du site Lynaris.",
 }
 
 export default function MentionsLegalesPage() {
   const siretEnCours = COMPANY.siret === "En cours d'immatriculation"
+  const siteUrl = getAppUrl()
+  const siteHost = siteUrl.replace(/^https?:\/\//, "")
 
   return (
     <article className="prose-legal space-y-8">
@@ -45,7 +48,7 @@ export default function MentionsLegalesPage() {
           )}
           <p>
             <strong className="text-[--ly-text]">Site web&nbsp;:</strong>{" "}
-            <a href="https://lynarisai.com" className="text-[--ly-primary-soft] hover:underline">lynarisai.com</a>
+            <a href={siteUrl} className="text-[--ly-primary-soft] hover:underline">{siteHost}</a>
           </p>
           <p><strong className="text-[--ly-text]">Numéro de TVA intracommunautaire&nbsp;:</strong> Non applicable (micro-entreprise sous le seuil)</p>
         </div>

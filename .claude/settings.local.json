@@ -37,7 +37,14 @@
       "Bash(git commit -m ' *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(curl -sI https://lynarishubb.vercel.app/)",
+      "Bash(curl -sI https://lynarishubb.vercel.app/login)",
+      "Bash(curl -sI https://lynarishubb.vercel.app/signup)",
+      "Bash(curl -sI https://lynarishubb.vercel.app/tarifs)",
+      "Bash(curl -sI https://lynarishubb.vercel.app/api/cron/run-jobs)",
+      "Bash(curl -s https://lynarishubb.vercel.app/robots.txt)",
+      "Bash(curl -s https://lynarishubb.vercel.app/sitemap.xml)"
     ]
   }
 }
