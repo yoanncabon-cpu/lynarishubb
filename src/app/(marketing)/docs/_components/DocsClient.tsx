@@ -2,6 +2,10 @@
 
 import { useState } from "react"
 
+// URL publique du site — basculé automatiquement quand on branche le domaine custom
+const SITE_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://lynarishubb.vercel.app"
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "")
+
 // ---------------------------------------------------------------------------
 // Sidebar structure
 // ---------------------------------------------------------------------------
@@ -375,7 +379,7 @@ function IntroductionSection({ onNavigate }: { onNavigate: (id: string) => void 
 // Section: Quick start
 // ---------------------------------------------------------------------------
 const quickstartSteps = [
-  { num: 1, title: "Créer un compte", desc: "Inscrivez-vous sur lynarisai.com. L'accès au dashboard est immédiat.", badge: "2 min", badgeColor: "#22D3EE" },
+  { num: 1, title: "Créer un compte", desc: `Inscrivez-vous sur ${SITE_HOST}. L'accès au dashboard est immédiat.`, badge: "2 min", badgeColor: "#22D3EE" },
   { num: 2, title: "Choisir vos agents", desc: "Sélectionnez les agents adaptés à vos besoins parmi les 9 disponibles.", badge: "5 min", badgeColor: "#10B981" },
   { num: 3, title: "Connecter vos outils", desc: "Reliez Gmail, Google Calendar, Twilio ou n8n via le catalogue d'intégrations.", badge: "15 min", badgeColor: "#F59E0B" },
   { num: 4, title: "Activer", desc: "Activez vos agents. Ils commencent à travailler immédiatement.", badge: "Instant", badgeColor: "#7C3AED" },
@@ -626,7 +630,7 @@ function MarineSection() {
       <Paragraph>
         Dans la Twilio Console, configurez le Voice URL de votre numéro :
       </Paragraph>
-      <CodeBlock filename="twilio-webhook">{"Voice URL → https://lynarisai.com/api/voice/incoming"}</CodeBlock>
+      <CodeBlock filename="twilio-webhook">{`Voice URL → ${SITE_URL}/api/voice/incoming`}</CodeBlock>
 
       <H3>Tools disponibles</H3>
       <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 24 }}>
@@ -968,7 +972,7 @@ function TwilioSection() {
 
       <H3>Webhook dans Twilio Console</H3>
       <CodeBlock filename="twilio-webhook-config">
-        {"Phone Numbers > votre numéro > Voice Configuration\nVoice URL (HTTP POST) → https://lynarisai.com/api/voice/incoming"}
+        {`Phone Numbers > votre numéro > Voice Configuration\nVoice URL (HTTP POST) → ${SITE_URL}/api/voice/incoming`}
       </CodeBlock>
 
       <H3>Test</H3>
@@ -1066,7 +1070,7 @@ function N8nSection() {
 
       <H3>Webhook entrant (n8n → Lynaris)</H3>
       <CodeBlock filename="n8n-webhook-config">
-        {"POST https://lynarisai.com/api/webhooks/n8n\nX-Lynaris-Signature: sha256=<hmac_signature>"}
+        {`POST ${SITE_URL}/api/webhooks/n8n\nX-Lynaris-Signature: sha256=<hmac_signature>`}
       </CodeBlock>
       <Paragraph>
         Lynaris vérifie une signature HMAC SHA-256 sur chaque webhook entrant. La clé secrète est
@@ -1089,7 +1093,7 @@ function N8nSection() {
 // ---------------------------------------------------------------------------
 // Section: Auth API
 // ---------------------------------------------------------------------------
-const authCurlExample = `curl -X POST https://lynarisai.com/api/agents/marine/chat \\
+const authCurlExample = `curl -X POST ${SITE_URL}/api/agents/marine/chat \\
   -H "Authorization: Bearer lynx_..." \\
   -H "Content-Type: application/json" \\
   -d '{"message": "Prendre un RDV demain"}'`

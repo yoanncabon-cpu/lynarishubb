@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { COMPANY } from "@/lib/legal/company"
+import { getAppUrl } from "@/lib/app-url"
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 }
 
 export default function ConfidentialitePage() {
+  const siteHost = getAppUrl().replace(/^https?:\/\//, "")
   return (
     <article className="space-y-8">
       <header className="mb-12">
@@ -20,7 +22,7 @@ export default function ConfidentialitePage() {
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-[--ly-text]">1. Responsable de traitement</h2>
         <p className="text-sm text-[--ly-text-muted] leading-relaxed">
-          Le responsable du traitement des données personnelles collectées sur le site lynarisai.com
+          Le responsable du traitement des données personnelles collectées sur le site {siteHost}
           est {COMPANY.name}, représentée par {COMPANY.representative}, dont le siège social est situé à {COMPANY.address}. Contact&nbsp;:{" "}
           <a href={`mailto:${COMPANY.email}`} className="text-[--ly-primary-soft] hover:underline">
             {COMPANY.email}
@@ -186,7 +188,7 @@ export default function ConfidentialitePage() {
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-[--ly-text]">9. Cookies</h2>
         <p className="text-sm text-[--ly-text-muted] leading-relaxed">
-          Le site lynarisai.com n&apos;utilise aucun cookie de tracking, de remarketing ou
+          Le site {siteHost} n&apos;utilise aucun cookie de tracking, de remarketing ou
           publicitaire. Seuls des cookies strictement nécessaires au fonctionnement technique
           de la Plateforme (session, authentification, préférences d&apos;affichage) peuvent être
           déposés. Ces cookies ne nécessitent pas votre consentement préalable au sens de la

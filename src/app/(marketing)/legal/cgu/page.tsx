@@ -23,7 +23,7 @@ export default function CguPage() {
         <p className="text-sm text-[--ly-text-muted] leading-relaxed">
           Les présentes Conditions Générales d&apos;Utilisation (ci-après &laquo;&nbsp;CGU&nbsp;&raquo;) ont pour
           objet de définir les conditions d&apos;accès et d&apos;utilisation de la plateforme Lynaris
-          (ci-après &laquo;&nbsp;la Plateforme&nbsp;&raquo;), accessible à l&apos;adresse lynarisai.com, éditée par
+          (ci-après &laquo;&nbsp;la Plateforme&nbsp;&raquo;), accessible à l&apos;adresse {siteHost}, éditée par
           Lynaris, dont le siège social est situé à Taverny (95), France.
         </p>
         <p className="text-sm text-[--ly-text-muted] leading-relaxed">
