@@ -108,11 +108,15 @@ export default function DashboardPage() {
   const [initials, setInitials] = useState("YC")
   const [stats, setStats] = useState<{ conversations: number; actions: number } | null>(null)
   const [charlesInput, setCharlesInput] = useState("")
-  const [now, setNow] = useState(() => new Date())
+  // Date initialisée à null pour éviter hydration mismatch : timezone serveur (UTC Vercel)
+  // vs client (Europe/Paris UTC+1) génèrent des heures/greetings différents → erreur React #418.
+  // On la set en useEffect côté client uniquement.
+  const [now, setNow] = useState<Date | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Live clock — refresh every minute
+  // Live clock — init au mount + refresh chaque minute
   useEffect(() => {
+    setNow(new Date())
     const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
   }, [])
@@ -178,14 +182,18 @@ export default function DashboardPage() {
     router.push("/dashboard/agents/charles")
   }
 
-  const hour = now.getHours()
-  const greeting = hour < 5 ? "Bonne nuit" : hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir"
-  const editorialWord = hour < 12 ? "matinée" : hour < 18 ? "journée" : "soirée"
-  const dayFmt = (() => {
-    const s = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
-    return s.charAt(0).toUpperCase() + s.slice(1)
-  })()
-  const timeFmt = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+  // Tant que `now` est null (SSR + 1er render client), on rend des placeholders
+  // identiques côté serveur et client → pas d'hydration mismatch.
+  const hour = now?.getHours() ?? 12
+  const greeting = !now ? "Bienvenue" : hour < 5 ? "Bonne nuit" : hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir"
+  const editorialWord = !now ? "journée" : hour < 12 ? "matinée" : hour < 18 ? "journée" : "soirée"
+  const dayFmt = now
+    ? (() => {
+        const s = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
+        return s.charAt(0).toUpperCase() + s.slice(1)
+      })()
+    : "—"
+  const timeFmt = now ? now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—"
 
   // Agents en ligne (statut live)
   const onlineCount = agents.filter((a) => a.status === "live" || a.status === "beta").length

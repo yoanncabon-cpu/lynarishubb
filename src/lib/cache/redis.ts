@@ -24,8 +24,22 @@ export function getRedis(): Redis | null {
     return null
   }
 
-  client = new Redis({ url, token })
-  return client
+  // Validation : Upstash exige une URL https://*.upstash.io. Si l'env est mal configurée
+  // (ex: collé une URL Vercel par erreur), on log + no-op au lieu de crasher l'app entière.
+  if (!/^https:\/\//.test(url)) {
+    console.warn(
+      `[cache] UPSTASH_REDIS_REST_URL invalide (doit commencer par https://). Cache désactivé. Reçu: ${url.slice(0, 40)}...`
+    )
+    return null
+  }
+
+  try {
+    client = new Redis({ url, token })
+    return client
+  } catch (err) {
+    console.warn("[cache] Init Upstash Redis failed, fallback no-op:", err instanceof Error ? err.message : err)
+    return null
+  }
 }
 
 /**
