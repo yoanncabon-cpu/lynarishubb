@@ -14,68 +14,10 @@ import {
   ArrowLeft,
   ChevronDown,
   FolderOpen,
-  Mail,
-  MessageSquare,
-  FileText,
-  Image,
-  BarChart2,
-  Share2,
 } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/auth/supabase-browser"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-interface AgentContent {
-  id: string
-  agentSlug: string
-  contentType: string
-  platform: string | null
-  title: string
-  description: string | null
-  status: string
-  externalUrl: string | null
-  metadata: Record<string, unknown> | null
-  createdAt: string
-}
-
-type ContentTab = "all" | "email" | "social_post" | "article" | "image" | "document" | "conversation"
-
-const CONTENT_TABS: { key: ContentTab; label: string }[] = [
-  { key: "all",         label: "Tout" },
-  { key: "email",       label: "Emails" },
-  { key: "social_post", label: "Posts" },
-  { key: "article",     label: "Articles" },
-  { key: "image",       label: "Visuels" },
-  { key: "document",    label: "Documents" },
-]
-
-function contentIcon(type: string) {
-  switch (type) {
-    case "email":       return <Mail size={14} aria-hidden />
-    case "social_post": return <Share2 size={14} aria-hidden />
-    case "article":     return <FileText size={14} aria-hidden />
-    case "image":       return <Image size={14} aria-hidden />
-    case "document":    return <BarChart2 size={14} aria-hidden />
-    default:            return <MessageSquare size={14} aria-hidden />
-  }
-}
-
-function statusBadge(status: string) {
-  const map: Record<string, { label: string; color: string }> = {
-    published: { label: "Envoyé",   color: "#10B981" },
-    sent:      { label: "Envoyé",   color: "#10B981" },
-    draft:     { label: "Brouillon", color: "#F59E0B" },
-    archived:  { label: "Archivé",  color: "#6B7280" },
-  }
-  const s = map[status] ?? { label: status, color: "#6B7280" }
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 600, color: s.color,
-      background: `${s.color}22`, borderRadius: 4,
-      padding: "2px 6px", whiteSpace: "nowrap",
-    }}>{s.label}</span>
-  )
-}
 
 type SortKey = "name-asc" | "name-desc" | "date-asc" | "date-desc" | "size-asc" | "size-desc"
 
@@ -424,24 +366,6 @@ export default function DocumentsPage() {
   const folderInputRef2 = useRef<HTMLInputElement>(null)
 
   const [openFolderId, setOpenFolderId] = useState<string | null>(null)
-
-  // ── Contenus agents ───────────────────────────────────────────────────────
-  const [agentContents, setAgentContents] = useState<AgentContent[]>([])
-  const [activeTab, setActiveTab] = useState<ContentTab>("all")
-  const [contentsLoading, setContentsLoading] = useState(true)
-
-  useEffect(() => {
-    setContentsLoading(true)
-    fetch("/api/contents")
-      .then((r) => r.ok ? r.json() as Promise<{ items: AgentContent[] }> : { items: [] })
-      .then((data) => setAgentContents(data.items ?? []))
-      .catch(() => {})
-      .finally(() => setContentsLoading(false))
-  }, [])
-
-  const filteredContents = activeTab === "all"
-    ? agentContents
-    : agentContents.filter((c) => c.contentType === activeTab)
 
   type Modal =
     | { type: "create" }
@@ -851,107 +775,6 @@ export default function DocumentsPage() {
           <input ref={fileInputRef} type="file" multiple onChange={handleFileInput} style={{ display: "none" }} />
         </div>
       </div>
-
-      {/* ── Contenus agents ── */}
-      {!openFolder && (
-        <div style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: "rgba(245,245,247,0.75)", margin: "0 0 12px" }}>
-            Outputs agents
-          </h2>
-
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-            {CONTENT_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                style={{
-                  height: 32, padding: "0 14px", borderRadius: 999, fontSize: 12, fontWeight: 500,
-                  cursor: "pointer",
-                  border: `1px solid ${activeTab === tab.key ? "rgba(232,111,77,0.45)" : "var(--glass-border)"}`,
-                  transition: "all 220ms var(--ease-apple)",
-                  background: activeTab === tab.key
-                    ? "rgba(232,111,77,0.14)"
-                    : "rgba(255,255,255,0.04)",
-                  color: activeTab === tab.key ? "var(--accent)" : "rgba(250,250,250,0.7)",
-                  backdropFilter: "blur(16px)",
-                  WebkitBackdropFilter: "blur(16px)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-                }}
-              >
-                {tab.label}
-                {tab.key !== "all" && agentContents.filter((c) => c.contentType === tab.key).length > 0 && (
-                  <span style={{
-                    marginLeft: 5, fontSize: 10, fontWeight: 700,
-                    color: activeTab === tab.key ? "var(--accent)" : "rgba(245,245,247,0.4)",
-                  }}>
-                    {agentContents.filter((c) => c.contentType === tab.key).length}
-                  </span>
-                )}
-                {tab.key === "all" && agentContents.length > 0 && (
-                  <span style={{
-                    marginLeft: 5, fontSize: 10, fontWeight: 700,
-                    color: activeTab === "all" ? "var(--accent)" : "rgba(245,245,247,0.4)",
-                  }}>
-                    {agentContents.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Liste contenus */}
-          {contentsLoading ? (
-            <p style={{ fontSize: 13, color: "rgba(245,245,247,0.3)", margin: 0 }}>Chargement…</p>
-          ) : filteredContents.length === 0 ? (
-            <p style={{ fontSize: 13, color: "rgba(245,245,247,0.3)", margin: 0 }}>
-              Aucun contenu généré par les agents pour l&apos;instant.
-            </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {filteredContents.slice(0, 20).map((c) => (
-                <div
-                  key={c.id}
-                  className="ly-surface"
-                  style={{
-                    display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                    borderRadius: 12,
-                  }}
-                >
-                  <span style={{ color: "rgba(245,245,247,0.4)", flexShrink: 0 }}>
-                    {contentIcon(c.contentType)}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      margin: 0, fontSize: 13, fontWeight: 500, color: "#F5F5F7",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>{c.title}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(245,245,247,0.35)" }}>
-                      {c.agentSlug} · {new Date(c.createdAt).toLocaleDateString("fr-FR", {
-                        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    {statusBadge(c.status)}
-                    {c.externalUrl && (
-                      <a
-                        href={c.externalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: 11, color: "#E86F4D", textDecoration: "none" }}
-                      >
-                        Voir
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Dossiers (vue racine uniquement) ── */}
       {!openFolder && (
