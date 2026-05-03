@@ -2221,18 +2221,18 @@ function TelephoniTab({ toast }: { toast: (msg: string, type?: "success" | "erro
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <p style={{ fontSize: 15, fontWeight: 600, color: "#F5F5F7", margin: "0 0 3px" }}>Numéros de téléphone</p>
           <p style={{ fontSize: 13, color: "rgba(245,245,247,0.4)", margin: 0 }}>Attribue des numéros à tes agents vocaux (Marine, etc.)</p>
         </div>
-        <button type="button" onClick={openModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 11, background: "linear-gradient(135deg, var(--accent) 0%, #C2552A 100%)", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 8px 24px -8px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
+        <button type="button" onClick={openModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 11, background: "linear-gradient(135deg, var(--accent) 0%, #C2552A 100%)", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 8px 24px -8px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.2)", whiteSpace: "nowrap" }}>
           <Plus size={14} /> Ajouter un numéro
         </button>
       </div>
 
       {/* Liste */}
-      <div style={s}>
+      <div style={{ ...s, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
         {loading ? (
           <div style={{ padding: "32px", textAlign: "center" }}>
             <Loader2 size={18} style={{ animation: "spin 1s linear infinite", color: "rgba(245,245,247,0.3)" }} />
@@ -2244,31 +2244,31 @@ function TelephoniTab({ toast }: { toast: (msg: string, type?: "success" | "erro
             <p style={{ fontSize: 12, color: "rgba(245,245,247,0.25)", margin: 0 }}>Ajoute un numéro pour que tes agents vocaux puissent décrocher</p>
           </div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 {["Numéro", "Nom", "Direction", "Statut", "Coût/mois", ""].map(h => (
-                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "rgba(245,245,247,0.3)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
+                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "rgba(245,245,247,0.3)", letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {numbers.map(num => (
                 <tr key={num.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                  <td style={{ padding: "12px 14px", fontSize: 13, color: "#F5F5F7", fontWeight: 500, fontFamily: "monospace" }}>{formatPhone(num.phoneNumber)}</td>
-                  <td style={{ padding: "12px 14px", fontSize: 13, color: "rgba(245,245,247,0.7)" }}>{num.displayName ?? "—"}</td>
-                  <td style={{ padding: "12px 14px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "rgba(232,111,77,0.14)", color: "var(--accent)", border: "1px solid rgba(232,111,77,0.25)" }}>
+                  <td style={{ padding: "12px 14px", fontSize: 13, color: "#F5F5F7", fontWeight: 500, fontFamily: "monospace", whiteSpace: "nowrap" }}>{formatPhone(num.phoneNumber)}</td>
+                  <td style={{ padding: "12px 14px", fontSize: 13, color: "rgba(245,245,247,0.7)", whiteSpace: "nowrap" }}>{num.displayName ?? "—"}</td>
+                  <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "rgba(232,111,77,0.14)", color: "var(--accent)", border: "1px solid rgba(232,111,77,0.25)", whiteSpace: "nowrap" }}>
                       {num.direction === "inbound" ? "Entrant" : num.direction === "outbound" ? "Sortant" : "Les deux"}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 14px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: num.status === "active" ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", color: num.status === "active" ? "#10B981" : "#EF4444", border: `1px solid ${num.status === "active" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}` }}>
+                  <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: num.status === "active" ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", color: num.status === "active" ? "#10B981" : "#EF4444", border: `1px solid ${num.status === "active" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}`, whiteSpace: "nowrap" }}>
                       {num.status === "active" ? "Actif" : num.status === "suspended" ? "Suspendu" : "Libéré"}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 14px", fontSize: 13, color: "rgba(245,245,247,0.5)" }}>{(num.monthlyCostCents / 100).toFixed(2)}€</td>
-                  <td style={{ padding: "12px 14px" }}>
+                  <td style={{ padding: "12px 14px", fontSize: 13, color: "rgba(245,245,247,0.5)", whiteSpace: "nowrap" }}>{(num.monthlyCostCents / 100).toFixed(2)}€</td>
+                  <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                     <button type="button" onClick={() => void handleDelete(num)} disabled={deleting === num.id} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "rgba(248,113,113,0.7)", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 6 }}>
                       {deleting === num.id ? <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={12} />} Supprimer
                     </button>

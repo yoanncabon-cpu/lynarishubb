@@ -420,17 +420,11 @@ export function AgentAvatar({
   const agentColor = (AGENT_COLORS[slug] ?? ["#F4956E", "#E86F4D"])[1]
   const image3DSrc = !forceSvg ? AVATAR_3D_MAP[slug] : undefined
 
-  // Charles est l'agent orchestrateur (chef d'équipe) → couronne dorée affichée
-  // partout où son avatar apparaît. Skip sur les très petits avatars (illisible)
-  const isOrchestrator = slug === "charles"
-  const showCrown = isOrchestrator && size >= 18
-  const crownSize = Math.max(12, Math.round(size * 0.42))
-
   return (
     <div
       className={className}
       role="img"
-      aria-label={isOrchestrator ? `Avatar ${slug} (orchestrateur)` : `Avatar ${slug}`}
+      aria-label={`Avatar ${slug}`}
       style={{
         position: "relative",
         width: size,
@@ -476,44 +470,6 @@ export function AgentAvatar({
           </svg>
         )}
       </div>
-
-      {/* Couronne dorée — réservée à Charles (agent orchestrateur Lynaris) */}
-      {showCrown && (
-        <svg
-          viewBox="0 0 24 18"
-          width={crownSize}
-          height={Math.round(crownSize * 0.75)}
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: -Math.round(size * 0.18),
-            left: "50%",
-            transform: "translateX(-50%) rotate(-12deg)",
-            filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px rgba(251,191,36,0.55))",
-            pointerEvents: "none",
-            zIndex: 2,
-          }}
-        >
-          {/* Corps de la couronne — 3 pointes + base */}
-          <path
-            d="M2 14 L4 5 L8 9 L12 2 L16 9 L20 5 L22 14 Z"
-            fill="#FBBF24"
-            stroke="#92400E"
-            strokeWidth="0.6"
-            strokeLinejoin="round"
-          />
-          {/* Base ouvrée */}
-          <rect x="2" y="14" width="20" height="3" rx="0.5" fill="#F59E0B" stroke="#92400E" strokeWidth="0.4" />
-          {/* Bijoux sur les pointes */}
-          <circle cx="4" cy="5" r="1" fill="#EF4444" stroke="#7F1D1D" strokeWidth="0.3" />
-          <circle cx="12" cy="2.2" r="1.1" fill="#3B82F6" stroke="#1E3A8A" strokeWidth="0.3" />
-          <circle cx="20" cy="5" r="1" fill="#10B981" stroke="#065F46" strokeWidth="0.3" />
-          {/* Reflets dorés */}
-          <ellipse cx="9" cy="11" rx="0.8" ry="1.2" fill="rgba(255,255,255,0.5)" />
-          <ellipse cx="15" cy="11" rx="0.8" ry="1.2" fill="rgba(255,255,255,0.3)" />
-        </svg>
-      )}
     </div>
   )
 }

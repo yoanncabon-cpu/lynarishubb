@@ -759,15 +759,21 @@ export default function BillingPage() {
               </GlassChip>
             </div>
 
-            {/* Usage grid 4 cols — 3 KpiTile + bloc renouvellement */}
+            {/* Usage cards — scroll horizontal sur mobile, grid responsive desktop */}
             <div
+              className="ly-scroll-row"
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gridAutoFlow: "column",
+                gridAutoColumns: "minmax(160px, 1fr)",
                 gap: 12,
                 marginBottom: 24,
                 position: "relative",
                 zIndex: 1,
+                overflowX: "auto",
+                paddingBottom: 4,
+                scrollSnapType: "x mandatory",
+                WebkitOverflowScrolling: "touch",
               }}
             >
               {usageStats.map(({ label, used, max, icon, accent }) => {
@@ -1011,8 +1017,20 @@ export default function BillingPage() {
             </GlassPanel>
           </div>
 
-          {/* Plans grid — 5 paliers (Découverte / Starter / Pro ⭐ / Business / Sur-mesure) */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+          {/* Plans — scroll horizontal mobile, grid auto-fit desktop */}
+          <div
+            className="ly-scroll-row"
+            style={{
+              display: "grid",
+              gridAutoFlow: "column",
+              gridAutoColumns: "minmax(220px, 1fr)",
+              gap: 10,
+              overflowX: "auto",
+              paddingBottom: 8,
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
             {PLANS.map((plan) => {
               // Mapping plan_id UI → valeur DB
               // discovery → trial, starter/pro → identique, business → "business" (étape 6),
