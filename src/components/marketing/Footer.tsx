@@ -44,11 +44,7 @@ export function Footer() {
   return (
     <footer className="border-t border-[rgba(255,255,255,0.08)] mt-auto" style={{ background: "#0A0A0F" }}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div
-          className="grid gap-8"
-          // 4 colonnes : brand + 3 colonnes de liens (Agents, Ressources, Entreprise, Légal)
-          style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}
-        >
+        <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:[grid-template-columns:2fr_1fr_1fr_1fr_1fr]">
           {/* Brand col */}
           <div>
             <Link href="/" className="flex items-center gap-2 mb-4 group w-fit">

@@ -182,13 +182,13 @@ export default function SignupPage() {
       `}</style>
 
       <div style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         background: "#111114",
         backgroundImage: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232,111,77,0.07) 0%, transparent 60%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "24px 16px",
+        padding: "clamp(16px, 4vw, 24px) clamp(12px, 4vw, 16px)",
       }}>
         <div style={{ width: "100%", maxWidth: 400 }}>
 
@@ -202,7 +202,7 @@ export default function SignupPage() {
             background: "#141416",
             border: "1px solid rgba(255,255,255,0.08)",
             borderRadius: 16,
-            padding: 32,
+            padding: "clamp(20px, 5vw, 32px)",
             boxShadow: "0 1px 0 rgba(255,255,255,0.05) inset, 0 24px 64px rgba(0,0,0,0.4)",
           }}>
 
@@ -347,7 +347,7 @@ export default function SignupPage() {
                         aria-label={showPwd ? "Masquer" : "Afficher"}
                         style={{
                           position: "absolute",
-                          right: 10,
+                          right: 4,
                           top: "50%",
                           transform: "translateY(-50%)",
                           background: "none",
@@ -356,8 +356,9 @@ export default function SignupPage() {
                           color: "rgba(250,250,250,0.35)",
                           display: "flex",
                           alignItems: "center",
+                          justifyContent: "center",
+                          width: 36, height: 36, borderRadius: 8,
                           transition: "color 150ms",
-                          padding: 0,
                         }}
                       >
                         <EyeIcon open={showPwd} />

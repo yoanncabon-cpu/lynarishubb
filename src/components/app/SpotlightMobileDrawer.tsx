@@ -53,8 +53,7 @@ export function SpotlightMobileDrawer({ open, onClose, isAdmin }: Props) {
         style={{
           position: "relative",
           margin: 16,
-          width: 300,
-          maxWidth: "85vw",
+          width: "clamp(260px, 75vw, 300px)",
           height: "calc(100dvh - 32px)",
           display: "flex",
           flexDirection: "column",
@@ -94,15 +93,20 @@ export function SpotlightMobileDrawer({ open, onClose, isAdmin }: Props) {
             aria-label="Fermer"
             className="lg-focus"
             style={{
-              padding: 6,
-              borderRadius: 9,
+              padding: 10,
+              minWidth: 44,
+              minHeight: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 10,
               border: "none",
               background: "transparent",
               color: "rgba(250,250,250,0.55)",
               cursor: "pointer",
             }}
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
@@ -170,8 +174,8 @@ function DrawerItem({
         display: "flex",
         alignItems: "center",
         gap: 12,
-        height: 38,
-        padding: "0 14px",
+        minHeight: 44,
+        padding: "10px 14px",
         margin: "0 10px",
         borderRadius: 10,
         fontSize: 13.5,
@@ -187,7 +191,7 @@ function DrawerItem({
       <Icon size={15} style={{ color: active ? "var(--accent)" : "currentColor", flexShrink: 0 }} aria-hidden />
       <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
       {locked && (
-        <span style={{ fontSize: 9, fontWeight: 700, color: "var(--accent)", background: "rgba(232,111,77,0.14)", border: "1px solid rgba(232,111,77,0.28)", borderRadius: 5, padding: "1px 5px" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "rgba(232,111,77,0.14)", border: "1px solid rgba(232,111,77,0.28)", borderRadius: 6, padding: "2px 7px" }}>
           PRO
         </span>
       )}

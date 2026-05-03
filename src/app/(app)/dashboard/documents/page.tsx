@@ -576,7 +576,7 @@ export default function DocumentsPage() {
   const currentSortLabel = SORT_OPTIONS.find((o) => o.key === sortKey)?.label ?? "Trier"
 
   return (
-    <div style={{ padding: "32px 40px" }}>
+    <div style={{ padding: "clamp(20px, 4vw, 32px) clamp(16px, 4vw, 40px)" }}>
 
       {/* ── Modals ── */}
       {modal?.type === "create" && (
@@ -642,10 +642,12 @@ export default function DocumentsPage() {
       {/* ── Actions bar ── */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24,
+        flexWrap: "wrap", gap: 10,
       }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 8, height: 38,
-          padding: "0 13px", width: 340,
+          padding: "0 13px",
+          width: "100%", maxWidth: 340, minWidth: 0, flex: "1 1 220px",
           border: "1px solid var(--glass-border)", borderRadius: 11,
           background: "rgba(255,255,255,0.06)",
           backdropFilter: "blur(16px) saturate(1.4)", WebkitBackdropFilter: "blur(16px) saturate(1.4)",

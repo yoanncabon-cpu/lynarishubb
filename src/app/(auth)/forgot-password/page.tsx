@@ -65,7 +65,13 @@ export default function ForgotPasswordPage() {
         .auth-btn-primary:active:not(:disabled){transform:translateY(0);}
         .auth-btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
         .auth-footer-link:hover{color:#F4956E!important;}
-        @media(max-width:768px){.login-left{display:none!important;}.login-right{max-width:440px!important;margin:0 auto;}}
+        @media(max-width:768px){
+          .auth-left-panel{display:none!important;}
+          .auth-right-panel{padding:24px 20px!important;flex:1 1 100%!important;}
+        }
+        @media(max-width:480px){
+          .auth-right-panel{padding:20px 16px!important;}
+        }
       `}</style>
 
       <div style={{
@@ -95,12 +101,12 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* ── PANNEAU GAUCHE — Branding ── */}
-        <div className="login-left" style={{
+        <div className="auth-left-panel" style={{
           flex: "0 0 48%",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: "48px 56px",
+          padding: "clamp(32px, 4vw, 48px) clamp(28px, 5vw, 56px)",
           borderRight: "1px solid rgba(255,255,255,0.06)",
           position: "relative",
           zIndex: 1,
@@ -163,12 +169,12 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* ── PANNEAU DROIT — Formulaire ── */}
-        <div style={{
+        <div className="auth-right-panel" style={{
           flex: 1,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "32px 24px",
+          padding: "clamp(28px, 4vw, 32px) clamp(20px, 4vw, 24px)",
           position: "relative",
           zIndex: 1,
           animation: "fade-up 0.6s ease-out 0.1s both",

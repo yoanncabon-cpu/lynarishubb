@@ -318,7 +318,7 @@ function RechargeModal({ type, onClose }: RechargeModalProps) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))",
             gap: 8,
             marginBottom: 16,
           }}
@@ -705,7 +705,7 @@ export default function BillingPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: 960, padding: "28px 24px 64px", margin: "0 auto" }}>
+      <div style={{ maxWidth: 960, padding: "clamp(20px, 4vw, 28px) clamp(16px, 4vw, 24px) clamp(40px, 8vw, 64px)", margin: "0 auto" }}>
 
         {/* ── Section 1 — Plan actuel + Usage ────────────────────────────── */}
         <section style={{ marginBottom: 28 }}>
@@ -763,7 +763,7 @@ export default function BillingPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
                 gap: 12,
                 marginBottom: 24,
                 position: "relative",
@@ -1012,7 +1012,7 @@ export default function BillingPage() {
           </div>
 
           {/* Plans grid — 5 paliers (Découverte / Starter / Pro ⭐ / Business / Sur-mesure) */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
             {PLANS.map((plan) => {
               // Mapping plan_id UI → valeur DB
               // discovery → trial, starter/pro → identique, business → "business" (étape 6),

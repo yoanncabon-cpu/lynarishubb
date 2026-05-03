@@ -668,10 +668,10 @@ export default function ConversationsPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {/* Back button — mobile only */}
                 <button
-                  className="md:hidden"
+                  className="md:hidden lg-focus"
                   type="button"
                   onClick={() => setSelected(null)}
-                  style={{ background: "none", border: "none", color: "#E86F4D", cursor: "pointer", fontSize: 22, lineHeight: 1, padding: "0 4px 0 0", flexShrink: 0 }}
+                  style={{ background: "none", border: "none", color: "#E86F4D", cursor: "pointer", fontSize: 22, lineHeight: 1, minWidth: 36, minHeight: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, flexShrink: 0 }}
                   aria-label="Retour à la liste"
                 >
                   ‹

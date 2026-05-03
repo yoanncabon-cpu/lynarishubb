@@ -175,12 +175,12 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
       strong
       radius={22}
       aria-label="Barre supérieure Lynaris"
-      style={{ height: 60, flexShrink: 0, position: "relative", zIndex: 40 }}
+      style={{ height: "clamp(52px, 8vw, 60px)", flexShrink: 0, position: "relative", zIndex: 40 }}
       contentStyle={{
         display: "flex",
         alignItems: "center",
-        gap: 12,
-        padding: "0 18px",
+        gap: "clamp(8px, 1.5vw, 12px)",
+        padding: "0 clamp(12px, 3vw, 18px)",
         height: "100%",
       }}
     >
@@ -191,8 +191,13 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
         className="lg:hidden lg-focus"
         aria-label="Menu"
         style={{
-          padding: 6,
-          borderRadius: 9,
+          padding: 10,
+          minWidth: 44,
+          minHeight: 44,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 10,
           background: "transparent",
           border: "none",
           color: "rgba(250,250,250,0.65)",
@@ -200,7 +205,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
           flexShrink: 0,
         }}
       >
-        <Menu size={18} />
+        <Menu size={20} />
       </button>
 
       {/* Logo — retour vers la home publique */}
@@ -343,7 +348,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
         className="lg-surface-3 lg-focus hidden sm:flex"
         aria-label="Rechercher (Cmd+K)"
         style={{
-          width: 200,
+          width: "clamp(160px, 22vw, 200px)",
           height: 36,
           alignItems: "center",
           gap: 10,
@@ -456,7 +461,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                 position: "absolute",
                 right: 0,
                 top: "calc(100% + 8px)",
-                width: 340,
+                width: "min(340px, calc(100vw - 32px))",
                 zIndex: 50,
                 overflow: "hidden",
               }}
@@ -497,7 +502,8 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                     type="button"
                     onClick={() => setNotifOpen(false)}
                     aria-label="Fermer"
-                    style={{ display: "flex", color: "rgba(250,250,250,0.45)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    className="lg-focus"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(250,250,250,0.45)", background: "none", border: "none", cursor: "pointer", padding: 8, minWidth: 32, minHeight: 32, borderRadius: 8 }}
                   >
                     <X size={14} />
                   </button>
@@ -532,10 +538,11 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                         type="button"
                         onClick={() => removeNotif(notif.id)}
                         aria-label="Supprimer"
+                        className="lg-focus"
                         style={{
                           flexShrink: 0,
-                          width: 18,
-                          height: 18,
+                          minWidth: 32,
+                          minHeight: 32,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -543,9 +550,8 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                           border: "none",
                           cursor: "pointer",
                           color: "rgba(250,250,250,0.4)",
-                          padding: 0,
-                          marginTop: 2,
-                          borderRadius: 4,
+                          padding: 8,
+                          borderRadius: 8,
                           transition: "color 220ms var(--ease-apple)",
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = "#EF4444" }}
@@ -635,7 +641,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                 position: "absolute",
                 right: 0,
                 top: "calc(100% + 8px)",
-                width: 220,
+                width: "min(220px, calc(100vw - 32px))",
                 zIndex: 50,
                 overflow: "hidden",
               }}

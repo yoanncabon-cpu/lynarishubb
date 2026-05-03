@@ -1664,7 +1664,7 @@ function BillingTab({ toast }: { toast: (msg: string, type?: "success" | "error"
       <div style={billingCardStyle}>
         <h3 style={{ fontSize: 15, fontWeight: 600, color: "#F5F5F7", margin: "0 0 16px" }}>Mon abonnement</h3>
         {orgBilling ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 18 }}>
             {[
               { label: "Plan", value: orgBilling.planLabel },
               { label: "Tarif HT", value: orgBilling.planPrice },
@@ -1763,7 +1763,7 @@ function BillingTab({ toast }: { toast: (msg: string, type?: "success" | "error"
           </div>
           <div style={{ padding: "20px 22px" }}>
             <label style={labelStyle}>Montant</label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, marginBottom: 14 }}>
               {RECHARGE_AMOUNTS.map(amt => (
                 <button key={amt} type="button" onClick={() => { setSelectedAmount(amt); setCustomAmount("") }} style={amtBtnStyle(selectedAmount === amt && !customAmount)}>{amt} €</button>
               ))}
@@ -1802,7 +1802,7 @@ function BillingTab({ toast }: { toast: (msg: string, type?: "success" | "error"
             {autoEnabled && (
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>Montant de recharge</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
                   {[10, 25, 50, 100].map(amt => (
                     <button key={amt} type="button" onClick={() => setAutoAmount(amt)} style={amtBtnStyle(autoAmount === amt)}>{amt} €</button>
                   ))}
@@ -2074,7 +2074,7 @@ function ApiTab({ toast }: { toast: (msg: string, type?: "success" | "error" | "
             {autoApiEnabled && (
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>Montant</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
                   {[10, 25, 50, 100].map(a => (
                     <button key={a} type="button" onClick={() => setAutoApiAmount(a)} style={apiAmtBtn(autoApiAmount === a)}>{a} €</button>
                   ))}
@@ -2097,7 +2097,7 @@ function ApiTab({ toast }: { toast: (msg: string, type?: "success" | "error" | "
           </div>
           <div style={{ padding: "20px 22px" }}>
             <label style={labelStyle}>Montant</label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, marginBottom: 14 }}>
               {RECHARGE_AMOUNTS.map(amt => (
                 <button key={amt} type="button" onClick={() => { setSelectedApiAmount(amt); setCustomApiAmount("") }} style={apiAmtBtn(selectedApiAmount === amt && !customApiAmount)}>{amt} €</button>
               ))}
@@ -2440,7 +2440,7 @@ export default function SettingsPage() {
   const { toasts, toast, setToasts } = useToast()
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 960 }}>
+    <div style={{ padding: "clamp(20px, 4vw, 32px) clamp(16px, 4vw, 40px)", maxWidth: 960 }}>
       <h1 style={{ fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.03em", color: "#FAFAFA", margin: "0 0 28px", lineHeight: 1.1 }}>
         Paramètres
       </h1>

@@ -231,8 +231,8 @@ export default function DashboardPage() {
         >
           <div
             style={{
-              width: 60,
-              height: 60,
+              width: "clamp(48px, 8vw, 60px)",
+              height: "clamp(48px, 8vw, 60px)",
               borderRadius: "50%",
               flexShrink: 0,
               overflow: "hidden",
@@ -242,7 +242,7 @@ export default function DashboardPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 19,
+              fontSize: "clamp(15px, 2.5vw, 19px)",
               fontWeight: 700,
               color: "#fff",
               boxShadow:

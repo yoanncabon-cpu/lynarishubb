@@ -98,7 +98,15 @@ export default function LoginPage() {
         .auth-btn-google:hover{background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.18);}
         .auth-footer-link:hover{color:#F4956E!important;}
         .pwd-toggle:hover{color:rgba(250,250,250,0.7)!important;}
-        @media(max-width:768px){.login-left{display:none!important;}.login-right{max-width:440px!important;margin:0 auto;}}
+        .auth-mobile-logo{display:none;}
+        @media(max-width:768px){
+          .auth-left-panel{display:none!important;}
+          .auth-right-panel{padding:24px 20px!important;flex:1 1 100%!important;}
+          .auth-mobile-logo{display:flex!important;}
+        }
+        @media(max-width:480px){
+          .auth-right-panel{padding:20px 16px!important;}
+        }
       `}</style>
 
       <div style={{
@@ -132,13 +140,13 @@ export default function LoginPage() {
         </div>
 
         {/* ── LEFT PANEL — Branding ── */}
-        <div className="login-left" style={{
+        <div className="auth-left-panel" style={{
           flex: "0 0 50%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: "52px 64px",
+          padding: "clamp(32px, 5vw, 52px) clamp(32px, 5vw, 64px)",
           borderRight: "1px solid rgba(255,255,255,0.07)",
           background: "linear-gradient(160deg, rgba(232,111,77,0.06) 0%, transparent 50%, rgba(124,58,237,0.04) 100%)",
           position: "relative",
@@ -208,13 +216,13 @@ export default function LoginPage() {
         </div>
 
         {/* ── RIGHT PANEL — Form ── */}
-        <div style={{
+        <div className="auth-right-panel" style={{
           flex: "0 0 50%",
           height: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "32px 48px",
+          padding: "clamp(28px, 4vw, 32px) clamp(28px, 4vw, 48px)",
           position: "relative",
           zIndex: 1,
           overflowY: "auto",
@@ -224,8 +232,7 @@ export default function LoginPage() {
           <div style={{ width: "100%", maxWidth: 420 }}>
 
             {/* Mobile logo */}
-            <div className="login-left" style={{
-              display: "none",
+            <div className="auth-mobile-logo" style={{
               alignItems: "center",
               justifyContent: "center",
               gap: 10,
@@ -278,7 +285,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7, flexWrap: "wrap", gap: 6 }}>
                   <label htmlFor="password" style={{
                     fontSize: 12, fontWeight: 600,
                     color: "rgba(250,250,250,0.55)", letterSpacing: "0.01em",
@@ -309,11 +316,12 @@ export default function LoginPage() {
                     className="pwd-toggle"
                     aria-label={showPwd ? "Masquer" : "Afficher"}
                     style={{
-                      position: "absolute", right: 12, top: "50%",
+                      position: "absolute", right: 4, top: "50%",
                       transform: "translateY(-50%)",
                       background: "none", border: "none", cursor: "pointer",
                       color: "rgba(250,250,250,0.3)",
-                      display: "flex", alignItems: "center", padding: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: 36, height: 36, borderRadius: 8,
                       transition: "color 150ms",
                     }}
                   >
