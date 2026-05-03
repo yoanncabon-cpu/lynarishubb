@@ -119,6 +119,10 @@ function NavItem({
     <Link
       href={href}
       onClick={onClick}
+      // Désactive le prefetch RSC : les pages dashboard/* font des queries DB lourdes,
+      // les prefetch en arrière-plan ajoutent 80+ requêtes sur le rendu initial.
+      // Coût : +150-300ms quand l'user clique. Bénéfice : Network panel propre + DB économisée.
+      prefetch={false}
       data-tour={tour}
       title={collapsed ? label : locked ? "Disponible en Plan Pro" : undefined}
       aria-current={active ? "page" : undefined}

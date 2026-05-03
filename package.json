@@ -6,7 +6,7 @@
     "dev": "cross-env NODE_OPTIONS=--max-http-header-size=131072 next dev --turbopack",
     "dev:cron": "node scripts/dev-cron.mjs",
     "build": "next build",
-    "start": "next start",
+    "start": "cross-env NODE_OPTIONS=--max-http-header-size=131072 next start",
     "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,9 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "check:no-fake": "tsx scripts/check-no-fake.ts"
+    "check:no-fake": "tsx scripts/check-no-fake.ts",
+    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true});require('fs').rmSync('node_modules/.cache',{recursive:true,force:true})\"",
+    "clean:all": "node -e \"['.next','node_modules/.cache','.turbo','tsconfig.tsbuildinfo'].forEach(p=>require('fs').rmSync(p,{recursive:true,force:true}))\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

@@ -197,7 +197,11 @@ export const conversations = pgTable(
     summary: text("summary"),
     metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   },
-  (t) => [index("conversations_org_id_idx").on(t.orgId)]
+  (t) => [
+    index("conversations_org_id_idx").on(t.orgId),
+    // Composite : analytics WHERE org_id = ? AND started_at >= ?
+    index("conversations_org_started_idx").on(t.orgId, t.startedAt.desc()),
+  ]
 )
 
 export const messages = pgTable(
@@ -253,6 +257,15 @@ export const actionLogs = pgTable(
     index("action_logs_org_id_idx").on(t.orgId),
     index("action_logs_created_at_idx").on(t.createdAt),
     index("action_logs_notif_dismissed_idx").on(t.notificationDismissedAt),
+    // Composite : analytics WHERE org_id = ? AND created_at >= ?
+    index("action_logs_org_created_idx").on(t.orgId, t.createdAt.desc()),
+    // Composite : analytics GROUP BY type WHERE org_id = ?
+    index("action_logs_org_type_idx").on(t.orgId, t.type),
+    // Partial : notifications actives uniquement (dismissed_at IS NULL).
+    // Index minuscule même si action_logs grossit, lookup quasi-instant.
+    index("action_logs_notif_active_idx")
+      .on(t.orgId, t.createdAt.desc())
+      .where(sql`${t.notificationDismissedAt} IS NULL`),
   ]
 )
 

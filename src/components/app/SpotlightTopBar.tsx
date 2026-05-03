@@ -82,7 +82,9 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
     })()
   }, [])
 
-  // Notifications — sync live : fetch initial + polling 30s + refetch sur reprise d'onglet
+  // Notifications — sync live : fetch initial + polling 2 min + refetch sur reprise d'onglet
+  // 30s était trop agressif (chaque appel = 1 query DB join). Le visibility refetch couvre
+  // le cas "user revient sur l'onglet", on n'a pas besoin de poll plus serré.
   useEffect(() => {
     let cancelled = false
     function load() {
@@ -97,7 +99,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
         .catch(() => {})
     }
     load()
-    const id = setInterval(load, 30_000)
+    const id = setInterval(load, 120_000)
     function onVisibility() {
       if (document.visibilityState === "visible") load()
     }

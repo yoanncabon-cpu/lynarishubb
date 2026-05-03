@@ -117,7 +117,9 @@ export default function DashboardPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Stats — sync live : fetch initial + polling 60s + refetch sur reprise d'onglet
+  // Stats — sync live : fetch initial + polling 5 min + refetch sur reprise d'onglet
+  // Stats agrégées coûteuses (10 queries DB) → polling rare suffit, le SSE useActivityStream
+  // gère déjà le live des activités unitaires.
   useEffect(() => {
     let cancelled = false
     function load() {
@@ -130,7 +132,7 @@ export default function DashboardPage() {
         .catch(() => {})
     }
     load()
-    const id = setInterval(load, 60_000)
+    const id = setInterval(load, 300_000)
     function onVisibility() {
       if (document.visibilityState === "visible") load()
     }
