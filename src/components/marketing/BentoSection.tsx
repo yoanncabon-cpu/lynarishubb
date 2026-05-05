@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useEffect } from "react"
+import Image from "next/image"
 import { Phone, Brain, PenTool, TrendingUp, BarChart3, type LucideIcon } from "lucide-react"
 // gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
@@ -118,40 +119,82 @@ export function BentoSection() {
           ref={gridRef}
           className="grid grid-cols-1 md:grid-cols-3 gap-4"
         >
-          {cards.map((card) => {
+          {cards.map((card, idx) => {
             const Icon = card.icon
+            const isFeatured = idx === 0
             return (
               <div
                 key={card.title}
-                className={`bento-card group relative rounded-2xl border border-[--ly-border] bg-[--ly-surface] p-6 lg:p-8 overflow-hidden transition-all duration-500 hover:border-transparent ${card.className}`}
+                className={`bento-card group relative rounded-2xl overflow-hidden transition-all duration-500 ${card.className} ${
+                  isFeatured
+                    ? "border border-white/10"
+                    : "border border-[--ly-border] bg-[--ly-surface] p-6 lg:p-8 hover:border-transparent"
+                }`}
               >
-                {/* Hover border glow */}
-                <div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                  style={{
-                    background: `linear-gradient(135deg, ${card.color}30, transparent 50%)`,
-                    padding: "1px",
-                    mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-                    maskComposite: "exclude",
-                    WebkitMaskComposite: "xor",
-                  }}
-                  aria-hidden
-                />
+                {/* Grande carte — image dashboard Higgsfield en background */}
+                {isFeatured && (
+                  <>
+                    <Image
+                      src="/marketing/bento-dashboard.webp"
+                      alt="Dashboard IA Lynaris — suivi des appels et performances en temps réel"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 66vw"
+                      style={{ objectFit: "cover", objectPosition: "center" }}
+                      className="transition-transform duration-700 group-hover:scale-105"
+                    />
+                    {/* Overlay gradient pour lisibilité du texte */}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      aria-hidden
+                      style={{
+                        background:
+                          "linear-gradient(135deg, rgba(8,8,16,0.92) 0%, rgba(8,8,16,0.75) 45%, rgba(8,8,16,0.55) 100%)",
+                      }}
+                    />
+                    {/* Glow cyan en bas à droite */}
+                    <div
+                      className="absolute bottom-0 right-0 w-72 h-72 pointer-events-none"
+                      aria-hidden
+                      style={{
+                        background: "radial-gradient(circle at center, rgba(34,211,238,0.18) 0%, transparent 70%)",
+                        filter: "blur(30px)",
+                      }}
+                    />
+                  </>
+                )}
 
-                {/* Background glow */}
-                <div
-                  className="absolute -bottom-20 -right-20 w-[200px] h-[200px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none blur-[80px]"
-                  style={{ backgroundColor: `${card.color}15` }}
-                  aria-hidden
-                />
+                {/* Hover border glow (petites cartes) */}
+                {!isFeatured && (
+                  <div
+                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{
+                      background: `linear-gradient(135deg, ${card.color}30, transparent 50%)`,
+                      padding: "1px",
+                      mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                      maskComposite: "exclude",
+                      WebkitMaskComposite: "xor",
+                    }}
+                    aria-hidden
+                  />
+                )}
 
-                <div className="relative z-10 h-full flex flex-col">
+                {/* Background glow (petites cartes) */}
+                {!isFeatured && (
+                  <div
+                    className="absolute -bottom-20 -right-20 w-[200px] h-[200px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none blur-[80px]"
+                    style={{ backgroundColor: `${card.color}15` }}
+                    aria-hidden
+                  />
+                )}
+
+                <div className={`relative z-10 h-full flex flex-col ${isFeatured ? "p-8 lg:p-10 justify-end min-h-[340px]" : ""}`}>
                   {/* Icon */}
                   <div
                     className="h-10 w-10 rounded-xl flex items-center justify-center mb-4 transition-shadow duration-500"
                     style={{
                       backgroundColor: `${card.color}15`,
-                      border: `1px solid ${card.color}20`,
+                      border: `1px solid ${card.color}30`,
+                      backdropFilter: isFeatured ? "blur(8px)" : undefined,
                     }}
                   >
                     <Icon
@@ -165,18 +208,32 @@ export function BentoSection() {
                   <span
                     className="inline-flex self-start px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide mb-3"
                     style={{
-                      backgroundColor: `${card.color}10`,
+                      backgroundColor: `${card.color}18`,
                       color: card.color,
-                      border: `1px solid ${card.color}20`,
+                      border: `1px solid ${card.color}35`,
+                      backdropFilter: isFeatured ? "blur(8px)" : undefined,
                     }}
                   >
                     {card.agent}
                   </span>
 
-                  <h3 className="text-xl font-bold text-[--ly-text] tracking-[-0.02em] mb-2">
+                  <h3
+                    className="font-bold tracking-[-0.02em] mb-2"
+                    style={{
+                      fontSize: isFeatured ? "clamp(22px, 2.5vw, 32px)" : undefined,
+                      color: "#F5F5F7",
+                    }}
+                  >
                     {card.title}
                   </h3>
-                  <p className="text-sm text-[--ly-text-muted] leading-relaxed">
+                  <p
+                    className="leading-relaxed"
+                    style={{
+                      fontSize: isFeatured ? 16 : 14,
+                      color: isFeatured ? "rgba(245,245,247,0.8)" : "var(--ly-text-muted)",
+                      maxWidth: isFeatured ? 380 : undefined,
+                    }}
+                  >
                     {card.description}
                   </p>
                 </div>

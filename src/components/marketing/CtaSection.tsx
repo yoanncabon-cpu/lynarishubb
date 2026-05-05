@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useRef, useEffect } from "react"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -54,25 +55,42 @@ export function CtaSection() {
       className="relative py-32 lg:py-40 overflow-hidden"
       aria-labelledby="cta-heading"
     >
-      {/* Aurora / beam effect */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{
-          background: `
-            radial-gradient(ellipse 60% 50% at 50% 50%, rgba(124,58,237,0.18) 0%, transparent 70%),
-            radial-gradient(ellipse 40% 30% at 30% 40%, rgba(34,211,238,0.08) 0%, transparent 60%),
-            radial-gradient(ellipse 40% 30% at 70% 60%, rgba(167,139,250,0.08) 0%, transparent 60%)
-          `,
-        }}
-      />
+      {/* Photo Higgsfield — entrepreneur premium en background */}
+      <div className="absolute inset-0">
+        <Image
+          src="/marketing/cta-hero.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          style={{ objectFit: "cover", objectPosition: "center 30%" }}
+          aria-hidden
+        />
+        {/* Overlay multi-couches pour lisibilité + cohérence dark theme */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(8,8,16,0.88) 0%, rgba(8,8,16,0.72) 40%, rgba(8,8,16,0.88) 100%)",
+          }}
+        />
+        {/* Aurora violet par-dessus */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124,58,237,0.22) 0%, transparent 65%)",
+          }}
+        />
+      </div>
 
       {/* Light beam line */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32"
         style={{
           background: "linear-gradient(to bottom, transparent, #7C3AED, transparent)",
-          opacity: 0.2,
+          opacity: 0.35,
         }}
         aria-hidden
       />

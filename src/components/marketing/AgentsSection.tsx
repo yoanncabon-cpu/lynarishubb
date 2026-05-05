@@ -361,12 +361,7 @@ export function AgentsSection() {
         {/* Mobile : carousel scroll-snap horizontal — Desktop : grid 3 colonnes */}
         <div
           ref={gridRef}
-          className="
-            flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scroll-px-4
-            sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:m-0 sm:p-0 sm:snap-none
-            lg:grid-cols-3 lg:gap-6
-            no-scrollbar
-          "
+          className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scroll-px-4 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:m-0 sm:p-0 sm:snap-none lg:grid-cols-3 lg:gap-6 no-scrollbar"
           style={{ scrollPaddingLeft: 16 }}
         >
           {agents.map((agent, idx) => (
