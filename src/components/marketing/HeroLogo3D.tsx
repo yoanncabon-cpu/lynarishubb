@@ -1,10 +1,13 @@
 "use client"
 
-import { useRef, useMemo, Suspense } from "react"
+import { useRef, useMemo, Suspense, useEffect } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import { Float, Sparkles } from "@react-three/drei"
 import * as THREE from "three"
 import { useReducedMotion } from "framer-motion"
+
+// Progression scroll normalisée [0, 1] — partagée avec les composants Three.js
+const scrollProgress = { value: 0 }
 
 // ─── Géométrie du logo Lynaris ────────────────────────────────────────────────
 // SVG viewBox 0 0 100 100 → normalisé Three.js [-1.5, 1.5], Y inversé
@@ -75,7 +78,7 @@ function logoMaterial() {
   })
 }
 
-// ─── Logo 3D animé ───────────────────────────────────────────────────────────
+// ─── Logo 3D animé — scroll-driven ──────────────────────────────────────────
 function LogoMesh() {
   const ref = useRef<THREE.Mesh>(null!)
   const geo = useMemo(buildLogoGeometry, [])
@@ -83,9 +86,27 @@ function LogoMesh() {
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
-    ref.current.rotation.y = Math.sin(t * 0.28) * 0.45
+    const p = scrollProgress.value // 0 → 1
+
+    // Phase 1 (0%–20%) : apparition + rotation d'entrée
+    const appear = Math.min(p / 0.2, 1)
+    const entryRotY = (1 - appear) * Math.PI * 0.5
+    const entryScale = 0.3 + appear * 0.7
+
+    // Phase 2 (20%–60%) : idle loop
+    const idleRotY = Math.sin(t * 0.28) * 0.45
+    const idleFloat = Math.sin(t * 0.42) * 0.06
+
+    // Phase 3 (60%–100%) : scale down + recul
+    const exit = Math.max((p - 0.6) / 0.4, 0)
+    const exitScale = 1 - exit * 0.5
+
+    ref.current.rotation.y = entryRotY + idleRotY
     ref.current.rotation.x = Math.sin(t * 0.18) * 0.08
-    ref.current.position.y = Math.sin(t * 0.42) * 0.06
+    ref.current.position.y = idleFloat - exit * 0.5
+    ref.current.position.z = -exit * 2
+    ref.current.scale.setScalar(entryScale * exitScale)
+    ;(ref.current.material as THREE.MeshStandardMaterial).opacity = appear * (1 - exit * 0.6)
   })
 
   return <mesh ref={ref} geometry={geo} material={mat} />
@@ -277,9 +298,42 @@ function Scene() {
   )
 }
 
-// ─── Export principal ─────────────────────────────────────────────────────────
+// ─── Export principal — avec scroll-driven GSAP ──────────────────────────────
 export function HeroLogo3D() {
   const reduceMotion = useReducedMotion()
+
+  // Scroll-driven : écoute le scroll de la section hero et met à jour scrollProgress
+  useEffect(() => {
+    if (reduceMotion) return
+
+    let cleanup: (() => void) | null = null
+    let cancelled = false
+
+    void import("gsap/ScrollTrigger").then((stMod) => {
+      if (cancelled) return
+      void import("gsap").then(({ default: gsap }) => {
+        if (cancelled) return
+        gsap.registerPlugin(stMod.ScrollTrigger)
+
+        const trigger = stMod.ScrollTrigger.create({
+          trigger: "body",
+          start: "top top",
+          end: "30% top", // 30% de la page = 100% de l'animation
+          onUpdate: (self) => {
+            scrollProgress.value = self.progress
+          },
+        })
+
+        cleanup = () => trigger.kill()
+      })
+    })
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
+  }, [reduceMotion])
+
   if (reduceMotion) return null
 
   return (
