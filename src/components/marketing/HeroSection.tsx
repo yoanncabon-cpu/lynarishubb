@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HeroVisualShowcase } from "./HeroVisualShowcase"
+import { HeroVideoLoop } from "./HeroVideoLoop"
 import dynamic from "next/dynamic"
 // gsap (~250kb) chargé en async dans useEffect → exclu du bundle initial de la landing
 
@@ -12,6 +13,8 @@ const HeroScene = dynamic(
   () => import("./HeroScene").then((m) => ({ default: m.HeroScene })),
   { ssr: false }
 )
+
+const HERO_VIDEO_SRC = "/marketing/videos/hero-loop.mp4"
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -75,7 +78,12 @@ export function HeroSection() {
       className="relative min-h-[100dvh] flex items-center pt-16 overflow-hidden"
       aria-labelledby="hero-heading"
     >
-      {/* Three.js background — hidden on mobile */}
+      {/* Vidéo hero Seedance 2.0 — si disponible, sinon Three.js */}
+      <HeroVideoLoop
+        src={HERO_VIDEO_SRC}
+        poster="/marketing/scenes/hero-universal.webp"
+      />
+      {/* Three.js fallback — hidden on mobile */}
       {!isMobile && <HeroScene />}
 
       {/* Radial ambient glows */}

@@ -8,6 +8,8 @@ export interface Agent {
   avatar?: string
   /** Scène cinématique 16:9 — utilisée en hero sur /agents/[slug] et autres contextes vitrine. */
   scene?: string
+  /** Vidéo Seedance 2.0 loop muted — remplace scene si présente. Format mp4/webm. */
+  video?: string
   color: string
   role: string
   tagline: string

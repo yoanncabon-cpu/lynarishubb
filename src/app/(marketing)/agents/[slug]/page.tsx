@@ -220,15 +220,16 @@ export default async function AgentDetailPage({
 
   return (
     <article className="relative">
-      {/* Cinematic scene hero — parallax sur scroll si scene dispo */}
-      {agent.scene && (
+      {/* Hero cinématique — vidéo Seedance loop si disponible, sinon image parallax */}
+      {(agent.scene || agent.video) && (
         <AgentSceneHero
-          src={agent.scene}
+          src={agent.scene ?? agent.avatar ?? ""}
           alt={`${agent.name}, ${agent.role} Lynaris`}
           color={agent.color}
           name={agent.name}
           role={agent.role}
           tagline={agent.tagline}
+          videoSrc={agent.video}
         />
       )}
 

@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { motion, useScroll, useTransform } from "framer-motion"
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion"
 import { useRef } from "react"
 
 interface AgentSceneHeroProps {
@@ -11,26 +11,29 @@ interface AgentSceneHeroProps {
   name: string
   role: string
   tagline: string
+  /** Vidéo Seedance 2.0 loop — prend le dessus sur src si définie et non-mobile. */
+  videoSrc?: string
 }
 
 /**
- * Banner cinématique 16:9 en tête de page agent.
- * Parallax léger sur le scroll, overlay dégradé qui blend dans le fond du site.
- * Côté mobile, on dégrade gracefully en image statique.
+ * Banner cinématique en tête de page agent.
+ * Supporte image (parallax) ou vidéo loop Seedance 2.0.
+ * Sur mobile ou prefers-reduced-motion : fallback image statique.
  */
-export function AgentSceneHero({ src, alt, color, name, role, tagline }: AgentSceneHeroProps) {
+export function AgentSceneHero({ src, alt, color, name, role, tagline, videoSrc }: AgentSceneHeroProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
   })
 
-  // Image translates up slowly (parallax) — scale légère au start
   const imgY = useTransform(scrollYProgress, [0, 1], ["0%", "20%"])
   const imgScale = useTransform(scrollYProgress, [0, 1], [1.05, 1.15])
-  // Texte fade out à mi-scroll
   const textOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
   const textY = useTransform(scrollYProgress, [0, 1], [0, -60])
+
+  const useVideo = !!videoSrc && !reduceMotion
 
   return (
     <div
@@ -38,47 +41,82 @@ export function AgentSceneHero({ src, alt, color, name, role, tagline }: AgentSc
       className="relative w-full overflow-hidden"
       style={{ height: "min(70vh, 720px)" }}
     >
-      {/* Image avec parallax */}
-      <motion.div
-        className="absolute inset-0"
-        style={{ y: imgY, scale: imgScale }}
-      >
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-          style={{ objectPosition: "center 30%" }}
-        />
-      </motion.div>
+      {useVideo ? (
+        /* Vidéo Seedance 2.0 — loop, muted, autoplay */
+        <motion.div
+          className="absolute inset-0"
+          style={{ scale: imgScale }}
+        >
+          <video
+            src={videoSrc}
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ objectPosition: "center 30%" }}
+          />
+          {/* Poster image pendant le chargement vidéo */}
+          <Image
+            src={src}
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+            style={{
+              objectPosition: "center 30%",
+              // masquée dès que la vidéo joue (z-index inférieur)
+              zIndex: -1,
+            }}
+            aria-hidden
+          />
+        </motion.div>
+      ) : (
+        /* Image statique avec parallax */
+        <motion.div
+          className="absolute inset-0"
+          style={{ y: imgY, scale: imgScale }}
+        >
+          <Image
+            src={src}
+            alt={alt}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+            style={{ objectPosition: "center 30%" }}
+          />
+        </motion.div>
+      )}
 
-      {/* Overlay dégradé pour lisibilité texte + blend bottom */}
+      {/* Overlay dégradé lisibilité + blend bottom */}
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
-          background: `
-            linear-gradient(180deg, rgba(10,10,15,0.35) 0%, rgba(10,10,15,0.55) 60%, #0A0A0F 100%),
-            radial-gradient(ellipse 80% 60% at 50% 100%, ${color}26, transparent 70%)
-          `,
+          background: `linear-gradient(180deg, rgba(10,10,15,0.35) 0%, rgba(10,10,15,0.55) 60%, #0A0A0F 100%), radial-gradient(ellipse 80% 60% at 50% 100%, ${color}26, transparent 70%)`,
         }}
       />
 
-      {/* Texte hero centered */}
+      {/* Glow couleur agent */}
+      <div
+        aria-hidden
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse at center, ${color}20 0%, transparent 70%)`,
+          filter: "blur(40px)",
+        }}
+      />
+
+      {/* Texte centré — fade out au scroll */}
       <motion.div
         className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
         style={{ opacity: textOpacity, y: textY }}
       >
         <span
           className="uppercase mb-3"
-          style={{
-            color,
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-          }}
+          style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em" }}
         >
           {role}
         </span>
