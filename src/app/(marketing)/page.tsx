@@ -3,6 +3,7 @@ import { LogosStrip } from "@/components/marketing/LogosStrip"
 import { StatsSection } from "@/components/marketing/StatsSection"
 import { ResultsSection } from "@/components/marketing/ResultsSection"
 import { AgentsSection } from "@/components/marketing/AgentsSection"
+import { TeamSection } from "@/components/marketing/TeamSection"
 import { DemoConversationSection } from "@/components/marketing/DemoConversationSection"
 import { BentoSection } from "@/components/marketing/BentoSection"
 import { HowItWorksSection } from "@/components/marketing/HowItWorksSection"
@@ -28,6 +29,7 @@ export default function HomePage() {
       <StatsSection />
       <ResultsSection />
       <AgentsSection />
+      <TeamSection />
       <div id="demo">
         <DemoConversationSection />
       </div>

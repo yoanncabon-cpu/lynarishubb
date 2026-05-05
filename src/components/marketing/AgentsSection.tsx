@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { useRef, useEffect, useCallback } from "react"
 import { ArrowRight } from "lucide-react"
@@ -64,6 +65,8 @@ function AgentCard({
         if (cardRef.current) {
           cardRef.current.style.border = `1px solid ${agent.color}4D`
           cardRef.current.style.transform = "translateY(-4px)"
+          const scene = cardRef.current.querySelector<HTMLElement>(".agent-card-scene")
+          if (scene) scene.style.opacity = "1"
         }
       }}
       onMouseLeave={() => {
@@ -71,9 +74,34 @@ function AgentCard({
         if (cardRef.current) {
           cardRef.current.style.border = "1px solid rgba(255,255,255,0.08)"
           cardRef.current.style.transform = "translateY(0)"
+          const scene = cardRef.current.querySelector<HTMLElement>(".agent-card-scene")
+          if (scene) scene.style.opacity = "0"
         }
       }}
     >
+      {/* Scene background — révélée au hover */}
+      {agent.scene && (
+        <div
+          aria-hidden
+          className="agent-card-scene pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500"
+        >
+          <Image
+            src={agent.scene}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover"
+            style={{ objectPosition: "center 30%" }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(180deg, rgba(20,20,28,0.55) 0%, rgba(20,20,28,0.85) 70%, rgba(20,20,28,0.95) 100%)`,
+            }}
+          />
+        </div>
+      )}
+
       {/* Mouse-follow glow */}
       <div
         ref={glowRef}

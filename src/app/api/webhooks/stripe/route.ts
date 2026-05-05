@@ -234,27 +234,69 @@ export async function POST(request: NextRequest) {
           const { db } = await import("@/lib/db")
           const { organizations } = await import("@/lib/db/schema")
           const { eq } = await import("drizzle-orm")
+          const { planSchema } = await import("@/lib/pricing/plans")
 
-          const priceId = session.metadata?.["price_id"]
-          const { planId, displayName } = resolvePlan(priceId)
+          // Résolution du plan : 3 sources possibles, ordre de fiabilité
+          //   1. metadata.plan_id (envoyé par /api/billing/checkout — slug UI)
+          //   2. metadata.price_id (legacy — non envoyé par notre code actuel)
+          //   3. subscription.items[0].price.id (retrieve subscription si besoin)
+          let resolvedPlanId: PlanId | null = null
+          let displayName = "Pro"
+
+          const metaPlanRaw = session.metadata?.["plan_id"] ?? session.metadata?.["planId"]
+          if (metaPlanRaw) {
+            const parsed = planSchema.safeParse(metaPlanRaw)
+            if (parsed.success) {
+              resolvedPlanId = parsed.data
+              displayName = PLANS[resolvedPlanId].name
+            }
+          }
+
+          if (!resolvedPlanId) {
+            const metaPriceId = session.metadata?.["price_id"]
+            const r = resolvePlan(metaPriceId)
+            if (r.planId !== null) {
+              resolvedPlanId = r.planId
+              displayName = r.displayName
+            }
+          }
+
+          if (!resolvedPlanId && session.subscription) {
+            const subId = typeof session.subscription === "string"
+              ? session.subscription
+              : session.subscription.id
+            if (subId) {
+              try {
+                const sub = await stripe.subscriptions.retrieve(subId)
+                const subPriceId = sub.items?.data?.[0]?.price?.id
+                const r = resolvePlan(subPriceId)
+                if (r.planId !== null) {
+                  resolvedPlanId = r.planId
+                  displayName = r.displayName
+                }
+              } catch (e) {
+                console.warn("[Stripe] subscription retrieve failed", e)
+              }
+            }
+          }
+
           activatedPlanName = displayName
 
-          if (planId !== null) {
+          if (resolvedPlanId !== null) {
             const customerId = typeof session.customer === "string" ? session.customer : undefined
-            // Détecter cycle de facturation depuis le mode/recurring du price
             const billingMode = session.metadata?.["billing"] === "annual" ? "annual" : "monthly"
             await db
               .update(organizations)
               .set({
-                planId,
+                planId: resolvedPlanId,
                 planBillingCycle: billingMode,
                 planActivatedAt: new Date(),
                 ...(customerId ? { stripeCustomerId: customerId } : {}),
               })
               .where(eq(organizations.id, orgId))
-            console.info("[Stripe] Org plan activated", { orgId, planId, billingMode })
+            console.info("[Stripe] Org plan activated", { orgId, planId: resolvedPlanId, billingMode })
           } else {
-            console.warn("[Stripe] Unknown price_id — plan non activé", { orgId, priceId })
+            console.warn("[Stripe] Plan non résolu — checkout.session", { orgId, sessionId: session.id })
           }
         } catch (err) {
           console.error("[Stripe] Failed to activate org plan", err)

@@ -42,16 +42,6 @@ const metrics = [
   },
 ]
 
-// ─── Case studies ─────────────────────────────────────────────────────────────
-const cases = [
-  {
-    client: "Cabinet kiné, Île-de-France",
-    agentSlug: "marine",
-    agentName: "Agent vocal",
-    result: "Appels patients pris en charge automatiquement pendant les séances",
-  },
-]
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ResultsSection() {
@@ -104,23 +94,6 @@ export function ResultsSection() {
           }
         )
 
-        // Case cards staggered
-        gsap.fromTo(
-          ".results-case",
-          { opacity: 0, y: 24 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.55,
-            stagger: 0.1,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: ".results-cases",
-              start: "top 88%",
-              once: true,
-            },
-          }
-        )
       }, sectionRef)
       cleanup = () => ctx.revert()
     })
@@ -281,83 +254,6 @@ export function ResultsSection() {
           ))}
         </div>
 
-        {/* Case study cards */}
-        <div
-          className="results-cases"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 12,
-          }}
-        >
-          {cases.map((c) => (
-            <div
-              key={c.client}
-              className="results-case"
-              style={{
-                background: "rgba(255,255,255,0.025)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 12,
-                padding: "18px 20px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              {/* Client name + agent */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "#F5F5F7",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {c.client}
-                </span>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    flexShrink: 0,
-                  }}
-                >
-                  <AgentAvatar slug={c.agentSlug} size={22} />
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "rgba(245,245,247,0.45)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {c.agentName}
-                  </span>
-                </div>
-              </div>
-
-              {/* Result */}
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "rgba(245,245,247,0.6)",
-                  lineHeight: 1.5,
-                  margin: 0,
-                }}
-              >
-                {c.result}
-              </p>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   )

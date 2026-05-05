@@ -52,3 +52,6 @@ test-results/
 
 # misc
 Thumbs.db
+
+# Backups locaux (avatars, etc.) — ne pas commiter
+/.backups/

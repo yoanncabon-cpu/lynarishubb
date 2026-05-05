@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 import {
   ArrowRight,
   Image,
@@ -121,6 +122,16 @@ const stats = [
 export default function MaxPage() {
   return (
     <div style={{ background: "#0A0A0B" }}>
+
+      {/* Cinematic scene parallax — banner full-bleed avec scroll effects */}
+      <AgentSceneHero
+        src="/agents/scenes/max.webp"
+        alt="Max, Agent Photo & Vidéo Lynaris"
+        color="#EC4899"
+        name="Max"
+        role="Agent Photo & Vidéo"
+        tagline="Génère, retouche, exporte. En secondes."
+      />
       {/* Hero */}
       <section
         style={{ position: "relative", paddingTop: "8rem", paddingBottom: "5rem", overflow: "hidden" }}

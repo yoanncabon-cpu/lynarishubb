@@ -136,7 +136,7 @@ export function IntegrationsSection() {
             id="integrations-heading"
             className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[--ly-text] tracking-tight"
           >
-            Plus de 20 intégrations natives
+            Plus de 250 intégrations natives
           </h2>
           <p className="text-lg text-[--ly-text-muted] max-w-2xl mx-auto">
             Tes agents se connectent à tes outils existants. Pas de migration, pas de friction.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 import {
   ArrowRight,
   Upload,
@@ -123,6 +124,16 @@ const stats = [
 export default function ElioPage() {
   return (
     <div style={{ background: "#0A0A0B" }}>
+
+      {/* Cinematic scene parallax — banner full-bleed avec scroll effects */}
+      <AgentSceneHero
+        src="/agents/scenes/elio.webp"
+        alt="Elio, Agent Commercial Lynaris"
+        color="#10B981"
+        name="Elio"
+        role="Agent Commercial"
+        tagline="Prospecte, qualifie, relance. Automatiquement."
+      />
       {/* Hero */}
       <section
         style={{ position: "relative", paddingTop: "8rem", paddingBottom: "5rem", overflow: "hidden" }}

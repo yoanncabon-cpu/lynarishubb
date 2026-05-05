@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 import {
   PenLine,
   ArrowRight,
@@ -120,6 +121,16 @@ const stats = [
 export default function LouPage() {
   return (
     <div style={{ background: "#0A0A0B" }}>
+
+      {/* Cinematic scene parallax — banner full-bleed avec scroll effects */}
+      <AgentSceneHero
+        src="/agents/scenes/lou.webp"
+        alt="Lou, Agent Contenu & SEO Lynaris"
+        color="#F472B6"
+        name="Lou"
+        role="Agent Contenu & SEO"
+        tagline="Rédige, optimise, publie. Partout."
+      />
       {/* Hero */}
       <section
         style={{ position: "relative", paddingTop: "8rem", paddingBottom: "5rem", overflow: "hidden" }}

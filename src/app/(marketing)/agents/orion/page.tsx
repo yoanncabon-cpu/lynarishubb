@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 import {
   ArrowRight,
   Workflow,
@@ -124,6 +125,16 @@ const stats = [
 export default function OrionPage() {
   return (
     <div style={{ background: "#0A0A0B" }}>
+
+      {/* Cinematic scene parallax — banner full-bleed avec scroll effects */}
+      <AgentSceneHero
+        src="/agents/scenes/orion.webp"
+        alt="Orion, Agent Automatisation Lynaris"
+        color="#64748B"
+        name="Orion"
+        role="Agent Automatisation"
+        tagline="Décris ton process en français. Orion le code."
+      />
       {/* Hero */}
       <section
         style={{ position: "relative", paddingTop: "8rem", paddingBottom: "5rem", overflow: "hidden" }}

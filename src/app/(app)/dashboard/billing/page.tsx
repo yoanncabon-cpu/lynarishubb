@@ -425,18 +425,56 @@ export default function BillingPage() {
   const plansRef = useRef<HTMLDivElement>(null)
   const { limits, plan: contextPlanRaw } = usePlan()
   const [realPlanId, setRealPlanId] = useState<PricingPlanId | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   // PlanProvider expose un PlanId legacy (trial|decouverte|pro|custom).
   // On normalise + on complète via /api/billing/plan pour avoir aussi
   // "starter" et "business" (absents du legacy enum).
+  // Filet de sécurité : si on retombe sur "discovery", on tente un sync Stripe
+  // silencieux pour rattraper les cas où le webhook + activate ont raté
+  // (utilisateur qui ferme l'onglet checkout, etc.).
   useEffect(() => {
     fetch("/api/billing/plan")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { planId?: PricingPlanId } | null) => {
-        if (d?.planId) setRealPlanId(d.planId)
+        if (d?.planId) {
+          setRealPlanId(d.planId)
+          if (d.planId === "discovery") {
+            // tentative silencieuse — si abonnement actif côté Stripe, resync
+            fetch("/api/billing/sync", { method: "POST" })
+              .then((r) => (r.ok ? r.json() : null))
+              .then((s: { planId?: PricingPlanId } | null) => {
+                if (s?.planId && s.planId !== "discovery") {
+                  setRealPlanId(s.planId)
+                  showToast(`Plan ${s.planId} synchronisé. Rechargement…`, "success")
+                  setTimeout(() => window.location.reload(), 1200)
+                }
+              })
+              .catch(() => {})
+          }
+        }
       })
       .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function handleResync() {
+    setSyncing(true)
+    try {
+      const res = await fetch("/api/billing/sync", { method: "POST" })
+      const data = (await res.json()) as { success?: boolean; planId?: PricingPlanId; error?: string }
+      if (data.success && data.planId) {
+        showToast(`Plan ${data.planId} synchronisé. Rechargement…`, "success")
+        setTimeout(() => window.location.reload(), 1200)
+      } else {
+        showToast(data.error ?? "Aucun abonnement actif trouvé sur Stripe.", "info")
+      }
+    } catch {
+      showToast("Erreur réseau lors de la synchronisation.", "error")
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const contextPlan: PricingPlanId =
     realPlanId ??
@@ -741,22 +779,39 @@ export default function BillingPage() {
                   Ton plan actuel
                 </span>
               </div>
-              <GlassChip
-                onClick={handleManageBilling}
-                icon={<ExternalLink size={12} />}
-                style={{
-                  height: 34,
-                  padding: "0 14px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  opacity: portalLoading ? 0.5 : 1,
-                  cursor: portalLoading ? "not-allowed" : "pointer",
-                  pointerEvents: portalLoading ? "none" : "auto",
-                }}
-              >
-                {portalLoading ? "Chargement…" : "Gérer via Stripe"}
-              </GlassChip>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <GlassChip
+                  onClick={handleResync}
+                  style={{
+                    height: 34,
+                    padding: "0 12px",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    opacity: syncing ? 0.5 : 1,
+                    cursor: syncing ? "not-allowed" : "pointer",
+                    pointerEvents: syncing ? "none" : "auto",
+                  }}
+                >
+                  {syncing ? "Sync…" : "Resynchroniser"}
+                </GlassChip>
+                <GlassChip
+                  onClick={handleManageBilling}
+                  icon={<ExternalLink size={12} />}
+                  style={{
+                    height: 34,
+                    padding: "0 14px",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    opacity: portalLoading ? 0.5 : 1,
+                    cursor: portalLoading ? "not-allowed" : "pointer",
+                    pointerEvents: portalLoading ? "none" : "auto",
+                  }}
+                >
+                  {portalLoading ? "Chargement…" : "Gérer via Stripe"}
+                </GlassChip>
+              </div>
             </div>
 
             {/* Usage cards — scroll horizontal sur mobile, grid responsive desktop */}

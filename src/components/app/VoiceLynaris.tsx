@@ -395,7 +395,7 @@ export function VoiceLynaris() {
           aria-label="Charles — Assistant vocal"
           aria-modal="true"
           style={{
-            position: "fixed", bottom: 88, right: 24,
+            position: "fixed", bottom: 76, left: 24,
             width: "min(420px, calc(100vw - 48px))",
             background: "rgba(12,12,18,0.97)",
             backdropFilter: "blur(24px) saturate(1.5)",
@@ -505,12 +505,12 @@ export function VoiceLynaris() {
           aria-hidden
           style={{
             position: "fixed",
-            bottom: 82,
-            right: 24,
+            bottom: 70,
+            left: 24,
             pointerEvents: "none",
             userSelect: "none",
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "flex-start",
             animation: "vlFadeIn 0.4s ease",
           }}
         >
@@ -549,8 +549,8 @@ export function VoiceLynaris() {
         aria-label='Activer Charles — dites "Ok Lynaris"'
         title='Dites "Ok Lynaris" pour activer'
         style={{
-          position: "fixed", bottom: 24, right: 24,
-          width: 50, height: 50, borderRadius: "50%",
+          position: "fixed", bottom: 18, left: 18,
+          width: 40, height: 40, borderRadius: "50%",
           border: isActive ? "1.5px solid rgba(124,58,237,0.45)" : "1px solid rgba(255,255,255,0.09)",
           background: isActive ? "rgba(124,58,237,0.16)" : "rgba(12,12,18,0.88)",
           backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
@@ -564,8 +564,8 @@ export function VoiceLynaris() {
         }}
       >
         {micOn
-          ? <Mic size={18} color={isActive ? "#A78BFA" : "rgba(245,245,247,0.45)"} />
-          : <MicOff size={18} color="rgba(245,245,247,0.2)" />
+          ? <Mic size={15} color={isActive ? "#A78BFA" : "rgba(245,245,247,0.45)"} />
+          : <MicOff size={15} color="rgba(245,245,247,0.2)" />
         }
       </button>
 

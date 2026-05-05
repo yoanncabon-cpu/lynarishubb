@@ -464,6 +464,9 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                 width: "min(340px, calc(100vw - 32px))",
                 zIndex: 50,
                 overflow: "hidden",
+                background: "rgba(14,14,20,0.96)",
+                backdropFilter: "blur(24px) saturate(1.4)",
+                WebkitBackdropFilter: "blur(24px) saturate(1.4)",
               }}
               contentStyle={{ padding: 0 }}
             >

@@ -9,33 +9,30 @@ import { eq } from "drizzle-orm"
 import { z } from "zod"
 import { sendEmail } from "@/lib/emails/send"
 import { paymentSuccess } from "@/lib/emails/stripe-templates"
+import { getPlanFromStripePriceId } from "@/lib/pricing/stripe-resolver"
+import { planSchema, type PlanId } from "@/lib/pricing/plans"
 
 const schema = z.object({ sessionId: z.string().min(1) })
 
 type DbPlan = "trial" | "starter" | "pro" | "scale"
 
-// Mapping plan_id (metadata Stripe checkout) → planEnum DB.
-// Nouvelle nomenclature (3 plans) :
-//   pro    → pro
-//   custom → scale (Sur-mesure)
-// Anciennes valeurs conservées pour rétrocompat checkout existants.
-const PLAN_MAP: Record<string, DbPlan> = {
-  // Nouvelle nomenclature
-  decouverte: "trial",
-  pro:        "pro",
-  custom:     "scale",
-  // Anciennes valeurs (rétrocompat sessions Stripe historiques)
-  essentiel:  "pro",   // Migration douce : Essentiel → Pro
-  starter:    "pro",
-  cabinet:    "scale",
-  scale:      "scale",
+// Mapping plan_id metadata (nouveau enum UI) ⇄ enum legacy DB `plan`.
+// L'écriture moderne se fait sur `planId` (text). L'enum `plan` est conservé
+// pour rétrocompat tant que l'ancien code n'est pas migré.
+const LEGACY_PLAN_MAP: Record<PlanId, DbPlan> = {
+  discovery: "trial",
+  starter:   "starter",
+  pro:       "pro",
+  business:  "pro",   // legacy enum n'a pas "business" — fallback
+  custom:    "scale",
 }
 
-const PLAN_LABELS: Record<DbPlan, string> = {
-  trial:   "Découverte",
-  starter: "Pro",   // Migration douce : ancien starter affiché comme Pro
-  pro:     "Pro",
-  scale:   "Sur-mesure",
+const PLAN_LABELS: Record<PlanId, string> = {
+  discovery: "Découverte",
+  starter:   "Starter",
+  pro:       "Pro",
+  business:  "Business",
+  custom:    "Sur-mesure",
 }
 
 export async function POST(req: NextRequest) {
@@ -57,29 +54,62 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = await stripe.checkout.sessions.retrieve(parsed.data.sessionId, {
-      expand: ["subscription", "invoice"],
+      expand: ["subscription", "subscription.items.data.price", "invoice", "line_items"],
     })
 
     if (session.payment_status !== "paid") {
       return NextResponse.json({ error: "Paiement non confirmé" }, { status: 400 })
     }
 
-    const planId = session.metadata?.["plan_id"] ?? session.metadata?.["planId"]
-    const dbPlan: DbPlan | undefined = planId ? PLAN_MAP[planId] : undefined
+    // Résolution du PlanId : 3 sources, ordre de fiabilité
+    //   1. metadata.plan_id (envoyé par /api/billing/checkout)
+    //   2. line_items.price → mapping env STRIPE_PRICE_*
+    //   3. subscription.items[0].price → mapping env STRIPE_PRICE_*
+    let resolvedPlanId: PlanId | null = null
 
-    if (!dbPlan) {
+    const metaPlan = session.metadata?.["plan_id"] ?? session.metadata?.["planId"]
+    if (metaPlan) {
+      const parsed = planSchema.safeParse(metaPlan)
+      if (parsed.success) resolvedPlanId = parsed.data
+    }
+
+    if (!resolvedPlanId) {
+      const lineItem = session.line_items?.data?.[0]
+      const lineItemPriceId = typeof lineItem?.price === "string"
+        ? lineItem.price
+        : lineItem?.price?.id
+      if (lineItemPriceId) {
+        resolvedPlanId = getPlanFromStripePriceId(lineItemPriceId)
+      }
+    }
+
+    if (!resolvedPlanId && session.subscription && typeof session.subscription === "object") {
+      const subPriceId = (session.subscription as { items?: { data?: Array<{ price?: { id?: string } }> } })
+        .items?.data?.[0]?.price?.id
+      if (subPriceId) {
+        resolvedPlanId = getPlanFromStripePriceId(subPriceId)
+      }
+    }
+
+    if (!resolvedPlanId) {
       return NextResponse.json({ error: "Plan introuvable dans la session" }, { status: 400 })
     }
+
+    const dbPlan = LEGACY_PLAN_MAP[resolvedPlanId]
+    const billingMode = session.metadata?.["billing"] === "annual" ? "annual" : "monthly"
 
     const customerId = typeof session.customer === "string" ? session.customer : undefined
     const subscriptionId = typeof session.subscription === "string"
       ? session.subscription
       : (session.subscription as { id?: string } | null)?.id
 
-    // 1. Mise à jour du plan en DB
+    // 1. Mise à jour planId (nouveau, lu par /api/billing/plan) + plan legacy
     await db.update(organizations)
       .set({
+        planId: resolvedPlanId,
         plan: dbPlan,
+        planBillingCycle: billingMode,
+        planActivatedAt: new Date(),
         ...(customerId ? { stripeCustomerId: customerId } : {}),
         ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
       })
@@ -88,7 +118,7 @@ export async function POST(req: NextRequest) {
     // 2. Envoi de l'email de confirmation
     const customerEmail = session.customer_details?.email ?? session.customer_email
     if (customerEmail) {
-      const planName = PLAN_LABELS[dbPlan]
+      const planName = PLAN_LABELS[resolvedPlanId]
       const amount = (session.amount_total ?? 0) / 100
       const currency = session.currency ?? "eur"
 
@@ -131,7 +161,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, plan: dbPlan })
+    return NextResponse.json({ success: true, plan: resolvedPlanId })
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erreur Stripe"
     return NextResponse.json({ error: msg }, { status: 500 })

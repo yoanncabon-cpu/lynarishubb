@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 import {
   ArrowRight,
   BarChart3,
@@ -122,6 +123,16 @@ const stats = [
 export default function NovaPage() {
   return (
     <div style={{ background: "#0A0A0B" }}>
+
+      {/* Cinematic scene parallax — banner full-bleed avec scroll effects */}
+      <AgentSceneHero
+        src="/agents/scenes/nova.webp"
+        alt="Nova, Agent Business Lynaris"
+        color="#6366F1"
+        name="Nova"
+        role="Agent Business"
+        tagline="Ton assistant stratégique avec tes vraies données."
+      />
       {/* Hero */}
       <section
         style={{ position: "relative", paddingTop: "8rem", paddingBottom: "5rem", overflow: "hidden" }}

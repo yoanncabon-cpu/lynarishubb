@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 import {
   Phone,
   Calendar,
@@ -110,6 +111,16 @@ const sectors = [
 export default function MarinePage() {
   return (
     <div style={{ background: "#0A0A0F", minHeight: "100vh", color: "#F5F5F7" }}>
+
+      {/* Cinematic scene parallax — banner full-bleed avec scroll effects */}
+      <AgentSceneHero
+        src="/agents/scenes/marine.webp"
+        alt="Marine, Agent Téléphonique Lynaris"
+        color="#22D3EE"
+        name="Marine"
+        role="Agent Téléphonique"
+        tagline="Décroche. Qualifie. Prend RDV. 24 / 7."
+      />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section style={{ padding: "100px 24px 64px", textAlign: "center", position: "relative", overflow: "hidden" }}>

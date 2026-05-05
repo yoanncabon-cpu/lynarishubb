@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 import {
   MessageCircle,
   ArrowRight,
@@ -122,6 +123,16 @@ const ACCENT_30 = "rgba(124,58,237,0.3)"
 export default function CharlesPage() {
   return (
     <div style={{ background: "#0A0A0B" }}>
+
+      {/* Cinematic scene parallax — banner full-bleed avec scroll effects */}
+      <AgentSceneHero
+        src="/agents/scenes/charles.webp"
+        alt="Charles, Agent Personnel Lynaris"
+        color="#7C3AED"
+        name="Charles"
+        role="Agent Personnel"
+        tagline="Ton chef d’orchestre IA disponible sur WhatsApp."
+      />
       {/* Hero */}
       <section
         style={{ position: "relative", paddingTop: "8rem", paddingBottom: "5rem", overflow: "hidden" }}

@@ -38,6 +38,7 @@ const AVATAR_3D_MAP: Record<string, string> = {
   nova: "/agents/avatars/nova.webp",
   alba: "/agents/avatars/alba.webp",
   orion: "/agents/avatars/orion.webp",
+  aria: "/agents/avatars/aria.webp",
 }
 
 // ─── Individual SVG characters ────────────────────────────────────────────────

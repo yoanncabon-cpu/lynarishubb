@@ -6,6 +6,8 @@ export interface Agent {
   emoji: string
   /** Avatar 3D Higgsfield — chemin public, ex: "/agents/avatars/marine.webp". */
   avatar?: string
+  /** Scène cinématique 16:9 — utilisée en hero sur /agents/[slug] et autres contextes vitrine. */
+  scene?: string
   color: string
   role: string
   tagline: string
@@ -22,6 +24,7 @@ export const agents: Agent[] = [
     name: "Marine",
     emoji: "🎤️",
     avatar: "/agents/avatars/marine.webp",
+    scene: "/agents/scenes/marine.webp",
     color: "#22D3EE",
     role: "Agent Téléphonique",
     tagline: "Décroche. Qualifie. Prend RDV. 24 / 7.",
@@ -36,6 +39,7 @@ export const agents: Agent[] = [
     name: "Charles",
     emoji: "🧠",
     avatar: "/agents/avatars/charles.webp",
+    scene: "/agents/scenes/charles.webp",
     color: "#7C3AED",
     role: "Agent Personnel",
     tagline: "Ton chef d’orchestre IA disponible sur WhatsApp.",
@@ -50,6 +54,7 @@ export const agents: Agent[] = [
     name: "Lou",
     emoji: "✍️",
     avatar: "/agents/avatars/lou.webp",
+    scene: "/agents/scenes/lou.webp",
     color: "#F472B6",
     role: "Agent Contenu & SEO",
     tagline: "Rédige, optimise, publie. Partout.",
@@ -64,6 +69,7 @@ export const agents: Agent[] = [
     name: "Elio",
     emoji: "💼",
     avatar: "/agents/avatars/elio.webp",
+    scene: "/agents/scenes/elio.webp",
     color: "#10B981",
     role: "Agent Commercial",
     tagline: "Prospecte, qualifie, relance. Automatiquement.",
@@ -78,6 +84,7 @@ export const agents: Agent[] = [
     name: "Mae",
     emoji: "📧",
     avatar: "/agents/avatars/mae.webp",
+    scene: "/agents/scenes/mae.webp",
     color: "#F59E0B",
     role: "Agent Mail",
     tagline: "Ta boîte mail triée et gérée chaque matin.",
@@ -92,6 +99,7 @@ export const agents: Agent[] = [
     name: "Max",
     emoji: "🎬",
     avatar: "/agents/avatars/max.webp",
+    scene: "/agents/scenes/max.webp",
     color: "#EC4899",
     role: "Agent Photo & Vidéo",
     tagline: "Génère, retouche, exporte. En secondes.",
@@ -106,6 +114,7 @@ export const agents: Agent[] = [
     name: "Nova",
     emoji: "📊",
     avatar: "/agents/avatars/nova.webp",
+    scene: "/agents/scenes/nova.webp",
     color: "#6366F1",
     role: "Agent Business",
     tagline: "Ton assistant stratégique avec tes vraies données.",
@@ -120,6 +129,7 @@ export const agents: Agent[] = [
     name: "Alba",
     emoji: "📋",
     avatar: "/agents/avatars/alba.webp",
+    scene: "/agents/scenes/alba.webp",
     color: "#8B5CF6",
     role: "Agent RH",
     tagline: "CV triés, contrats rédigés, candidats contactés.",
@@ -134,6 +144,7 @@ export const agents: Agent[] = [
     name: "Orion",
     emoji: "🔧",
     avatar: "/agents/avatars/orion.webp",
+    scene: "/agents/scenes/orion.webp",
     color: "#64748B",
     role: "Agent Automatisation",
     tagline: "Décris ton process en français. Orion le code.",
@@ -147,6 +158,8 @@ export const agents: Agent[] = [
     slug: "aria",
     name: "Aria",
     emoji: "🌟",
+    avatar: "/agents/avatars/aria.webp",
+    scene: "/agents/scenes/aria.webp",
     color: "#F97316",
     role: "Assistante Universelle",
     tagline: "Direction. Marketing. Legal. Compta. Recrutement. Tout en une.",

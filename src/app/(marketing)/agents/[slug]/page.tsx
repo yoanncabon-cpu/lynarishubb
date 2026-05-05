@@ -6,6 +6,7 @@ import { ArrowRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 import { CopyButton } from "./_components/CopyButton"
+import { AgentSceneHero } from "@/components/marketing/AgentSceneHero"
 
 interface AgentDetail {
   capabilities: string[]
@@ -168,6 +169,23 @@ const agentDetails: Record<string, AgentDetail> = {
     longDescription:
       "Orion est ton agent automatisation. Décris ton process en français — « Quand un formulaire est soumis, crée un contact dans HubSpot et envoie un email de bienvenue » — et Orion crée le workflow, le teste avec des données réelles, et le déploie sur ton instance n8n ou Make. Il gère aussi tes automatisations existantes et génère la documentation technique.",
   },
+  aria: {
+    capabilities: [
+      "Pilote 12 rôles : direction, marketing, SEO, commercial, support, compta, juridique, RH, facturation, e-commerce, social, analyse",
+      "Bascule de contexte instantanée selon ta demande",
+      "Mémorise tes préférences à long terme par domaine",
+      "Délègue aux agents spécialisés Lynaris quand pertinent",
+      "Produit un brief multi-domaines à la demande",
+    ],
+    integrations: ["Gmail", "Google Calendar", "Notion", "Slack", "Stripe", "WhatsApp"],
+    commands: [
+      "$ aria audite mon SEO et mes finances de la semaine",
+      "$ aria rédige le compte-rendu du conseil et lance les actions",
+      "$ aria prépare un brief recrutement + juridique pour le CDI",
+    ],
+    longDescription:
+      "Aria est ton assistante universelle. Là où les autres agents Lynaris sont chacun expert d'un domaine, Aria couvre 12 rôles — direction, marketing, SEO, commercial, relation client, comptabilité, juridique, recrutement, facturation, e-commerce, social et analyse de données. Tu lui parles en langage naturel, elle bascule de contexte sans friction, et délègue aux agents spécialisés quand le job demande de la profondeur. Idéale pour les solopreneurs et TPE qui veulent une seule interface pour tout piloter.",
+  },
 }
 
 export function generateStaticParams() {
@@ -202,12 +220,26 @@ export default async function AgentDetailPage({
 
   return (
     <article className="relative">
-      {/* Hero mini */}
+      {/* Cinematic scene hero — parallax sur scroll si scene dispo */}
+      {agent.scene && (
+        <AgentSceneHero
+          src={agent.scene}
+          alt={`${agent.name}, ${agent.role} Lynaris`}
+          color={agent.color}
+          name={agent.name}
+          role={agent.role}
+          tagline={agent.tagline}
+        />
+      )}
+
+      {/* Hero mini — fallback sans scene OU compact ci-dessous */}
       <div
-        className="relative pt-32 pb-20"
-        style={{
-          background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${agent.color}33, transparent 60%)`,
-        }}
+        className={agent.scene ? "relative pt-12 pb-12" : "relative pt-32 pb-20"}
+        style={
+          agent.scene
+            ? undefined
+            : { background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${agent.color}33, transparent 60%)` }
+        }
       >
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           {/* Back link */}
@@ -220,6 +252,7 @@ export default async function AgentDetailPage({
             Tous les agents
           </Link>
 
+          {!agent.scene && (
           <div className="flex flex-col items-center text-center">
             {/* Avatar */}
             <div
@@ -290,6 +323,7 @@ export default async function AgentDetailPage({
               {agent.tagline}
             </p>
           </div>
+          )}
         </div>
       </div>
 

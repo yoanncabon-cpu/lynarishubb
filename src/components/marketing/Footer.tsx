@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 
 const footerColumns = [
@@ -48,27 +49,14 @@ export function Footer() {
           {/* Brand col */}
           <div>
             <Link href="/" className="flex items-center gap-2 mb-4 group w-fit">
-              <div
-                className="relative flex items-center justify-center overflow-hidden"
-                style={{
-                  width: logoSize,
-                  height: logoSize,
-                  borderRadius: logoSize * 0.28,
-                  boxShadow: "0 0 20px rgba(124,58,237,0.4)",
-                }}
-              >
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(135deg, #7C3AED, #22D3EE)" }}
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.45), transparent 60%)" }}
-                />
-                <span className="relative z-10 text-white select-none" style={{ fontWeight: 800, fontSize: logoSize * 0.45 }}>
-                  L
-                </span>
-              </div>
+              <Image
+                src="/logo.svg"
+                alt="Lynaris"
+                width={logoSize}
+                height={logoSize}
+                priority
+                className="select-none"
+              />
               <span style={{ color: "#F5F5F7", fontWeight: 700, fontSize: 18, letterSpacing: "-0.04em" }}>
                 Lynaris
               </span>
