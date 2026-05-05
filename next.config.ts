@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "framer-motion", "gsap"],
   },
 
+  // Turbopack — fixe le root pour éviter le warning lockfile multiple
+  turbopack: {
+    root: __dirname,
+  },
+
   // Baileys (WhatsApp) et ses dépendances natives ne doivent pas être bundlés
   serverExternalPackages: [
     "@whiskeysockets/baileys",
