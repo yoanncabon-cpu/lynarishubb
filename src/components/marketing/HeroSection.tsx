@@ -14,7 +14,7 @@ const HeroScene = dynamic(
   { ssr: false }
 )
 
-const HERO_VIDEO_SRC = "/marketing/videos/hero-loop.mp4"
+const HERO_VIDEO_SRC = "/marketing/videos/hero-lynaris.mp4"
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null)
