@@ -90,36 +90,12 @@ export function AgentSceneHero({ src, alt, color, name, role, tagline, videoSrc 
         </motion.div>
       )}
 
-      {/* Overlay dégradé — fond progressif vers #0A0A0F sur les 50% bas */}
+      {/* Overlay — assombrit progressivement sans couleur parasite */}
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
-          background: `linear-gradient(180deg,
-            rgba(10,10,15,0.25) 0%,
-            rgba(10,10,15,0.30) 30%,
-            rgba(10,10,15,0.65) 60%,
-            rgba(10,10,15,0.92) 80%,
-            #0A0A0F 100%
-          )`,
-        }}
-      />
-      {/* Halo couleur agent en bas */}
-      <div
-        aria-hidden
-        className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
-        style={{
-          background: `radial-gradient(ellipse 70% 100% at 50% 100%, ${color}15, transparent 70%)`,
-        }}
-      />
-
-      {/* Glow couleur agent */}
-      <div
-        aria-hidden
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] pointer-events-none"
-        style={{
-          background: `radial-gradient(ellipse at center, ${color}20 0%, transparent 70%)`,
-          filter: "blur(40px)",
+          background: "linear-gradient(180deg, rgba(10,10,15,0.15) 0%, rgba(10,10,15,0.25) 40%, rgba(10,10,15,0.55) 70%, #0A0A0F 100%)",
         }}
       />
 

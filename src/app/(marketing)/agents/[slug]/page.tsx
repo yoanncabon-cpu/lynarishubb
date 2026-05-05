@@ -233,16 +233,38 @@ export default async function AgentDetailPage({
         />
       )}
 
-      {/* Section contenu — démarre directement après le hero (fondu géré dans AgentSceneHero) */}
+      {/* Section contenu — chevauche le bas du hero de 200px */}
+      {/* Le masque transparent→#0A0A0F sur les 200px crée le vrai fondu */}
       <div
-        className={agent.scene || agent.video ? "relative pt-8 pb-12" : "relative pt-32 pb-20"}
+        className={agent.scene || agent.video ? "relative pb-12" : "relative pt-32 pb-20"}
         style={
-          !(agent.scene || agent.video)
-            ? { background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${agent.color}33, transparent 60%)` }
-            : undefined
+          (agent.scene || agent.video)
+            ? { marginTop: -200, position: "relative", zIndex: 2 }
+            : { background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${agent.color}33, transparent 60%)` }
         }
       >
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        {/* Masque de fondu — recouvre les 200 derniers px du hero */}
+        {(agent.scene || agent.video) && (
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 220,
+              background: "linear-gradient(to bottom, transparent 0%, #0A0A0F 100%)",
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+          />
+        )}
+
+        {/* Contenu — z-index 2 pour passer au-dessus du masque */}
+        <div
+          className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8"
+          style={(agent.scene || agent.video) ? { position: "relative", zIndex: 2, paddingTop: 120 } : undefined}
+        >
           {/* Back link */}
           <Link
             href="/agents"
