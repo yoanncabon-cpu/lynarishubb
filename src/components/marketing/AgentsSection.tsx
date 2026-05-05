@@ -3,142 +3,222 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useRef, useEffect, useCallback } from "react"
+import { motion, useReducedMotion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import { agents, type AgentStatus } from "@/lib/agents/data"
-import { AgentAvatar } from "@/components/shared/AgentAvatar"
-// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
 function StatusBadge({ status }: { status: AgentStatus }) {
   if (status === "live") {
-    return <span style={{ color: "#10B981", fontSize: 11 }}>● En production</span>
+    return <span style={{ color: "#10B981", fontSize: 11, fontWeight: 600 }}>● En production</span>
   }
   if (status === "beta") {
-    return <span style={{ color: "#F59E0B", fontSize: 11 }}>⊕ Bêta — accès inclus</span>
+    return <span style={{ color: "#F59E0B", fontSize: 11, fontWeight: 600 }}>⊕ Bêta</span>
   }
-  return <span style={{ color: "#71717A", fontSize: 11 }}>◌ Roadmap Q4 2026</span>
+  return <span style={{ color: "#71717A", fontSize: 11, fontWeight: 600 }}>◌ Roadmap</span>
 }
 
 function AgentCard({
   agent,
+  floatDelay,
 }: {
   agent: (typeof agents)[number]
+  floatDelay: number
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const glowRef = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       const card = cardRef.current
       const glow = glowRef.current
       if (!card || !glow) return
-
       const rect = card.getBoundingClientRect()
       const mx = ((e.clientX - rect.left) / rect.width) * 100
       const my = ((e.clientY - rect.top) / rect.height) * 100
-
-      glow.style.background = `radial-gradient(400px circle at ${mx}% ${my}%, ${agent.color}26, transparent 45%)`
+      glow.style.background = `radial-gradient(500px circle at ${mx}% ${my}%, ${agent.color}33, transparent 50%)`
       glow.style.opacity = "1"
     },
-    [agent.color]
+    [agent.color],
   )
 
-  const handleMouseLeave = useCallback(() => {
-    if (glowRef.current) {
-      glowRef.current.style.opacity = "0"
-    }
-  }, [])
-
   return (
-    <div
+    <motion.div
       ref={cardRef}
-      className="agent-card group relative flex flex-col overflow-hidden transition-all duration-500"
+      className="agent-card group relative flex flex-col snap-start"
       style={{
-        borderRadius: 20,
-        padding: 24,
-        background: "rgba(20,20,28,0.6)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
+        borderRadius: 24,
+        background: "linear-gradient(180deg, rgba(28,28,38,0.7) 0%, rgba(15,15,22,0.85) 100%)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
         border: "1px solid rgba(255,255,255,0.08)",
+        overflow: "hidden",
+        transition: "transform 500ms cubic-bezier(0.22,1,0.36,1), border-color 300ms",
+        minHeight: 460,
       }}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => {
-        if (cardRef.current) {
-          cardRef.current.style.border = `1px solid ${agent.color}4D`
-          cardRef.current.style.transform = "translateY(-4px)"
-          const scene = cardRef.current.querySelector<HTMLElement>(".agent-card-scene")
-          if (scene) scene.style.opacity = "1"
-        }
+        const card = cardRef.current
+        if (!card) return
+        card.style.borderColor = `${agent.color}66`
+        card.style.transform = "translateY(-6px)"
+        const scene = card.querySelector<HTMLElement>(".agent-card-scene")
+        if (scene) scene.style.opacity = "1"
+        const avatar = card.querySelector<HTMLElement>(".agent-card-avatar")
+        if (avatar) avatar.style.transform = "scale(1.08) translateY(-4px)"
       }}
       onMouseLeave={() => {
-        handleMouseLeave()
-        if (cardRef.current) {
-          cardRef.current.style.border = "1px solid rgba(255,255,255,0.08)"
-          cardRef.current.style.transform = "translateY(0)"
-          const scene = cardRef.current.querySelector<HTMLElement>(".agent-card-scene")
-          if (scene) scene.style.opacity = "0"
-        }
+        const card = cardRef.current
+        if (!card) return
+        card.style.borderColor = "rgba(255,255,255,0.08)"
+        card.style.transform = "translateY(0)"
+        if (glowRef.current) glowRef.current.style.opacity = "0"
+        const scene = card.querySelector<HTMLElement>(".agent-card-scene")
+        if (scene) scene.style.opacity = "0"
+        const avatar = card.querySelector<HTMLElement>(".agent-card-avatar")
+        if (avatar) avatar.style.transform = "scale(1) translateY(0)"
       }}
     >
-      {/* Scene background — révélée au hover */}
+      {/* Scène contextuelle révélée au hover */}
       {agent.scene && (
         <div
           aria-hidden
-          className="agent-card-scene pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500"
+          className="agent-card-scene pointer-events-none absolute inset-0 transition-opacity duration-700"
+          style={{ opacity: 0 }}
         >
           <Image
             src={agent.scene}
             alt=""
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover"
-            style={{ objectPosition: "center 30%" }}
+            sizes="(max-width: 640px) 80vw, (max-width: 1024px) 50vw, 33vw"
+            style={{ objectFit: "cover", objectPosition: "center 35%" }}
           />
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(180deg, rgba(20,20,28,0.55) 0%, rgba(20,20,28,0.85) 70%, rgba(20,20,28,0.95) 100%)`,
+              background: `linear-gradient(180deg, rgba(15,15,22,0.55) 0%, rgba(15,15,22,0.85) 65%, rgba(15,15,22,0.96) 100%)`,
             }}
           />
         </div>
       )}
 
+      {/* Halo couleur agent fixe */}
+      <div
+        aria-hidden
+        className="absolute pointer-events-none"
+        style={{
+          top: "-30%",
+          right: "-30%",
+          width: "140%",
+          height: "140%",
+          background: `radial-gradient(circle at center, ${agent.color}22 0%, transparent 60%)`,
+          filter: "blur(20px)",
+          opacity: 0.7,
+        }}
+      />
+
       {/* Mouse-follow glow */}
       <div
         ref={glowRef}
-        className="pointer-events-none absolute z-0 opacity-0 transition-opacity duration-300"
-        style={{ inset: -1 }}
+        className="pointer-events-none absolute z-0 transition-opacity duration-300"
+        style={{ inset: -1, opacity: 0 }}
         aria-hidden
       />
 
+      {/* Avatar grand format avec float perpétuel */}
+      <div
+        className="relative z-10 flex justify-center pt-6 pb-2"
+        style={{ height: 220 }}
+      >
+        <motion.div
+          className="agent-card-avatar relative"
+          style={{
+            width: 200,
+            height: 200,
+            transition: "transform 500ms cubic-bezier(0.22,1,0.36,1)",
+            transformOrigin: "center bottom",
+          }}
+          animate={
+            reduceMotion
+              ? undefined
+              : {
+                  y: [0, -6, 0],
+                }
+          }
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: floatDelay,
+          }}
+        >
+          {/* Glow sous l'avatar (ombre lumineuse) */}
+          <div
+            aria-hidden
+            className="absolute pointer-events-none"
+            style={{
+              bottom: "-10%",
+              left: "10%",
+              right: "10%",
+              height: "30%",
+              background: `radial-gradient(ellipse at center, ${agent.color}55 0%, transparent 70%)`,
+              filter: "blur(15px)",
+            }}
+          />
+          {agent.avatar ? (
+            <Image
+              src={agent.avatar.replace(".webp", ".png")}
+              alt={`Avatar ${agent.name}`}
+              width={400}
+              height={400}
+              sizes="200px"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.45))",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                background: `linear-gradient(135deg, ${agent.color}66, ${agent.color}11)`,
+              }}
+            />
+          )}
+        </motion.div>
+      </div>
+
       {/* Content */}
-      <div className="relative z-10 flex flex-col flex-1">
-        {/* Avatar */}
-        <div style={{ marginBottom: 16 }}>
-          <AgentAvatar slug={agent.slug} size={52} glow />
+      <div className="relative z-10 flex flex-col flex-1 px-6 pb-6 pt-2">
+        <div className="flex items-baseline justify-between gap-3 mb-1">
+          <h3
+            className="font-bold tracking-[-0.02em]"
+            style={{ color: "#F5F5F7", fontSize: 22 }}
+          >
+            {agent.name}
+          </h3>
+          <span style={{ color: "#71717A", fontSize: 11, fontWeight: 500, whiteSpace: "nowrap" }}>
+            {agent.role}
+          </span>
         </div>
 
-        {/* Name */}
-        <h3
-          className="font-bold tracking-[-0.02em]"
-          style={{ color: "#F5F5F7", fontSize: 16, marginBottom: 4 }}
-        >
-          {agent.name}
-        </h3>
-
-        {/* Tagline */}
         <p
           style={{
             color: agent.color,
             fontWeight: 600,
-            fontSize: 13,
-            marginBottom: 8,
+            fontSize: 14,
+            marginBottom: 12,
+            lineHeight: 1.4,
           }}
         >
           {agent.tagline}
         </p>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5" style={{ marginBottom: 16 }}>
+        <div className="flex flex-wrap gap-1.5 mb-4">
           {agent.tags.map((tag) => (
             <span
               key={tag}
@@ -147,8 +227,9 @@ function AgentCard({
                 borderRadius: 9999,
                 fontSize: 11,
                 background: `${agent.color}14`,
-                color: `${agent.color}CC`,
+                color: `${agent.color}DD`,
                 border: `1px solid ${agent.color}33`,
+                fontWeight: 500,
               }}
             >
               {tag}
@@ -156,28 +237,24 @@ function AgentCard({
           ))}
         </div>
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Status badge */}
-        <div style={{ marginBottom: 12 }}>
+        <div className="flex items-center justify-between gap-2 pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           <StatusBadge status={agent.status} />
+          <Link
+            href={`/agents/${agent.slug}`}
+            className="group/link inline-flex items-center gap-1.5 transition-colors"
+            style={{ fontSize: 12, color: "#A1A1AA", fontWeight: 500 }}
+          >
+            Découvrir
+            <ArrowRight
+              className="h-3 w-3 transition-transform duration-200 group-hover/link:translate-x-1"
+              aria-hidden
+            />
+          </Link>
         </div>
-
-        {/* CTA */}
-        <Link
-          href={`/agents/${agent.slug}`}
-          className="group/link flex items-center gap-1.5 transition-colors"
-          style={{ fontSize: 12, color: "#A1A1AA" }}
-        >
-          Découvrir
-          <ArrowRight
-            className="h-3 w-3 transition-transform duration-200 group-hover/link:translate-x-1"
-            aria-hidden
-          />
-        </Link>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -211,18 +288,19 @@ export function AgentsSection() {
               start: "top 80%",
               once: true,
             },
-          }
+          },
         )
 
         const cards = gridRef.current?.querySelectorAll(".agent-card")
-        if (cards) {
+        if (cards && cards.length > 0) {
           gsap.fromTo(
             cards,
-            { opacity: 0, y: 50 },
+            { opacity: 0, y: 60, scale: 0.95 },
             {
               opacity: 1,
               y: 0,
-              duration: 0.6,
+              scale: 1,
+              duration: 0.7,
               stagger: 0.08,
               ease: "power3.out",
               scrollTrigger: {
@@ -230,7 +308,7 @@ export function AgentsSection() {
                 start: "top 85%",
                 once: true,
               },
-            }
+            },
           )
         }
       }, sectionRef)
@@ -246,26 +324,25 @@ export function AgentsSection() {
   return (
     <section
       ref={sectionRef}
-      className="py-24 lg:py-32 relative"
+      className="py-24 lg:py-32 relative overflow-hidden"
       aria-labelledby="agents-heading"
     >
-      {/* Background ambient glow */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] pointer-events-none"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse, rgba(124,58,237,0.08) 0%, transparent 70%)",
+          background:
+            "radial-gradient(ellipse, rgba(124,58,237,0.10) 0%, rgba(34,211,238,0.05) 40%, transparent 75%)",
         }}
         aria-hidden
       />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div ref={headerRef} className="text-center mb-20 space-y-3">
+        <div ref={headerRef} className="text-center mb-16 space-y-3">
           <span className="ly-overline">L’équipe</span>
           <h2
             id="agents-heading"
             style={{
-              fontSize: 56,
+              fontSize: "clamp(36px, 5vw, 64px)",
               fontWeight: 700,
               letterSpacing: "-0.035em",
               lineHeight: 1.05,
@@ -276,33 +353,54 @@ export function AgentsSection() {
             <span className="ly-gradient-text">ton équipe IA</span>
             <span style={{ color: "#F5F5F7" }}>.</span>
           </h2>
-          {/* Reformulation marketing : éviter le chiffre brut "9 agents" jugé prématuré */}
           <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: "#A1A1AA" }}>
             Une équipe IA spécialisée. Chaque agent expert de son domaine. Charles coordonne le tout.
           </p>
         </div>
 
-        {/* Grid */}
+        {/* Mobile : carousel scroll-snap horizontal — Desktop : grid 3 colonnes */}
         <div
           ref={gridRef}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          className="
+            flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scroll-px-4
+            sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:m-0 sm:p-0 sm:snap-none
+            lg:grid-cols-3 lg:gap-6
+            no-scrollbar
+          "
+          style={{ scrollPaddingLeft: 16 }}
         >
-          {agents.map((agent) => (
-            <AgentCard key={agent.slug} agent={agent} />
+          {agents.map((agent, idx) => (
+            <div
+              key={agent.slug}
+              className="flex-shrink-0 w-[78%] sm:w-auto"
+              style={{ scrollSnapAlign: "start" }}
+            >
+              <AgentCard agent={agent} floatDelay={(idx * 0.4) % 2} />
+            </div>
           ))}
         </div>
 
-        {/* Bottom CTA */}
         <div className="mt-16 text-center">
           <Link
             href="/agents"
-            className="group inline-flex items-center gap-2 text-[#A78BFA] font-semibold hover:text-[#F5F5F7] transition-colors text-sm"
+            className="group inline-flex items-center gap-2 font-semibold transition-colors text-sm"
+            style={{ color: "#A78BFA" }}
           >
             Voir tous les agents en détail
             <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
           </Link>
         </div>
       </div>
+
+      <style jsx>{`
+        .no-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   )
 }
