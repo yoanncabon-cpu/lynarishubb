@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/marketing/Navbar"
 import { Footer } from "@/components/marketing/Footer"
 import { CookieBanner } from "@/components/shared/CookieBanner"
+import { SmoothScrollProvider } from "@/components/shared/SmoothScrollProvider"
 import {
   OrganizationSchema,
   FAQSchema,
@@ -13,6 +14,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <OrganizationSchema />
       <FAQSchema />
       <SoftwareAppSchema />
+      <SmoothScrollProvider />
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
