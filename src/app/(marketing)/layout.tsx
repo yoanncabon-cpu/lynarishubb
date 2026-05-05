@@ -2,6 +2,7 @@ import { Navbar } from "@/components/marketing/Navbar"
 import { Footer } from "@/components/marketing/Footer"
 import { CookieBanner } from "@/components/shared/CookieBanner"
 import { SmoothScrollProvider } from "@/components/shared/SmoothScrollProvider"
+import { SiteLogoWatermark } from "@/components/marketing/SiteLogoWatermark"
 import {
   OrganizationSchema,
   FAQSchema,
@@ -15,8 +16,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <FAQSchema />
       <SoftwareAppSchema />
       <SmoothScrollProvider />
+      {/* Logo Lynaris ghost watermark — fixed derrière tout le site */}
+      <SiteLogoWatermark />
       <Navbar />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 relative z-10">{children}</main>
       <Footer />
       <CookieBanner />
     </>

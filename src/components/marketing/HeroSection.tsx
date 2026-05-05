@@ -13,11 +13,6 @@ const HeroScene = dynamic(
   { ssr: false }
 )
 
-const HeroLogo3D = dynamic(
-  () => import("./HeroLogo3D").then((m) => ({ default: m.HeroLogo3D })),
-  { ssr: false }
-)
-
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null)
   const badgeRef = useRef<HTMLDivElement>(null)
@@ -80,8 +75,6 @@ export function HeroSection() {
       className="relative min-h-[100dvh] flex items-center pt-16 overflow-hidden"
       aria-labelledby="hero-heading"
     >
-      {/* Animation 3D logo Lynaris — R3F, désactivée mobile + reduced-motion */}
-      {!isMobile && <HeroLogo3D />}
       {/* Three.js particles background — hidden on mobile */}
       {!isMobile && <HeroScene />}
 

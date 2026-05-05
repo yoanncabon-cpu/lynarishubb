@@ -233,12 +233,16 @@ export default async function AgentDetailPage({
         />
       )}
 
-      {/* Hero mini — fallback sans scene OU compact ci-dessous */}
+      {/* Section contenu — chevauche le bas du hero pour un fondu seamless */}
       <div
-        className={agent.scene ? "relative pt-12 pb-12" : "relative pt-32 pb-20"}
+        className={agent.scene || agent.video ? "relative pb-12" : "relative pt-32 pb-20"}
         style={
-          agent.scene
-            ? undefined
+          (agent.scene || agent.video)
+            ? {
+                marginTop: -100,
+                paddingTop: 100,
+                background: `linear-gradient(to bottom, transparent 0px, #0A0A0F 100px)`,
+              }
             : { background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${agent.color}33, transparent 60%)` }
         }
       >
