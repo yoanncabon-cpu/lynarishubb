@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { Menu, X, Search, ChevronRight, Copy, Check, ArrowLeft, ArrowRight as ArrowRightIcon, ExternalLink } from "lucide-react"
 
 // URL publique du site — basculé automatiquement quand on branche le domaine custom
 const SITE_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://lynarishubb.vercel.app"
-const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "")
 
 // ---------------------------------------------------------------------------
 // Sidebar structure
@@ -23,11 +23,15 @@ const sections = [
     id: "agents",
     label: "Agents",
     items: [
-      { id: "marine", label: "Agent vocal" },
-      { id: "charles", label: "Charles" },
-      { id: "lou", label: "Lou" },
-      { id: "elio", label: "Elio" },
-      { id: "mae", label: "Mae" },
+      { id: "marine", label: "Marine — Agent vocal" },
+      { id: "charles", label: "Charles — Orchestrateur" },
+      { id: "lou", label: "Lou — Contenu & SEO" },
+      { id: "elio", label: "Elio — Commercial" },
+      { id: "mae", label: "Mae — Email" },
+      { id: "max", label: "Max — Photo & vidéo" },
+      { id: "nova", label: "Nova — Business" },
+      { id: "alba", label: "Alba — RH" },
+      { id: "orion", label: "Orion — Automatisation" },
     ],
   },
   {
@@ -379,10 +383,10 @@ function IntroductionSection({ onNavigate }: { onNavigate: (id: string) => void 
 // Section: Quick start
 // ---------------------------------------------------------------------------
 const quickstartSteps = [
-  { num: 1, title: "Créer un compte", desc: `Inscrivez-vous sur ${SITE_HOST}. L'accès au dashboard est immédiat.`, badge: "2 min", badgeColor: "#22D3EE" },
-  { num: 2, title: "Choisir vos agents", desc: "Sélectionnez les agents adaptés à vos besoins parmi les 9 disponibles.", badge: "5 min", badgeColor: "#10B981" },
-  { num: 3, title: "Connecter vos outils", desc: "Reliez Gmail, Google Calendar, Twilio ou n8n via le catalogue d'intégrations.", badge: "15 min", badgeColor: "#F59E0B" },
-  { num: 4, title: "Activer", desc: "Activez vos agents. Ils commencent à travailler immédiatement.", badge: "Instant", badgeColor: "#7C3AED" },
+  { num: 1, title: "Créer un compte", desc: "Inscris-toi en quelques secondes — accès immédiat à ton dashboard, sans carte bancaire.", badge: "2 min", badgeColor: "#22D3EE", href: "/signup" },
+  { num: 2, title: "Choisir tes agents", desc: "Sélectionne les agents adaptés à tes besoins parmi les 9 disponibles. Active-les en un clic.", badge: "5 min", badgeColor: "#10B981" },
+  { num: 3, title: "Connecter tes outils", desc: "Relie Gmail, Google Calendar, Twilio ou n8n via le catalogue d'intégrations OAuth.", badge: "15 min", badgeColor: "#F59E0B" },
+  { num: 4, title: "Activer", desc: "Tes agents commencent à travailler immédiatement. Ils gèrent les appels, les emails, le contenu pendant que tu te concentres sur ton métier.", badge: "Instant", badgeColor: "#7C3AED" },
 ]
 
 const codeExampleQuickstart = `// Chat avec un agent via l'API Lynaris
@@ -415,48 +419,91 @@ function QuickstartSection({ onNavigate }: { onNavigate: (id: string) => void })
       </SectionLead>
 
       <H3>Mise en route rapide</H3>
-      <div style={{ display: "flex", flexDirection: "column" as const, gap: 12, marginBottom: 40 }}>
-        {quickstartSteps.map((step) => (
-          <div
-            key={step.num}
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 12,
-              padding: "18px 20px",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 16,
-            }}
-          >
-            <div
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 12, marginBottom: 32 }}>
+        {quickstartSteps.map((step) => {
+          const Card = step.href ? "a" : "div"
+          return (
+            <Card
+              key={step.num}
+              {...(step.href ? { href: step.href } : {})}
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "rgba(124,58,237,0.2)",
-                border: "1.5px solid rgba(124,58,237,0.4)",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                padding: "18px 20px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#7C3AED",
-                flexShrink: 0,
+                alignItems: "flex-start",
+                gap: 16,
+                textDecoration: "none",
+                cursor: step.href ? "pointer" : "default",
+                transition: "border-color 200ms, background 200ms, transform 200ms",
+              }}
+              onMouseEnter={(e) => {
+                if (step.href) {
+                  e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)"
+                  e.currentTarget.style.background = "rgba(124,58,237,0.06)"
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (step.href) {
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"
+                  e.currentTarget.style.background = "rgba(255,255,255,0.04)"
+                }
               }}
             >
-              {step.num}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#F5F5F7" }}>{step.title}</span>
-                <TagBadge label={step.badge} color={step.badgeColor} />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "rgba(124,58,237,0.2)",
+                  border: "1.5px solid rgba(124,58,237,0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "#7C3AED",
+                  flexShrink: 0,
+                }}
+              >
+                {step.num}
               </div>
-              <p style={{ fontSize: 14, color: "#A1A1AA", margin: 0, lineHeight: 1.6 }}>{step.desc}</p>
-            </div>
-          </div>
-        ))}
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap" as const }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#F5F5F7" }}>{step.title}</span>
+                  <TagBadge label={step.badge} color={step.badgeColor} />
+                </div>
+                <p style={{ fontSize: 14, color: "#A1A1AA", margin: 0, lineHeight: 1.6 }}>{step.desc}</p>
+              </div>
+              {step.href && (
+                <ChevronRight style={{ width: 18, height: 18, color: "#A1A1AA", flexShrink: 0, marginTop: 6 }} aria-hidden />
+              )}
+            </Card>
+          )
+        })}
       </div>
+
+      <a
+        href="/signup"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          background: "linear-gradient(135deg, #7C3AED 0%, #E86F4D 100%)",
+          color: "white",
+          padding: "12px 24px",
+          borderRadius: 10,
+          fontSize: 14,
+          fontWeight: 600,
+          textDecoration: "none",
+          marginBottom: 36,
+          boxShadow: "0 8px 24px rgba(124,58,237,0.3)",
+        }}
+      >
+        Créer un compte gratuit
+        <ArrowRightIcon style={{ width: 16, height: 16 }} aria-hidden />
+      </a>
 
       <H3>Exemple de requête</H3>
       <CodeBlock filename="api-example.ts">{codeExampleQuickstart}</CodeBlock>
@@ -880,6 +927,223 @@ function MaeSection() {
         {tools.map((t) => (
           <div key={t.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <code style={{ fontSize: 12, background: "rgba(245,158,11,0.1)", color: "#F59E0B", padding: "3px 8px", borderRadius: 4, flexShrink: 0, marginTop: 1 }}>{t.name}</code>
+            <span style={{ fontSize: 14, color: "#A1A1AA" }}>{t.desc}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Section: Max
+// ---------------------------------------------------------------------------
+function MaxSection() {
+  const tools = [
+    { name: "generate_image", desc: "Génère une image via Replicate (Flux 1.1 Pro)" },
+    { name: "edit_image", desc: "Édite une image existante (inpainting, retouche)" },
+    { name: "upscale_image", desc: "Augmente la résolution d'une image" },
+    { name: "generate_video", desc: "Génère une courte vidéo (modèles Replicate)" },
+    { name: "save_to_storage", desc: "Sauvegarde l'asset dans Supabase Storage" },
+  ]
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <SectionBadge label="Agents" color="#EC4899" />
+        <TagBadge label="Roadmap" color="#64748B" />
+      </div>
+      <SectionTitle>Max — Photo & Vidéo</SectionTitle>
+      <SectionLead>
+        Max génère et édite tes visuels marketing : photos produit, illustrations d&apos;article,
+        miniatures vidéo, contenus pour réseaux sociaux. Tous les assets passent par Replicate
+        (Flux 1.1 Pro pour les images) et sont stockés dans ton espace Supabase.
+      </SectionLead>
+
+      <H3>Intégrations requises</H3>
+      <DocTable
+        headers={["Service", "Utilisation"]}
+        rows={[
+          ["Replicate", "Génération d'images et vidéos (clé API requise)"],
+          ["Supabase Storage", "Stockage des assets générés (inclus dans Lynaris)"],
+        ]}
+      />
+
+      <H3>Tools disponibles</H3>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 24 }}>
+        {tools.map((t) => (
+          <div key={t.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <code style={{ fontSize: 12, background: "rgba(236,72,153,0.1)", color: "#EC4899", padding: "3px 8px", borderRadius: 4, flexShrink: 0, marginTop: 1 }}>{t.name}</code>
+            <span style={{ fontSize: 14, color: "#A1A1AA" }}>{t.desc}</span>
+          </div>
+        ))}
+      </div>
+
+      <H3>Bonne pratique</H3>
+      <InfoCard
+        title="Coût des générations"
+        desc="Chaque génération consomme des crédits Replicate facturés à l'usage. Active les quotas dans Dashboard > Agents > Max > Paramètres pour éviter les dépassements."
+        color="#F59E0B"
+      />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Section: Nova
+// ---------------------------------------------------------------------------
+function NovaSection() {
+  const tools = [
+    { name: "get_revenue_summary", desc: "Récupère le revenu Stripe sur une période donnée" },
+    { name: "get_top_customers", desc: "Identifie les meilleurs clients par CA" },
+    { name: "analyze_churn", desc: "Analyse le taux de désabonnement et les causes" },
+    { name: "get_cash_position", desc: "Position de trésorerie via Qonto (optionnel)" },
+    { name: "forecast_revenue", desc: "Projection de revenu basée sur les abonnements actifs" },
+  ]
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <SectionBadge label="Agents" color="#6366F1" />
+        <TagBadge label="Roadmap" color="#64748B" />
+      </div>
+      <SectionTitle>Nova — Business & Finance</SectionTitle>
+      <SectionLead>
+        Nova est ton assistant stratégique : elle a accès à tes données financières (Stripe, Qonto,
+        Shopify si applicable) et te livre un brief hebdomadaire sur le revenu, les abonnements,
+        la trésorerie et les anomalies.
+      </SectionLead>
+
+      <H3>Intégrations</H3>
+      <DocTable
+        headers={["Service", "Utilisation", "Statut"]}
+        rows={[
+          ["Stripe", "Revenu, abonnements, churn", "Requis"],
+          ["Shopify", "Ventes e-commerce", "Optionnel"],
+          ["Qonto", "Trésorerie, virements", "Optionnel"],
+        ]}
+      />
+
+      <H3>Tools disponibles</H3>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 24 }}>
+        {tools.map((t) => (
+          <div key={t.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <code style={{ fontSize: 12, background: "rgba(99,102,241,0.1)", color: "#6366F1", padding: "3px 8px", borderRadius: 4, flexShrink: 0, marginTop: 1 }}>{t.name}</code>
+            <span style={{ fontSize: 14, color: "#A1A1AA" }}>{t.desc}</span>
+          </div>
+        ))}
+      </div>
+
+      <H3>Sécurité des données</H3>
+      <InfoCard
+        title="Tokens chiffrés en base"
+        desc="Tous les credentials Stripe, Qonto, Shopify sont chiffrés AES-256-GCM avant stockage. Nova accède aux données en lecture seule sauf pour les actions explicitement validées."
+        color="#10B981"
+      />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Section: Alba
+// ---------------------------------------------------------------------------
+function AlbaSection() {
+  const tools = [
+    { name: "screen_cv", desc: "Évalue un CV par rapport à une fiche de poste" },
+    { name: "generate_contract", desc: "Génère un contrat à partir d'un template (CDI, CDD, freelance)" },
+    { name: "schedule_interview", desc: "Planifie un entretien dans Google Calendar" },
+    { name: "answer_employee_faq", desc: "Répond aux questions fréquentes des salariés (congés, fiches de paie)" },
+    { name: "send_onboarding_kit", desc: "Envoie le kit d'arrivée à un nouveau collaborateur" },
+  ]
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <SectionBadge label="Agents" color="#8B5CF6" />
+        <TagBadge label="Roadmap" color="#64748B" />
+      </div>
+      <SectionTitle>Alba — Ressources humaines</SectionTitle>
+      <SectionLead>
+        Alba automatise les tâches RH récurrentes : tri des candidatures, génération des contrats,
+        organisation des entretiens, FAQ salariés et onboarding. Elle s&apos;appuie sur tes
+        templates et ta charte d&apos;entreprise pour rester cohérente avec ta culture.
+      </SectionLead>
+
+      <H3>Intégrations requises</H3>
+      <DocTable
+        headers={["Service", "Utilisation"]}
+        rows={[
+          ["Gmail", "Envoi des invitations entretiens, accusés de réception candidatures"],
+          ["Google Calendar", "Planification des entretiens et créneaux RH"],
+          ["Google Drive", "Stockage des CV et contrats générés (optionnel)"],
+        ]}
+      />
+
+      <H3>Tools disponibles</H3>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 24 }}>
+        {tools.map((t) => (
+          <div key={t.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <code style={{ fontSize: 12, background: "rgba(139,92,246,0.1)", color: "#8B5CF6", padding: "3px 8px", borderRadius: 4, flexShrink: 0, marginTop: 1 }}>{t.name}</code>
+            <span style={{ fontSize: 14, color: "#A1A1AA" }}>{t.desc}</span>
+          </div>
+        ))}
+      </div>
+
+      <H3>Conformité RGPD</H3>
+      <InfoCard
+        title="Données candidats"
+        desc="Les données candidats sont conservées 2 ans maximum (durée légale). Alba purge automatiquement les dossiers expirés et journalise les accès aux fiches sensibles."
+        color="#10B981"
+      />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Section: Orion
+// ---------------------------------------------------------------------------
+function OrionSection() {
+  const tools = [
+    { name: "list_n8n_workflows", desc: "Liste les workflows existants dans ton instance n8n" },
+    { name: "describe_workflow", desc: "Décrit un workflow en langage naturel" },
+    { name: "create_workflow", desc: "Crée un workflow à partir d'une description naturelle" },
+    { name: "trigger_workflow", desc: "Déclenche un workflow par webhook" },
+    { name: "monitor_executions", desc: "Surveille les dernières exécutions et signale les échecs" },
+  ]
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <SectionBadge label="Agents" color="#64748B" />
+        <TagBadge label="Roadmap" color="#64748B" />
+      </div>
+      <SectionTitle>Orion — Automatisation</SectionTitle>
+      <SectionLead>
+        Orion crée des workflows n8n à partir de descriptions naturelles. Tu lui décris ton
+        process, il assemble les nœuds et te livre un workflow prêt à activer dans ton instance n8n.
+        Il surveille aussi les exécutions et te prévient en cas d&apos;échec.
+      </SectionLead>
+
+      <H3>Intégration requise</H3>
+      <InfoCard
+        title="Instance n8n self-hosted ou n8n Cloud"
+        desc="Orion a besoin d'une URL d'API + clé d'API n8n pour piloter ton instance. Setup : Dashboard > Intégrations > n8n."
+        color="#64748B"
+      />
+
+      <H3>Exemple de prompt</H3>
+      <CodeBlock filename="orion-example.txt">{`"Quand un nouveau client paie sur Stripe, ajoute-le à ma liste Mailchimp \"Clients\" et envoie-moi un Slack dans #ventes."
+
+// Orion va :
+// 1. create_workflow() avec les nœuds Stripe Trigger -> Mailchimp -> Slack
+// 2. Te retourner l'URL du workflow + le payload exemple
+// 3. Tu valides et l'actives dans n8n`}</CodeBlock>
+
+      <H3>Tools disponibles</H3>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 24 }}>
+        {tools.map((t) => (
+          <div key={t.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <code style={{ fontSize: 12, background: "rgba(100,116,139,0.1)", color: "#94A3B8", padding: "3px 8px", borderRadius: 4, flexShrink: 0, marginTop: 1 }}>{t.name}</code>
             <span style={{ fontSize: 14, color: "#A1A1AA" }}>{t.desc}</span>
           </div>
         ))}
@@ -1503,6 +1767,10 @@ function buildDocContent(onNavigate: (id: string) => void): Record<string, React
     lou: <LouSection />,
     elio: <ElioSection />,
     mae: <MaeSection />,
+    max: <MaxSection />,
+    nova: <NovaSection />,
+    alba: <AlbaSection />,
+    orion: <OrionSection />,
     google: <GoogleSection />,
     twilio: <TwilioSection />,
     elevenlabs: <ElevenLabsSection />,
