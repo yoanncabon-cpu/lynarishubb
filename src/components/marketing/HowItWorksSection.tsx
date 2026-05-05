@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useEffect } from "react"
+import Image from "next/image"
 import { Plug, Cpu, BarChart3 } from "lucide-react"
 // gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
@@ -8,23 +9,23 @@ const steps = [
   {
     number: "01",
     title: "Connecte tes outils",
-    description:
-      "Tu relies Gmail, Google Calendar, WordPress... en quelques clics. Pas de code.",
+    description: "Tu relies Gmail, Google Calendar, WordPress, Twilio… en quelques clics. Pas de code, pas d'intégration complexe.",
     icon: Plug,
+    color: "#22D3EE",
   },
   {
     number: "02",
     title: "Active tes agents",
-    description:
-      "Tu choisis les agents qui correspondent a ton activite. Un agent vocal pour les appels, Lou pour le contenu, Elio pour la prospection.",
+    description: "Tu choisis les agents qui correspondent à ton activité. Un agent vocal pour les appels, Lou pour le contenu, Elio pour la prospection.",
     icon: Cpu,
+    color: "#7C3AED",
   },
   {
     number: "03",
     title: "Ils travaillent, tu pilotes",
-    description:
-      "Tes agents s'executent en autonomie. Tu supervises depuis le dashboard ou par WhatsApp via Charles.",
+    description: "Tes agents s'exécutent en autonomie. Tu supervises depuis le dashboard ou par WhatsApp via Charles.",
     icon: BarChart3,
+    color: "#10B981",
   },
 ]
 
@@ -121,22 +122,48 @@ export function HowItWorksSection() {
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div ref={headerRef} className="text-center mb-20 space-y-4">
+        <div ref={headerRef} className="text-center mb-16 space-y-4">
           <span className="inline-flex items-center rounded-full border border-[--ly-primary]/20 bg-[--ly-primary]/5 px-4 py-1 text-[13px] font-medium text-[--ly-primary-soft] tracking-wide uppercase">
-            Comment ca marche
+            Comment ça marche
           </span>
           <h2
             id="how-it-works-heading"
             className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[--ly-text] tracking-[-0.04em]"
           >
-            Operationnel en{" "}
-            <span className="gradient-text" style={{ WebkitTextFillColor: "transparent" }}>
-              3 etapes
+            Opérationnel en{" "}
+            <span className="ly-gradient-text">
+              3 étapes
             </span>
           </h2>
           <p className="text-lg text-[--ly-text-muted] max-w-2xl mx-auto leading-relaxed">
-            Pas de formation. Pas d&apos;integration complexe. Tu connectes, tu actives, ca tourne.
+            Pas de formation. Pas d&apos;intégration complexe. Tu connectes, tu actives, ça tourne.
           </p>
+        </div>
+
+        {/* Visuel Higgsfield — 3 panneaux illustrant les 3 étapes */}
+        <div
+          className="relative mx-auto mb-20 rounded-3xl overflow-hidden"
+          style={{
+            maxWidth: 960,
+            boxShadow: "0 40px 80px -20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)",
+          }}
+        >
+          <Image
+            src="/marketing/how-it-works.webp"
+            alt="Intégrations, agent IA actif, et analytics — les 3 étapes Lynaris"
+            width={1600}
+            height={900}
+            sizes="(max-width: 1024px) 100vw, 960px"
+            className="w-full h-auto"
+          />
+          {/* Fade bottom pour raccord avec la timeline */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+            aria-hidden
+            style={{
+              background: "linear-gradient(to bottom, transparent, rgba(8,8,16,0.95))",
+            }}
+          />
         </div>
 
         {/* Timeline */}
@@ -174,15 +201,25 @@ export function HowItWorksSection() {
                   {/* Large translucent number */}
                   <span
                     className="absolute -top-4 lg:-top-8 right-0 lg:right-auto lg:left-[100px] text-[6rem] lg:text-[8rem] font-black leading-none select-none pointer-events-none"
-                    style={{ color: "rgba(124,58,237,0.05)" }}
+                    style={{ color: `${step.color}08` }}
                     aria-hidden
                   >
                     {step.number}
                   </span>
 
-                  {/* Icon circle */}
-                  <div className="relative z-10 shrink-0 h-[72px] w-[72px] lg:h-[120px] lg:w-[120px] rounded-2xl bg-[--ly-surface] border border-[--ly-border] flex items-center justify-center transition-all duration-500 hover:border-[--ly-primary]/30 hover:shadow-[0_0_30px_rgba(124,58,237,0.15)]">
-                    <Icon className="h-7 w-7 lg:h-10 lg:w-10 text-[--ly-primary-soft]" aria-hidden />
+                  {/* Icon circle avec couleur d'étape */}
+                  <div
+                    className="relative z-10 shrink-0 h-[72px] w-[72px] lg:h-[120px] lg:w-[120px] rounded-2xl flex items-center justify-center transition-all duration-500"
+                    style={{
+                      background: `${step.color}10`,
+                      border: `1px solid ${step.color}25`,
+                    }}
+                  >
+                    <Icon
+                      className="h-7 w-7 lg:h-10 lg:w-10"
+                      style={{ color: step.color }}
+                      aria-hidden
+                    />
                   </div>
 
                   {/* Text */}
