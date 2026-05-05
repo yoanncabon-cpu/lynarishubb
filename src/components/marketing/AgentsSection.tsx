@@ -26,6 +26,7 @@ function AgentCard({
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const glowRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const reduceMotion = useReducedMotion()
 
   const handleMouseMove = useCallback(
@@ -66,6 +67,12 @@ function AgentCard({
         if (scene) scene.style.opacity = "1"
         const avatar = card.querySelector<HTMLElement>(".agent-card-avatar")
         if (avatar) avatar.style.transform = "scale(1.08) translateY(-4px)"
+        // Lancer la vidéo au hover
+        const vid = videoRef.current
+        if (vid && !reduceMotion) {
+          vid.currentTime = 0
+          void vid.play().catch(() => { /* autoplay policy */ })
+        }
       }}
       onMouseLeave={() => {
         const card = cardRef.current
@@ -77,22 +84,42 @@ function AgentCard({
         if (scene) scene.style.opacity = "0"
         const avatar = card.querySelector<HTMLElement>(".agent-card-avatar")
         if (avatar) avatar.style.transform = "scale(1) translateY(0)"
+        videoRef.current?.pause()
       }}
     >
-      {/* Scène contextuelle révélée au hover */}
-      {agent.scene && (
+      {/* Scène contextuelle révélée au hover — vidéo prioritaire, image en fallback */}
+      {(agent.video ?? agent.scene) && (
         <div
           aria-hidden
           className="agent-card-scene pointer-events-none absolute inset-0 transition-opacity duration-700"
           style={{ opacity: 0 }}
         >
-          <Image
-            src={agent.scene}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 80vw, (max-width: 1024px) 50vw, 33vw"
-            style={{ objectFit: "cover", objectPosition: "center 35%" }}
-          />
+          {agent.video ? (
+            <video
+              ref={videoRef}
+              src={agent.video}
+              preload="none"
+              muted
+              loop
+              playsInline
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center 35%",
+              }}
+            />
+          ) : agent.scene ? (
+            <Image
+              src={agent.scene}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 80vw, (max-width: 1024px) 50vw, 33vw"
+              style={{ objectFit: "cover", objectPosition: "center 35%" }}
+            />
+          ) : null}
           <div
             className="absolute inset-0"
             style={{
