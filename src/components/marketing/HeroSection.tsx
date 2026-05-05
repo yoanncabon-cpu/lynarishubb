@@ -4,8 +4,7 @@ import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { HeroTerminal } from "./HeroTerminal"
-import { AgentAvatar } from "@/components/shared/AgentAvatar"
+import { HeroVisualShowcase } from "./HeroVisualShowcase"
 import dynamic from "next/dynamic"
 // gsap (~250kb) chargé en async dans useEffect → exclu du bundle initial de la landing
 
@@ -13,8 +12,6 @@ const HeroScene = dynamic(
   () => import("./HeroScene").then((m) => ({ default: m.HeroScene })),
   { ssr: false }
 )
-
-const SOCIAL_AGENTS = ["marine", "charles", "lou", "elio", "mae"] as const
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -265,9 +262,9 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Right — terminal */}
+          {/* Right — visuel immersif (photo + avatar Marine + bulles + secteurs) */}
           <div ref={terminalRef} className="lg:col-span-2 w-full opacity-0">
-            <HeroTerminal />
+            <HeroVisualShowcase />
           </div>
         </div>
       </div>
