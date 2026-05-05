@@ -233,17 +233,13 @@ export default async function AgentDetailPage({
         />
       )}
 
-      {/* Section contenu — chevauche le bas du hero pour un fondu seamless */}
+      {/* Section contenu — démarre directement après le hero (fondu géré dans AgentSceneHero) */}
       <div
-        className={agent.scene || agent.video ? "relative pb-12" : "relative pt-32 pb-20"}
+        className={agent.scene || agent.video ? "relative pt-8 pb-12" : "relative pt-32 pb-20"}
         style={
-          (agent.scene || agent.video)
-            ? {
-                marginTop: -100,
-                paddingTop: 100,
-                background: `linear-gradient(to bottom, transparent 0px, #0A0A0F 100px)`,
-              }
-            : { background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${agent.color}33, transparent 60%)` }
+          !(agent.scene || agent.video)
+            ? { background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${agent.color}33, transparent 60%)` }
+            : undefined
         }
       >
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">

@@ -3,38 +3,36 @@
 import { useEffect, useRef } from "react"
 
 /**
- * Logo Lynaris en giant ghost watermark — position fixed derrière tout le site.
- * Juste la silhouette du L en trait/fill ultra-transparent.
- * Anime doucement en rotation et parallax sur le scroll.
+ * Logo Lynaris en giant ghost watermark — position fixed, plein écran.
+ * Le L occupe tout le viewport avec un léger recadrage pour le voir entier.
+ * Animation: flottement vertical lent + rotation micro.
  */
 export function SiteLogoWatermark() {
   const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (prefersReducedMotion) return
+
     let raf = 0
-    let scrollY = 0
     let time = 0
     let last = performance.now()
-
-    if (prefersReducedMotion) return
 
     function tick(now: number) {
       const dt = (now - last) / 1000
       last = now
       time += dt
-      scrollY = window.scrollY
 
       if (svgRef.current) {
-        // Parallax lent sur le scroll — se déplace 15% moins vite que le scroll
-        const parallax = scrollY * 0.06
-        // Rotation micro très lente
-        const rot = Math.sin(time * 0.04) * 1.5
-        // Scale micro-pulsation
-        const sc = 1 + Math.sin(time * 0.18) * 0.015
+        // Parallax scroll léger — 4% de la position scroll
+        const parallax = window.scrollY * 0.04
+        // Rotation micro très lente ±1.2°
+        const rot = Math.sin(time * 0.035) * 1.2
+        // Flottement vertical ±8px
+        const floatY = Math.sin(time * 0.22) * 8
 
         svgRef.current.style.transform =
-          `translateY(${-parallax}px) rotate(${rot}deg) scale(${sc})`
+          `translate(-50%, calc(-50% + ${floatY - parallax}px)) rotate(${rot}deg)`
       }
 
       raf = requestAnimationFrame(tick)
@@ -45,6 +43,7 @@ export function SiteLogoWatermark() {
   }, [])
 
   return (
+    // Pas d'overflow:hidden — le SVG doit être visible en entier
     <div
       aria-hidden
       style={{
@@ -52,20 +51,18 @@ export function SiteLogoWatermark() {
         inset: 0,
         zIndex: 0,
         pointerEvents: "none",
-        overflow: "hidden",
-        // Pas de background ici — juste le logo transparent
       }}
     >
       <svg
         ref={svgRef}
-        viewBox="0 0 100 100"
+        viewBox="-8 -8 116 116"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         style={{
           position: "absolute",
-          // Centré, taille ~90vh
-          width: "90vh",
-          height: "90vh",
+          // Calcul pour que le carré s'adapte à l'écran entier quel que soit le ratio
+          width: "min(95vh, 85vw)",
+          height: "min(95vh, 85vw)",
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
@@ -73,20 +70,20 @@ export function SiteLogoWatermark() {
           willChange: "transform",
         }}
       >
-        {/* Polygone principal — L shape Lynaris */}
+        {/* Polygone L — fill très subtil + stroke visible */}
         <polygon
           points="0,0 24,0 40,18 40,65 100,65 100,100 0,100"
-          fill="rgba(245,146,47,0.028)"
-          stroke="rgba(245,146,47,0.06)"
-          strokeWidth="0.4"
+          fill="rgba(245,146,47,0.035)"
+          stroke="rgba(245,146,47,0.10)"
+          strokeWidth="0.5"
           strokeLinejoin="round"
         />
         {/* Triangle coin haut-droit */}
         <polygon
           points="58,0 100,0 100,42"
-          fill="rgba(245,146,47,0.025)"
-          stroke="rgba(245,146,47,0.06)"
-          strokeWidth="0.4"
+          fill="rgba(245,146,47,0.030)"
+          stroke="rgba(245,146,47,0.10)"
+          strokeWidth="0.5"
           strokeLinejoin="round"
         />
       </svg>
