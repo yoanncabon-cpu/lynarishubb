@@ -6,20 +6,24 @@ import { type NextRequest, NextResponse } from "next/server"
 let ratelimit: Ratelimit | null = null
 
 function getRatelimit(): Ratelimit | null {
-  if (!process.env["UPSTASH_REDIS_REST_URL"] || !process.env["UPSTASH_REDIS_REST_TOKEN"]) {
-    return null // Rate limiting disabled if Redis not configured
+  const url = process.env["UPSTASH_REDIS_REST_URL"]
+  const token = process.env["UPSTASH_REDIS_REST_TOKEN"]
+  // Valider que l'URL pointe bien vers Upstash (commence par https:// et contient upstash)
+  if (!url || !token || !url.startsWith("https://") || !url.includes("upstash")) {
+    return null // Rate limiting désactivé si Redis non configuré ou URL invalide
   }
   if (!ratelimit) {
-    const redis = new Redis({
-      url: process.env["UPSTASH_REDIS_REST_URL"],
-      token: process.env["UPSTASH_REDIS_REST_TOKEN"],
-    })
-    ratelimit = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(100, "1 m"),
-      analytics: true,
-      prefix: "lynaris",
-    })
+    try {
+      const redis = new Redis({ url, token })
+      ratelimit = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(100, "1 m"),
+        analytics: true,
+        prefix: "lynaris",
+      })
+    } catch {
+      return null // Redis init failed — continue sans rate limiting
+    }
   }
   return ratelimit
 }
