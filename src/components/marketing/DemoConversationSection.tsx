@@ -48,7 +48,7 @@ const SCENARIOS: Scenario[] = [
   // ── Kiné & Santé ──────────────────────────────────────────────────────────
   {
     id: "kine",
-    label: "Kiné & Santé",
+    label: "Santé",
     emoji: "🏥",
     chatTitle: "Gestion des appels entrants",
     agentCount: "2 assistants",

@@ -21,8 +21,8 @@ export function TeamSection() {
   const imgY = useTransform(scrollYProgress, [0, 1], ["-15%", "15%"])
   const imgScale = useTransform(scrollYProgress, [0, 0.5, 1], [1.15, 1.08, 1.15])
   // Texte qui apparaît plus tard
-  const textOpacity = useTransform(scrollYProgress, [0.1, 0.35, 0.65, 0.9], [0, 1, 1, 0])
-  const textY = useTransform(scrollYProgress, [0, 1], [40, -40])
+  const textOpacity = useTransform(scrollYProgress, [0.05, 0.28], [0, 1])
+  const textY = useTransform(scrollYProgress, [0, 1], [32, -32])
 
   return (
     <section
