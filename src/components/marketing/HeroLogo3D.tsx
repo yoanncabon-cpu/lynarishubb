@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 "use client"
 
 import { useRef, useMemo, Suspense, useEffect } from "react"
@@ -53,7 +54,7 @@ function buildLogoWireframes() {
 // ─── Logo en wireframe 3D ─────────────────────────────────────────────────────
 function LogoWireframe() {
   const groupRef = useRef<THREE.Group>(null!)
-  const { geoL, geoT, edgesL, edgesT, depth } = useMemo(buildLogoWireframes, [])
+  const { geoL, geoT, edgesL, edgesT, depth } = useMemo(() => buildLogoWireframes(), [])
 
   // Arêtes principales — violet
   const matEdge = useMemo(() => new THREE.LineBasicMaterial({

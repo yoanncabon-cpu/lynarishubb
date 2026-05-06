@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
-import { conversations, actionLogs, agentInstances } from "@/lib/db/schema"
+import { conversations, actionLogs } from "@/lib/db/schema"
 import { eq, and, gte, lt, sql, count } from "drizzle-orm"
 import { actionTypeShortLabel } from "@/lib/agents/action-labels"
 import { cached } from "@/lib/cache/redis"

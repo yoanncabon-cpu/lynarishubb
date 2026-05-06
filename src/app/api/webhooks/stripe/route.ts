@@ -12,7 +12,6 @@ import {
 } from "@/lib/emails/stripe-templates"
 import {
   getPlanFromStripePriceId,
-  isVoicePackPriceId,
 } from "@/lib/pricing/stripe-resolver"
 import { PLANS, type PlanId } from "@/lib/pricing/plans"
 import { addVoicePackMinutes } from "@/lib/usage/service"

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
-import { agentInstances, actionLogs, conversations } from "@/lib/db/schema"
+import { actionLogs, conversations } from "@/lib/db/schema"
 import { eq, and, sql, desc } from "drizzle-orm"
 
 export const dynamic = "force-dynamic"
@@ -18,14 +18,6 @@ function relativeTime(date: Date): string {
   return `il y a ${diffD}j`
 }
 
-// Pricing per 1M tokens (USD), approximate
-const PRICING: Record<string, { input: number; output: number }> = {
-  "claude-opus-4-6":   { input: 15, output: 75 },
-  "claude-sonnet-4-6": { input: 3,  output: 15 },
-  "claude-haiku-4-5":  { input: 0.8, output: 4 },
-  "gpt-4o":            { input: 5,  output: 15 },
-  "gpt-4o-mini":       { input: 0.15, output: 0.6 },
-}
 
 export async function GET(
   _request: NextRequest,

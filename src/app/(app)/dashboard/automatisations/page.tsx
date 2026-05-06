@@ -926,7 +926,7 @@ function JobCard({ job, onToggle, onDelete, onRunNow, onEdit }: { job: Scheduled
   // Cadence adaptative : 1s sous la minute (compte à rebours en secondes lisible),
   // 30s au-delà (rafraîchissement minute, économique en CPU)
   const [, setTick] = useState(0)
-  const agent = agents.find((a) => a.slug === job.agentSlug)
+  const _agent = agents.find((a) => a.slug === job.agentSlug)
 
   useEffect(() => {
     if (!job.isActive) return

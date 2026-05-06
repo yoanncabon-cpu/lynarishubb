@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
 import { users, agentInstances, conversations } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 
 export async function GET(req: Request) {
   try {

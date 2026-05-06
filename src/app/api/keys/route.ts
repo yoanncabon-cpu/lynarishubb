@@ -22,7 +22,7 @@ function generateApiKey(): string {
   return key
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const orgId = await getOrProvisionOrgId()
   try {
     const rows = await db.query.integrations.findMany({

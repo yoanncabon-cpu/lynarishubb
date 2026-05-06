@@ -377,7 +377,6 @@ export function VoiceLynaris() {
       isRunning = false
       setMicOn(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (!supported) return null

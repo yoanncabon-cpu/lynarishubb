@@ -309,11 +309,12 @@ export default function ConversationsPage() {
   // Charge les messages quand une conversation est sélectionnée
   useEffect(() => {
     if (!selected) return
+    const selectedId = selected.id
     if (selected.messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
       return
     }
-    fetch(`/api/conversations/${selected.id}/messages`)
+    fetch(`/api/conversations/${selectedId}/messages`)
       .then(r => r.json() as Promise<{ messages: Array<{ role: string; content: unknown; created_at: string }> }>)
       .then(({ messages }) => {
         const mapped: ConvMessage[] = messages.map(m => ({
@@ -323,11 +324,11 @@ export default function ConversationsPage() {
             : (m.content as { text?: string })?.text ?? "",
           time: new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
         }))
-        setSelected(prev => prev?.id === selected.id ? { ...prev, messages: mapped } : prev)
+        setSelected(prev => prev?.id === selectedId ? { ...prev, messages: mapped } : prev)
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50)
       })
       .catch(() => { /* ignore */ })
-  }, [selected?.id])
+  }, [selected])
 
   // counts kept for future use
   const _counts = {

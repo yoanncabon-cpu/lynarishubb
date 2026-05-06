@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, CSSProperties } from "react"
 import {
   LayoutGrid, Plus, X, Users, Calendar, Lock, Share2,
-  StickyNote, Trash2, Link2, Search,
+  StickyNote, Trash2, Search,
   ChevronRight, FolderOpen, MoreHorizontal, Upload,
   Copy, Check, UserPlus, Download,
 } from "lucide-react"

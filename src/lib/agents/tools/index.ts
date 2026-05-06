@@ -2,18 +2,12 @@ import type { ToolResult } from "./types"
 import { db } from "@/lib/db"
 import { agentMemories, actionLogs, prospects, prospectingSequences, tasks, organizations } from "@/lib/db/schema"
 import type { EmailStyleConfig } from "@/lib/db/schema"
-import { eq, and, like, desc, inArray } from "drizzle-orm"
+import { eq, and, like, desc } from "drizzle-orm"
 import { getIntegration } from "@/lib/integrations/manager"
 import { logContent } from "@/lib/content-logger"
 import { renderEmail, isAlreadyHtml } from "@/lib/emails/templates/branded"
 import { randomUUID } from "node:crypto"
 import { getAppUrl } from "@/lib/app-url"
-
-// ─── Supabase helper ──────────────────────────────────────────────────────────
-async function getSupabaseServer() {
-  const { createSupabaseServerClient } = await import("@/lib/auth/supabase-server")
-  return createSupabaseServerClient()
-}
 
 // ─── Google token helper ──────────────────────────────────────────────────────
 async function getGoogleCreds(orgId: string): Promise<{ access_token: string } | null> {
@@ -213,7 +207,7 @@ const toolHandlers: Record<
     day3.setHours(10, 15, 0, 0)
 
     const allSlots = [day1, day1b, day2, day2b, day3].map(formatSlot)
-    const available_slots = allSlots.filter((s) => {
+    const _available_slots = allSlots.filter((s) => {
       const d = new Date(s.datetime)
       const dow = d.getDay()
       return dow !== 0 && dow !== 6
@@ -3318,9 +3312,9 @@ Réponds UNIQUEMENT avec le JSON.`
   manage_order: async (input) => {
     const orderId = (input["order_id"] as string | undefined) ?? ""
     const action = (input["action"] as string | undefined) ?? "status"
-    const notes = (input["notes"] as string | undefined) ?? ""
+    const _notes = (input["notes"] as string | undefined) ?? ""
 
-    const messages: Record<string, string> = {
+    const _messages: Record<string, string> = {
       status: `Statut récupéré pour la commande ${orderId}`,
       refund: `Remboursement initié pour la commande ${orderId}`,
       ship: `Expédition déclenchée pour la commande ${orderId}`,

@@ -1,7 +1,7 @@
 ﻿"use client"
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Menu, X, Search, ChevronRight, Copy, Check, ArrowLeft, ArrowRight as ArrowRightIcon, ExternalLink } from "lucide-react"
+import React, { useState } from "react"
+import { ChevronRight, ArrowRight as ArrowRightIcon } from "lucide-react"
 
 // URL publique du site — basculé automatiquement quand on branche le domaine custom
 const SITE_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://lynarishubb.vercel.app"

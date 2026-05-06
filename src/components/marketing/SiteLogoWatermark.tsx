@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 "use client"
 
 import { useRef, useMemo, Suspense, useEffect, useState } from "react"
@@ -161,7 +162,7 @@ function LogoFragments({
 function LogoScene() {
   const fragsGroupRef  = useRef<THREE.Group>(null!)
   const globalGroupRef = useRef<THREE.Group>(null!)
-  const { geoL, geoT, edgesL, edgesT, fragGeos, fragEdges, depth } = useMemo(buildGeometries, [])
+  const { geoL, geoT, edgesL, edgesT, fragGeos, fragEdges, depth } = useMemo(() => buildGeometries(), [])
 
   // Matériaux fragments
   const matFragFill = useMemo(() => new THREE.MeshBasicMaterial({

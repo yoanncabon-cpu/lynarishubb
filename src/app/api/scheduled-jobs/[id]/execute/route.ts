@@ -5,7 +5,7 @@ export const maxDuration = 120
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { scheduledJobs, agentInstances, actionLogs } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { runAgent } from "@/lib/agents/executor"
 import { computeNextRunAt } from "@/lib/scheduler"
 

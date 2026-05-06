@@ -30,7 +30,7 @@ export function FinalCTA() {
           Encore une question ?
         </h2>
         <p className="text-lg text-[#A1A1AA] max-w-xl mx-auto mb-10 leading-relaxed">
-          Démarre gratuitement, sans CB. Ou réserve une démo pour qu'on te
+          Démarre gratuitement, sans CB. Ou réserve une démo pour qu&apos;on te
           montre Lynaris en action sur ton secteur.
         </p>
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, CSSProperties } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import {
   Save, Check, Plus, Trash2, ExternalLink,
   Copy, Key, RefreshCw, Download,
@@ -264,7 +265,7 @@ function AvatarUpload({
         }}
       >
         {value
-          ? <img src={value} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ? <Image src={value} alt="avatar" fill style={{ objectFit: "cover" }} unoptimized />
           : (placeholder ?? <Camera size={size * 0.3} color="rgba(245,245,247,0.3)" />)
         }
         <div style={{
@@ -977,7 +978,7 @@ function SecurityTab({ toast }: { toast: (msg: string, type?: ToastItem["type"])
                 <Loader2 size={24} color="rgba(245,245,247,0.4)" style={{ animation: "spin 1s linear infinite" }} />
               </div>
             ) : twoFaQr ? (
-              <img src={twoFaQr} alt="QR Code 2FA" style={{ width: 148, height: 148, margin: "0 auto 20px", display: "block", borderRadius: 12, background: "white", padding: 8 }} />
+              <Image src={twoFaQr} alt="QR Code 2FA" width={148} height={148} style={{ margin: "0 auto 20px", display: "block", borderRadius: 12, background: "white", padding: 8 }} unoptimized />
             ) : (
               <div style={{ width: 148, height: 148, margin: "0 auto 20px", background: "rgba(255,255,255,0.06)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <AlertCircle size={24} color="rgba(245,245,247,0.4)" />
@@ -1550,10 +1551,11 @@ interface StripeInvoice {
   description: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BillingTab({ toast }: { toast: (msg: string, type?: "success" | "error" | "info") => void }) {
   const [orgBilling, setOrgBilling] = useState<OrgBilling | null>(null)
-  const [invoices, setInvoices] = useState<StripeInvoice[]>([])
-  const [invoicesLoading, setInvoicesLoading] = useState(false)
+  const [_invoices, setInvoices] = useState<StripeInvoice[]>([])
+  const [_invoicesLoading, setInvoicesLoading] = useState(false)
   const [credits, setCredits] = useState<Credits>({
     phone_credits: 0, api_credits: 0, phone_pending: 0, api_pending: 0,
     auto_recharge_phone: false, auto_recharge_api: false,

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getStripeClient } from "@/lib/integrations/stripe"
 import { z } from "zod"
-import { PLANS, planSchema, type PlanId } from "@/lib/pricing/plans"
+import { PLANS, planSchema } from "@/lib/pricing/plans"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 

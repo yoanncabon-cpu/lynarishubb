@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import {
   Library,
@@ -182,11 +183,12 @@ function ContentCard({
         }}
       >
         {item.thumbnail ? (
-          <img
+          <Image
             src={item.thumbnail.storageUrl}
             alt={item.title}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            loading="lazy"
+            fill
+            style={{ objectFit: "cover" }}
+            unoptimized
           />
         ) : (
           <TypeIcon cfg={typeConf} />
@@ -620,10 +622,12 @@ function ContentDetailModal({
               {/* Images gallery */}
               {images.length > 0 && (
                 <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", height: 280, border: "1px solid var(--glass-border)" }}>
-                  <img
-                    src={images[currentImg]?.storageUrl}
+                  <Image
+                    src={images[currentImg]?.storageUrl ?? ""}
                     alt={detail.title}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    fill
+                    style={{ objectFit: "cover" }}
+                    unoptimized
                   />
                   {images.length > 1 && (
                     <>

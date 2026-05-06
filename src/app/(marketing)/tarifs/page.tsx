@@ -54,7 +54,7 @@ function PricingHero() {
             aria-hidden
           />
           <span className="text-xs uppercase tracking-widest font-semibold text-violet-300">
-            Des tarifs qui s'adaptent
+            Des tarifs qui s&apos;adaptent
           </span>
         </div>
 

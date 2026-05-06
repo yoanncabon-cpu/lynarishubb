@@ -263,13 +263,16 @@ function StepWelcome({
   const [pwdError, setPwdError] = useState("")
   const [saving, setSaving] = useState(false)
 
-  // Pré-remplir l'email depuis le compte Supabase
+  // Pré-remplir l'email depuis le compte Supabase — intentionnellement run-once au mount
+  // (ajouter email dans les deps créerait une boucle infinie)
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (email) return
     void getSupabaseBrowserClient().auth.getUser().then((r: Awaited<ReturnType<ReturnType<typeof getSupabaseBrowserClient>["auth"]["getUser"]>>) => {
       if (r.data.user?.email) setEmail(r.data.user.email)
     })
   }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -966,12 +969,12 @@ export default function OnboardingPage() {
   const next = useCallback(() => setStep((s) => Math.min(s + 1, 4)), [])
   const back = useCallback(() => setStep((s) => Math.max(s - 1, 1)), [])
 
-  // Plans payants déclenchant un checkout Stripe (Découverte/Sur-mesure exclus)
-  // 'essentiel'/'starter' conservés en rétrocompat des liens existants
-  const PAID_PLANS = ["pro", "essentiel", "starter"]
-
   const saveAndFinish = useCallback(
     async (_instruction: string): Promise<boolean> => {
+      // Plans payants déclenchant un checkout Stripe (Découverte/Sur-mesure exclus)
+      // 'essentiel'/'starter' conservés en rétrocompat des liens existants
+      const PAID_PLANS = ["pro", "essentiel", "starter"]
+
       localStorage.setItem("user_name", firstName)
       setProvisionLoading(true)
       setProvisionError(null)
@@ -1029,7 +1032,7 @@ export default function OnboardingPage() {
         return false
       }
     },
-    [firstName, company, sector, plan, enabledAgents, PAID_PLANS]
+    [firstName, company, sector, plan, enabledAgents]
   )
 
   return (

@@ -454,7 +454,6 @@ export default function BillingPage() {
         }
       })
       .catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleResync() {

@@ -18,7 +18,7 @@ import {
   orgUsageCounters,
   orgProtectionState,
 } from "@/lib/db/schema"
-import { eq, lte, sql } from "drizzle-orm"
+import { eq, lte } from "drizzle-orm"
 import { PLAN_COST_BUDGET_EUROS } from "@/lib/cost-protection/config"
 import { planSchema, type PlanId } from "@/lib/pricing/plans"
 

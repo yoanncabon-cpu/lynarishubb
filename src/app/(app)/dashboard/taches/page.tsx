@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { CheckSquare, Plus, X, Trash2, Calendar as CalIcon, Flag, ChevronDown } from "lucide-react"
+import { CheckSquare, Plus, X, Trash2, Calendar as CalIcon, Flag } from "lucide-react"
 import { GlassCard } from "@/components/app/glass/GlassCard"
 import { GlassChip } from "@/components/app/glass/GlassChip"
 
@@ -35,7 +35,7 @@ const PRIORITIES: { id: TaskPriority; label: string; color: string }[] = [
   { id: "high",   label: "Haute",   color: "#EF4444" },
 ]
 
-const STATUS_META = Object.fromEntries(STATUSES.map((s) => [s.id, s])) as Record<TaskStatus, typeof STATUSES[number]>
+const _STATUS_META = Object.fromEntries(STATUSES.map((s) => [s.id, s])) as Record<TaskStatus, typeof STATUSES[number]>
 const PRIORITY_META = Object.fromEntries(PRIORITIES.map((p) => [p.id, p])) as Record<TaskPriority, typeof PRIORITIES[number]>
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
