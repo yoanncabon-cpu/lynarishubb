@@ -12,7 +12,6 @@ import {
   X,
   TrendingUp,
   Mic,
-  FileText,
   Users,
 } from "lucide-react"
 import { GlassCard, GlassPanel, GlassChip, KpiTile } from "@/components/app/glass"
@@ -703,13 +702,6 @@ export default function BillingPage() {
       max: planLimits?.voiceMinutes ?? limits.voiceMinutes,
       icon: <Mic size={14} />,
       accent: "#22D3EE",
-    },
-    {
-      label: "Documents RAG",
-      used: usageData?.ragDocs ?? null,
-      max: planLimits?.ragDocs ?? 0,
-      icon: <FileText size={14} />,
-      accent: "#A78BFA",
     },
     {
       label: "Membres équipe",
