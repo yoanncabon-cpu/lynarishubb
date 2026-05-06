@@ -128,7 +128,7 @@ export default function AgentDetailPage() {
         >
           {/* Left: avatar + info */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flex: 1, minWidth: 0 }}>
-            <AgentAvatar slug={slug} size={56} glow style={{ borderRadius: "50%", flexShrink: 0 }} />
+            <AgentAvatar slug={slug} size={56} glow priority style={{ borderRadius: "50%", flexShrink: 0 }} />
 
             <div style={{ flex: 1, minWidth: 0 }}>
               {/* Name + online badge */}

@@ -366,7 +366,8 @@ export function AgentAvatar({
   className,
   style,
   forceSvg = false,
-}: AgentAvatarProps) {
+  priority = false,
+}: AgentAvatarProps & { priority?: boolean }) {
   const uid = useId().replace(/:/g, "")
   const id = `av-${slug}-${uid}`
   const AvatarContent = AVATAR_MAP[slug]
@@ -405,6 +406,7 @@ export function AgentAvatar({
             width={size}
             height={size}
             sizes={`${size}px`}
+            priority={priority}
             style={{ display: "block", width: size, height: size, objectFit: "cover" }}
           />
         ) : (

@@ -317,7 +317,20 @@ export async function* streamAgent(
     budgetTier: (effectiveConfig["budgetTier"] as "économique" | "standard" | "premium" | undefined) ?? "standard",
   })
 
-  const effectiveModel = routing.modelId
+  const routedProvider = detectProvider(routing.modelId)
+
+  // Valide que le provider routé est bien configuré (clé API présente)
+  const providerAvailable =
+    routedProvider === "anthropic"
+      ? !!process.env["ANTHROPIC_API_KEY"]
+      : routedProvider === "openai"
+        ? !!process.env["OPENAI_API_KEY"]
+        : routedProvider === "gemini"
+          ? !!process.env["GOOGLE_AI_API_KEY"]
+          : false
+
+  // Si le provider n'est pas configuré → fallback sur le modèle défini par l'agent
+  const effectiveModel = providerAvailable ? routing.modelId : agentDef.model
   const provider = detectProvider(effectiveModel)
 
   // ── Providers non-Anthropic : pas de tool use, yield texte uniquement ────────
