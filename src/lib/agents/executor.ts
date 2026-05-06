@@ -4,6 +4,7 @@ import { getAgent, type AgentConfig } from "./registry"
 import { executeTool } from "./tools/index"
 import type { EmailStyleConfig } from "@/lib/db/schema"
 import { detectProvider, streamOpenAI, streamGemini, type ProviderMessage } from "./providers"
+import { routeRequest } from "./llm-router"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
@@ -295,11 +296,28 @@ export async function* streamAgent(
 
   const systemPrompt = augmentSystemPrompt(agentDef.systemPromptFn(effectiveConfig), effectiveConfig)
 
-  // Modèle effectif : priorité au choix de l'utilisateur dans les settings
-  const effectiveModel =
-    (effectiveConfig.modelId as string | undefined) ??
-    (effectiveConfig.model as string | undefined) ??
-    agentDef.model
+  // Routeur LLM : sélection automatique du modèle optimal pour cette requête
+  const lastUserMsg = messages.filter((m) => m.role === "user").at(-1)
+  const lastUserText = typeof lastUserMsg?.content === "string"
+    ? lastUserMsg.content
+    : (Array.isArray(lastUserMsg?.content)
+        ? (lastUserMsg.content as Array<{ type: string; text?: string }>)
+            .filter((b) => b.type === "text")
+            .map((b) => b.text ?? "")
+            .join(" ")
+        : "")
+
+  const routing = await routeRequest({
+    userMessage: lastUserText,
+    agentSlug,
+    isVoiceRealTime: agentSlug === "marine",
+    hasAttachment: (effectiveConfig["hasAttachment"] as boolean | undefined) ?? false,
+    estimatedTokens: messages.reduce((acc, m) => acc + (typeof m.content === "string" ? m.content.length / 4 : 200), 0),
+    sector: (effectiveConfig["sector"] as string | undefined),
+    budgetTier: (effectiveConfig["budgetTier"] as "économique" | "standard" | "premium" | undefined) ?? "standard",
+  })
+
+  const effectiveModel = routing.modelId
   const provider = detectProvider(effectiveModel)
 
   // ── Providers non-Anthropic : pas de tool use, yield texte uniquement ────────
