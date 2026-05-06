@@ -13,16 +13,6 @@ import { Glass } from "@/components/app/glass/Glass"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
 import { usePlan } from "@/hooks/usePlan"
 
-const MODEL_MAP = {
-  marine: { label: "Sonnet 4.6", tier: "sonnet" as const },
-  charles: { label: "Opus 4.6", tier: "opus" as const },
-  lou: { label: "Opus 4.6", tier: "opus" as const },
-  elio: { label: "Sonnet 4.6", tier: "sonnet" as const },
-  mae: { label: "Sonnet 4.6", tier: "sonnet" as const },
-  max: { label: "Sonnet 4.6", tier: "sonnet" as const },
-  nova: { label: "Opus 4.6", tier: "opus" as const },
-  alba: { label: "Sonnet 4.6", tier: "sonnet" as const },
-} as const
 
 interface AgentStats {
   conversations: number
@@ -91,8 +81,6 @@ export default function AgentDetailPage() {
       </div>
     )
   }
-
-  const model = MODEL_MAP[slug as keyof typeof MODEL_MAP] ?? { label: "Sonnet 4.6", tier: "sonnet" as const }
 
   const tabs: { id: Tab; label: string; icon: typeof MessageSquare }[] = [
     { id: "chat", label: "Chat", icon: MessageSquare },
@@ -174,17 +162,6 @@ export default function AgentDetailPage() {
                   En ligne
                 </span>
 
-                {/* Model badge */}
-                <span
-                  style={{
-                    padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600,
-                    background: model.tier === "opus" ? "rgba(232,111,77,0.12)" : "rgba(34,211,238,0.08)",
-                    color: model.tier === "opus" ? "#E86F4D" : "#22D3EE",
-                    border: `1px solid ${model.tier === "opus" ? "rgba(232,111,77,0.25)" : "rgba(34,211,238,0.2)"}`,
-                  }}
-                >
-                  {model.label}
-                </span>
               </div>
 
               <p style={{ fontSize: 13, color: "#71717A", margin: "0 0 10px" }}>{agent.role}</p>
