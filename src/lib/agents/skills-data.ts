@@ -1,4 +1,4 @@
-export type ModelTier = "sonnet" | "opus"
+﻿export type ModelTier = "sonnet" | "opus"
 export type AgentCategory =
   | "communication"
   | "orchestration"
@@ -6,7 +6,6 @@ export type AgentCategory =
   | "commercial"
   | "business"
   | "rh"
-  | "automatisation"
 
 export interface AgentSkillEntry {
   slug: string
@@ -168,25 +167,7 @@ export const AGENT_SKILLS: AgentSkillEntry[] = [
       "Planifier entretiens",
       "Générer contrats",
     ],
-  },
-  {
-    slug: "orion",
-    name: "Orion",
-    color: "#64748B",
-    role: "Agent Automatisation",
-    tagline: "Décris ton process en français. Orion le code.",
-    category: "automatisation",
-    model: "Opus 4.6",
-    modelTier: "opus",
-    integrations: ["n8n", "Make"],
-    tools: [
-      "Créer workflows n8n",
-      "Créer workflows Make",
-      "Déployer sur instance",
-      "Confirmer exécution",
-      "Description en langage naturel",
-    ],
-  },
+  }
 ]
 
 export const CATEGORIES = [
@@ -197,5 +178,4 @@ export const CATEGORIES = [
   { value: "commercial", label: "Commercial", color: "#10B981" },
   { value: "business", label: "Business", color: "#6366F1" },
   { value: "rh", label: "RH", color: "#8B5CF6" },
-  { value: "automatisation", label: "Automatisation", color: "#64748B" },
 ] as const

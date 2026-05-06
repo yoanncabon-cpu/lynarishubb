@@ -2123,7 +2123,7 @@ Si la question nécessite un conseil personnalisé au-delà d'informations gén�
     }
   },
 
-  // ─── Orion tools ──────────────────────────────────────────────────────
+  // ─── Automation tools (n8n) ───────────────────────────────────────────
   list_n8n_nodes: async () => {
     return { nodes: [], message: "n8n integration pending" }
   },
@@ -2134,7 +2134,7 @@ Si la question nécessite un conseil personnalisé au-delà d'informations gén�
     const integrations = (input["integrations"] as string[] | undefined) ?? []
     const complexity = (input["complexity"] as string | undefined) ?? "medium"
 
-    const prompt = `Tu es Orion, expert en automatisation n8n et workflows no-code.
+    const prompt = `Tu es un expert en automatisation n8n et workflows no-code.
 Génère un workflow n8n valide et complet pour:
 
 Description: ${description}

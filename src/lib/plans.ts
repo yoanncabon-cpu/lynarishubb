@@ -21,7 +21,7 @@ export interface PlanLimits {
 export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
   // Plan technique : essai 14j (créé à l'inscription via trialEndsAt)
   trial: {
-    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba", "orion"],
+    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba"],
     actionsPerMonth: 50,
     voiceMinutes: 30,
     teamMembers: 1,
@@ -33,7 +33,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
   },
   // Plan Découverte = alias public de l'essai gratuit (mêmes limites)
   decouverte: {
-    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba", "orion"],
+    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba"],
     actionsPerMonth: 50,
     voiceMinutes: 30,
     teamMembers: 1,
@@ -45,7 +45,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
   },
   // Plan Pro : tous les agents, 1500 actions, 300 min voix
   pro: {
-    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba", "orion"],
+    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba"],
     actionsPerMonth: 1500,
     voiceMinutes: 300,
     teamMembers: 5,
@@ -57,7 +57,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
   },
   // Plan Sur-mesure : volume illimité (mappé sur 'scale' en DB)
   custom: {
-    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba", "orion"],
+    agents: ["charles", "marine", "mae", "lou", "elio", "nova", "max", "alba"],
     actionsPerMonth: 999999,
     voiceMinutes: 999999,
     teamMembers: 999999,

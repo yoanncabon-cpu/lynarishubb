@@ -77,7 +77,6 @@ const ALL_AGENTS = [
   { slug: "max", name: "Max", color: "#EC4899" },
   { slug: "nova", name: "Nova", color: "#6366F1" },
   { slug: "alba", name: "Alba", color: "#8B5CF6" },
-  { slug: "orion", name: "Orion", color: "#64748B" },
 ]
 
 const DEFAULT_AGENT_ACCESS: AgentAccessMap = Object.fromEntries(

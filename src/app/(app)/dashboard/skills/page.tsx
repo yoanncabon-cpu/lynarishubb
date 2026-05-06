@@ -44,7 +44,6 @@ const AGENT_COLORS: Record<string, string> = {
   charles: "#A78BFA",
   nova: "#818CF8",
   alba: "#C084FC",
-  orion: "#94A3B8",
 }
 
 function getAgentColor(slug: string): string {

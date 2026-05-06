@@ -30,7 +30,6 @@ import { maeDefinition } from "./prompts/mae"
 import { maxDefinition } from "./prompts/max"
 import { novaDefinition } from "./prompts/nova"
 import { albaDefinition } from "./prompts/alba"
-import { orionDefinition } from "./prompts/orion"
 import { ariaDefinition } from "./prompts/aria"
 import { CORE_TOOLS } from "./tools/core"
 
@@ -43,7 +42,6 @@ const rawRegistry: Record<string, AgentDefinition> = {
   max: maxDefinition,
   nova: novaDefinition,
   alba: albaDefinition,
-  orion: orionDefinition,
   aria: ariaDefinition,
 }
 

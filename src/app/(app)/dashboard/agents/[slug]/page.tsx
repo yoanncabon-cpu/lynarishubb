@@ -22,7 +22,6 @@ const MODEL_MAP = {
   max: { label: "Sonnet 4.6", tier: "sonnet" as const },
   nova: { label: "Opus 4.6", tier: "opus" as const },
   alba: { label: "Sonnet 4.6", tier: "sonnet" as const },
-  orion: { label: "Opus 4.6", tier: "opus" as const },
 } as const
 
 interface AgentStats {

@@ -18,7 +18,6 @@ const AGENTS_DROPDOWN = [
   { slug: "max", name: "Max", role: "Photo & Vidéo" },
   { slug: "nova", name: "Nova", role: "Business" },
   { slug: "alba", name: "Alba", role: "RH" },
-  { slug: "orion", name: "Orion", role: "Automatisation" },
 ] as const
 
 const navLinks = [

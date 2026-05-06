@@ -733,7 +733,7 @@ export function DemoConversationSection() {
                 Équipe disponible 24h/24
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {["marine", "charles", "lou", "elio", "mae", "max", "nova", "alba", "orion"].map((slug) => (
+                {["marine", "charles", "lou", "elio", "mae", "max", "nova", "alba"].map((slug) => (
                   <div
                     key={slug}
                     style={{ position: "relative" }}

@@ -83,11 +83,6 @@ const AGENT_SPECIFIC_FIELDS: Record<string, SpecificField[]> = {
     { key: "jobCriteria", label: "Critères de recrutement", placeholder: "3+ ans XP, TypeScript, remote-friendly...", helper: "Alba scorera les CVs sur ces critères", type: "textarea" },
     { key: "hrContact", label: "Email RH", placeholder: "rh@entreprise.com", helper: "Pour les notifications d'entretien" },
   ],
-  orion: [
-    { key: "n8nBaseUrl", label: "URL n8n", placeholder: "https://n8n.mon-instance.com", helper: "URL de ton instance n8n (sans /webhook)" },
-    { key: "defaultWorkflowPrefix", label: "Préfixe des workflows", placeholder: "lynaris-", helper: "Orion préfixera ses workflows avec ce nom" },
-    { key: "notifyOnDeploy", label: "Email de notification", placeholder: "moi@email.com", helper: "Orion envoie un email après chaque déploiement" },
-  ],
   aria: [
     { key: "orgName", label: "Nom de l'organisation", placeholder: "Ma Startup", helper: "Aria mentionnera ce nom dans ses interactions" },
     { key: "industry", label: "Secteur d'activité", placeholder: "E-commerce, Conseil, Santé...", helper: "Pour personnaliser les conseils sectoriels" },

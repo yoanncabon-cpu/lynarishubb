@@ -58,10 +58,6 @@ const MOCK_LOGS: Record<string, ActionLog[]> = {
     { id: "log_070", type: "cv_analyzed", status: "success", detail: "4 CVs analysés pour poste Dev Full-Stack — meilleur: 87/100", duration_ms: 22000, cost_usd: 0.031, created_at: new Date(Date.now() - 24*3600*1000).toISOString() },
     { id: "log_071", type: "message_sent", status: "success", detail: "Message candidature envoyé à Lucas Bernard", duration_ms: 3800, cost_usd: 0.007, created_at: new Date(Date.now() - 26*3600*1000).toISOString() },
   ],
-  orion: [
-    { id: "log_080", type: "workflow_generated", status: "success", detail: "Workflow n8n créé: Prospection LinkedIn → CRM", duration_ms: 38000, cost_usd: 0.055, created_at: new Date(Date.now() - 24*3600*1000).toISOString() },
-    { id: "log_081", type: "workflow_deployed", status: "success", detail: "Workflow déployé et actif sur n8n instance", duration_ms: 2100, cost_usd: 0.000, created_at: new Date(Date.now() - 24*3600*1000 + 5000).toISOString() },
-  ],
 }
 
 const DEFAULT_LOGS: ActionLog[] = []

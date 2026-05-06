@@ -34,7 +34,6 @@ export const AGENT_SLUGS = [
   "max",
   "nova",
   "alba",
-  "orion",
 ] as const
 export type AgentSlug = (typeof AGENT_SLUGS)[number]
 
@@ -254,7 +253,7 @@ const STARTER: Plan = {
 const PRO: Plan = {
   id: "pro",
   name: "Pro",
-  tagline: "Tous les 9 agents, volume premium, intégrations clés",
+  tagline: "Tous les agents, volume premium, intégrations clés",
   priceMonthly: 449,
   priceAnnualMonthly: 382,
   setupFee: 290,
@@ -432,7 +431,7 @@ export function getFeatureList(plan: Plan): readonly string[] {
   switch (f.agentsAccess) {
     case "trial_all":           items.push("Accès à tous les agents (essai)"); break
     case "limited_3":           items.push("3 agents au choix (hors Marine)"); break
-    case "all":                 items.push("Tous les 9 agents Lynaris"); break
+    case "all":                 items.push("Tous les agents Lynaris"); break
     case "all_plus_custom":     items.push("Tous les agents + 1 agent custom"); break
     case "all_plus_dedicated":  items.push("Agent dédié configuré pour ton secteur + tous les agents"); break
   }

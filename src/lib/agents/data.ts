@@ -150,22 +150,6 @@ export const agents: Agent[] = [
     status: "live",
   },
   {
-    slug: "orion",
-    name: "Orion",
-    emoji: "🔧",
-    avatar: "/agents/avatars/orion.webp",
-    scene: "/agents/scenes/orion.webp",
-    video: "/agents/videos/orion.mp4",
-    color: "#64748B",
-    role: "Agent Automatisation",
-    tagline: "Décris ton process en français. Orion le code.",
-    description:
-      "Orion crée des workflows Make et n8n à partir de ta description en langage naturel, les déploie sur ton instance et te confirme que tout fonctionne.",
-    tags: ["n8n", "Make", "No-code"],
-    available: true,
-    status: "live",
-  },
-  {
     slug: "aria",
     name: "Aria",
     emoji: "🌟",

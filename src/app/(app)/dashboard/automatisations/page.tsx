@@ -340,7 +340,6 @@ function JobModal({ job, onClose, onSaved }: { job?: ScheduledJob; onClose: () =
     elio: "Relance les prospects qui n'ont pas répondu depuis 5 jours.",
     nova: "Génère le rapport de performance de la semaine écoulée et envoie-le par email à yoanncabon@gmail.com.",
     charles: "Envoie un SMS à Yoann Cabon avec le texte : « Brief du jour : 3 RDV agenda, 2 emails à valider. »",
-    orion: "Vérifie que tous les workflows automatisés ont bien tourné cette nuit.",
     alba: "Vérifie les demandes RH en attente et prépare les réponses.",
     max: "Génère 3 visuels pour les réseaux sociaux de la semaine.",
   }

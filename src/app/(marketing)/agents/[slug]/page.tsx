@@ -1,4 +1,4 @@
-import Link from "next/link"
+﻿import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { agents } from "@/lib/agents/data"
@@ -151,23 +151,6 @@ const agentDetails: Record<string, AgentDetail> = {
     ],
     longDescription:
       "Alba est ton agent RH. Elle analyse les candidatures reçues, les score selon tes critères, rédige les messages aux candidats (acceptation, refus, relance), planifie les entretiens dans ton agenda et génère les contrats depuis tes templates. Elle répond aussi aux questions RH courantes de tes équipes pour te libérer du temps administratif.",
-  },
-  orion: {
-    capabilities: [
-      "Crée des workflows n8n en langage naturel",
-      "Les déploie directement sur ton instance",
-      "Teste les workflows avec des données réelles",
-      "Gère tes automatisations existantes",
-      "Génère la documentation automatiquement",
-    ],
-    integrations: ["n8n", "Make", "Slack", "Notion", "Airtable"],
-    commands: [
-      "$ orion crée un workflow formulaire → HubSpot",
-      "$ orion teste le workflow avec des données réelles",
-      "$ orion documente mes automatisations",
-    ],
-    longDescription:
-      "Orion est ton agent automatisation. Décris ton process en français — « Quand un formulaire est soumis, crée un contact dans HubSpot et envoie un email de bienvenue » — et Orion crée le workflow, le teste avec des données réelles, et le déploie sur ton instance n8n ou Make. Il gère aussi tes automatisations existantes et génère la documentation technique.",
   },
   aria: {
     capabilities: [

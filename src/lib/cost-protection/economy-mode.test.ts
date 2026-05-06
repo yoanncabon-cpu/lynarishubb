@@ -38,7 +38,7 @@ describe("canSwitchToEconomy", () => {
   })
 
   it("Tous les autres agents : true", () => {
-    const others = ["charles", "lou", "elio", "mae", "max", "nova", "alba", "orion"] as const
+    const others = ["charles", "lou", "elio", "mae", "max", "nova", "alba"] as const
     for (const agent of others) {
       expect(canSwitchToEconomy(agent)).toBe(true)
     }

@@ -24,7 +24,7 @@ export type CriticalityLevel = (typeof CRITICALITY_LEVELS)[number]
  * - `content_gen`    : génération contenu Lou (standard)
  * - `image_gen`      : génération image Max (optional)
  * - `video_gen`      : génération vidéo Max (optional)
- * - `automation`     : workflow Orion (optional)
+ * - `automation`     : workflow n8n (optional)
  * - `analysis`       : analyse Nova (standard)
  * - `internal`       : tâche interne Charles (orchestration) (standard)
  */
@@ -100,11 +100,6 @@ const CRITICALITY_MATRIX: Readonly<
     chat: "standard",
     email_send: "standard",
     analysis: "standard",
-  },
-  // Orion : automatisation — optional (l'utilisateur peut attendre)
-  orion: {
-    chat: "standard",
-    automation: "optional",
   },
 } as const
 

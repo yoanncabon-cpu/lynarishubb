@@ -56,7 +56,7 @@ describe("canUseAgent", () => {
   })
 
   it("Pro / Business / Custom autorisent tous les agents", () => {
-    const agents: AgentSlug[] = ["marine", "charles", "lou", "elio", "mae", "max", "nova", "alba", "orion"]
+    const agents: AgentSlug[] = ["marine", "charles", "lou", "elio", "mae", "max", "nova", "alba"]
     for (const agent of agents) {
       expectAllowed(canUseAgent("pro", agent))
       expectAllowed(canUseAgent("business", agent))
@@ -274,7 +274,7 @@ describe("hasFeature", () => {
 describe("Matrice plan × action — invariants critiques", () => {
   it("Toutes les fonctions retournent un AccessResult valide (jamais throw)", () => {
     const plans = ["discovery", "starter", "pro", "business", "custom"] as const
-    const agents: AgentSlug[] = ["marine", "charles", "lou", "elio", "mae", "max", "nova", "alba", "orion"]
+    const agents: AgentSlug[] = ["marine", "charles", "lou", "elio", "mae", "max", "nova", "alba"]
 
     for (const plan of plans) {
       for (const agent of agents) {

@@ -1,4 +1,4 @@
-export interface BlogArticle {
+﻿export interface BlogArticle {
   slug: string
   title: string
   excerpt: string
@@ -244,10 +244,10 @@ export const BLOG_ARTICLES: BlogArticle[] = [
     slug: "5-workflows-n8n-essentiels",
     title: "Les 5 workflows n8n essentiels pour automatiser votre PME",
     excerpt:
-      "Orion a identifié les automatisations qui apportent le plus de valeur avec le moins d'effort. Voici les 5 workflows n8n à implémenter en priorité.",
-    agent: "Orion",
-    agentSlug: "orion",
-    agentColor: "#64748B",
+      "Voici les 5 workflows n8n qui apportent le plus de valeur avec le moins d'effort — à implémenter en priorité.",
+    agent: "Charles",
+    agentSlug: "charles",
+    agentColor: "#7C3AED",
     readTime: "7 min",
     category: "Technique",
     categoryColor: "#64748B",
@@ -274,7 +274,7 @@ export const BLOG_ARTICLES: BlogArticle[] = [
 <p><strong>Logique</strong> : Cron (tous les matins à 8h) → Requête parallèle sur Gmail, Google Calendar, logs Lynaris → Agrégation et formatage → Envoi par email ou Slack.</p>
 <p><strong>Nœuds utilisés</strong> : Schedule Trigger, Gmail, Google Calendar, HTTP Request (API Lynaris), Function (agrégation), Send Email ou Slack.</p>
 <p><strong>Temps d'implémentation estimé</strong> : 3 à 5 heures.</p>
-<p>Ce workflow est celui qu'Orion peut générer automatiquement depuis une description en langage naturel — c'est son cas d'usage principal.</p>
+
 
 <h2>Workflow 4 — Archivage automatique des emails traités par Mae</h2>
 <p><strong>Problème résolu</strong> : Mae répond aux emails mais les messages restent en boîte de réception. La boîte ne se vide jamais, l'inbox zero reste un rêve.</p>
@@ -291,7 +291,7 @@ export const BLOG_ARTICLES: BlogArticle[] = [
 
 <h2>Par où commencer</h2>
 <p>Si vous débutez avec n8n, commencez par le workflow 3 (résumé quotidien). C'est le moins risqué — il ne modifie aucune donnée, il se contente d'agréger et d'informer. Une fois à l'aise avec la logique des nœuds et des connexions, passez aux workflows qui écrivent ou bougent des données.</p>
-<p>Pour aller plus loin sur les blueprints n8n et la configuration Orion, référez-vous à la documentation technique Lynaris.</p>
+<p>Pour aller plus loin sur les blueprints n8n, référez-vous à la documentation technique Lynaris.</p>
 
 <p><em>Note : Cet article est rédigé par l'équipe Lynaris. Les temps d'implémentation sont indicatifs pour un développeur ou une personne à l'aise avec les outils no-code. Les workflows décrits ne sont pas des blueprints JSON prêts à l'emploi — leur implémentation requiert une adaptation à votre stack.</em></p>
 `,

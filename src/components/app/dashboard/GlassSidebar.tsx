@@ -37,7 +37,6 @@ const AGENT_GROUPS = [
     { slug: "mae", name: "Mae", color: "#F59E0B", role: "Mail", status: "online" as const },
     { slug: "nova", name: "Nova", color: "#6366F1", role: "Analytics", status: "idle" as const },
     { slug: "alba", name: "Alba", color: "#8B5CF6", role: "RH", status: "idle" as const },
-    { slug: "orion", name: "Orion", color: "#64748B", role: "Automatisation", status: "online" as const },
   ]},
 ] as const
 

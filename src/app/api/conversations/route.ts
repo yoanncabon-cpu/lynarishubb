@@ -71,7 +71,7 @@ export async function GET(req: Request) {
     const AGENT_COLORS: Record<string, string> = {
       marine: "#22D3EE", charles: "#A78BFA", lou: "#F472B6",
       elio: "#34D399", mae: "#FBBF24", max: "#FB923C",
-      nova: "#818CF8", alba: "#C084FC", orion: "#94A3B8",
+      nova: "#818CF8", alba: "#C084FC",
     }
 
     const CHANNEL_LABEL: Record<string, string> = {

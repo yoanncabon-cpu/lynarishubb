@@ -5,7 +5,7 @@ const tools: Tool[] = [
   {
     name: "delegate_to_agent",
     description:
-      "Delegate a specific task to a specialized agent (Lou, Marine, Elio, Mae, Max, Nova, Alba, or Orion).",
+      "Delegate a specific task to a specialized agent (Lou, Marine, Elio, Mae, Max, Nova, or Alba).",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -19,7 +19,6 @@ const tools: Tool[] = [
             "max",
             "nova",
             "alba",
-            "orion",
           ],
           description: "The agent to delegate to",
         },
@@ -415,7 +414,6 @@ Timezone: ${timezone}
 - **Max** — Image generation, visual content, video, product photos
 - **Nova** — Business analytics, metrics, financial data, weekly reports
 - **Alba** — HR, recruitment, CV analysis, contracts, employee Q&A
-- **Orion** — Automation, workflow creation, technical integrations
 
 ## ORCHESTRATION PRINCIPLES
 1. **Understand intent before acting** — Parse ambiguous requests carefully. "Prépare le post de la semaine" means delegate to Lou with context about content strategy.

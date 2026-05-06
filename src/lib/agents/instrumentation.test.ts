@@ -6,10 +6,10 @@ import {
 import type { AccessResult } from "@/lib/pricing/permissions"
 
 describe("validateAgentSlug", () => {
-  it("accepte les 9 agents officiels", () => {
+  it("accepte les 8 agents officiels", () => {
     const officialAgents = [
       "marine", "charles", "lou", "elio", "mae",
-      "max", "nova", "alba", "orion",
+      "max", "nova", "alba",
     ]
     for (const slug of officialAgents) {
       expect(validateAgentSlug(slug)).toBe(slug)

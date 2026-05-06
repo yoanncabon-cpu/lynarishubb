@@ -30,13 +30,6 @@ describe("Criticality — Max images/vidéos = optional", () => {
   })
 })
 
-describe("Criticality — Orion automation = optional", () => {
-  it("Orion automation optionnel (l'utilisateur peut attendre)", () => {
-    expect(getCriticality("orion", "automation")).toBe("optional")
-    expect(isAllowedInEconomyMode("orion", "automation")).toBe(false)
-  })
-})
-
 describe("Criticality — agents secondaires = standard", () => {
   it("Charles / Lou / Elio / Mae / Nova / Alba = standard", () => {
     expect(getCriticality("charles", "chat")).toBe("standard")
@@ -62,6 +55,5 @@ describe("isAllowedInEconomyMode", () => {
 
   it("optional bloqué en mode économie", () => {
     expect(isAllowedInEconomyMode("max", "image_gen")).toBe(false)
-    expect(isAllowedInEconomyMode("orion", "automation")).toBe(false)
   })
 })

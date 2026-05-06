@@ -40,7 +40,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   max: "Max",
   nova: "Nova",
   alba: "Alba",
-  orion: "Orion",
 }
 
 function buildBreadcrumbs(pathname: string): { label: string; href: string }[] {

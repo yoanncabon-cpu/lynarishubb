@@ -37,7 +37,7 @@ const SECTOR_AGENTS = {
   juridique: ["mae", "charles", "alba"],
   btp: ["marine", "elio", "nova"],
   commerce: ["elio", "lou", "nova"],
-  tech: ["charles", "orion", "nova"],
+  tech: ["charles", "nova", "lou"],
   marketing: ["lou", "elio", "max"],
   finance: ["nova", "mae", "charles"],
   formation: ["lou", "mae", "charles"],

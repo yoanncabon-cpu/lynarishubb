@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Menu, X, Search, ChevronRight, Copy, Check, ArrowLeft, ArrowRight as ArrowRightIcon, ExternalLink } from "lucide-react"
@@ -31,7 +31,6 @@ const sections = [
       { id: "max", label: "Max — Photo & vidéo" },
       { id: "nova", label: "Nova — Business" },
       { id: "alba", label: "Alba — RH" },
-      { id: "orion", label: "Orion — Automatisation" },
     ],
   },
   {
@@ -292,7 +291,6 @@ function IntroductionSection({ onNavigate }: { onNavigate: (id: string) => void 
     { name: "Max", slug: "max", role: "Photo & vidéo (Replicate)", status: "Roadmap", color: "#EC4899" },
     { name: "Nova", slug: "nova", role: "Business & finance", status: "Roadmap", color: "#6366F1" },
     { name: "Alba", slug: "alba", role: "RH & recrutement", status: "Roadmap", color: "#8B5CF6" },
-    { name: "Orion", slug: "orion", role: "Automatisation & workflows n8n", status: "Roadmap", color: "#64748B" },
   ]
 
   const statusColor: Record<string, string> = {
@@ -313,7 +311,7 @@ function IntroductionSection({ onNavigate }: { onNavigate: (id: string) => void 
         s&apos;intègre directement dans votre stack existante.
       </SectionLead>
 
-      <H3>Les 9 agents disponibles</H3>
+      <H3>Les agents disponibles</H3>
       <DocTable
         headers={["Agent", "Slug", "Rôle", "Statut"]}
         rows={agents.map((a) => [
@@ -332,7 +330,7 @@ function IntroductionSection({ onNavigate }: { onNavigate: (id: string) => void 
         la gestion des erreurs.
       </Paragraph>
       <div style={{ display: "flex", flexDirection: "column" as const, gap: 10, marginBottom: 28 }}>
-        <InfoCard title="Modèle" desc="Claude Sonnet 4.6 pour les agents temps réel (agent vocal, Elio, Mae). Claude Opus 4.6 pour les agents complexes (Charles, Lou, Nova, Orion)." color="#7C3AED" />
+        <InfoCard title="Modèle" desc="Claude Sonnet 4.6 pour les agents temps réel (agent vocal, Elio, Mae). Claude Opus 4.6 pour les agents complexes (Charles, Lou, Nova)." color="#7C3AED" />
         <InfoCard title="Tools" desc="Chaque agent dispose d'un sous-ensemble de tools déclarés dans src/lib/agents/tools/. L'executor gère jusqu'à 10 itérations d'appels d'outils par run." color="#22D3EE" />
         <InfoCard title="Intégrations" desc="Google, Twilio, ElevenLabs, n8n, Replicate, Stripe, Shopify... Les credentials sont chiffrés en base et injectés au runtime." color="#10B981" />
       </div>
@@ -1100,59 +1098,6 @@ function AlbaSection() {
 }
 
 // ---------------------------------------------------------------------------
-// Section: Orion
-// ---------------------------------------------------------------------------
-function OrionSection() {
-  const tools = [
-    { name: "list_n8n_workflows", desc: "Liste les workflows existants dans ton instance n8n" },
-    { name: "describe_workflow", desc: "Décrit un workflow en langage naturel" },
-    { name: "create_workflow", desc: "Crée un workflow à partir d'une description naturelle" },
-    { name: "trigger_workflow", desc: "Déclenche un workflow par webhook" },
-    { name: "monitor_executions", desc: "Surveille les dernières exécutions et signale les échecs" },
-  ]
-
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <SectionBadge label="Agents" color="#64748B" />
-        <TagBadge label="Roadmap" color="#64748B" />
-      </div>
-      <SectionTitle>Orion — Automatisation</SectionTitle>
-      <SectionLead>
-        Orion crée des workflows n8n à partir de descriptions naturelles. Tu lui décris ton
-        process, il assemble les nœuds et te livre un workflow prêt à activer dans ton instance n8n.
-        Il surveille aussi les exécutions et te prévient en cas d&apos;échec.
-      </SectionLead>
-
-      <H3>Intégration requise</H3>
-      <InfoCard
-        title="Instance n8n self-hosted ou n8n Cloud"
-        desc="Orion a besoin d'une URL d'API + clé d'API n8n pour piloter ton instance. Setup : Dashboard > Intégrations > n8n."
-        color="#64748B"
-      />
-
-      <H3>Exemple de prompt</H3>
-      <CodeBlock filename="orion-example.txt">{`"Quand un nouveau client paie sur Stripe, ajoute-le à ma liste Mailchimp \"Clients\" et envoie-moi un Slack dans #ventes."
-
-// Orion va :
-// 1. create_workflow() avec les nœuds Stripe Trigger -> Mailchimp -> Slack
-// 2. Te retourner l'URL du workflow + le payload exemple
-// 3. Tu valides et l'actives dans n8n`}</CodeBlock>
-
-      <H3>Tools disponibles</H3>
-      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, marginBottom: 24 }}>
-        {tools.map((t) => (
-          <div key={t.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-            <code style={{ fontSize: 12, background: "rgba(100,116,139,0.1)", color: "#94A3B8", padding: "3px 8px", borderRadius: 4, flexShrink: 0, marginTop: 1 }}>{t.name}</code>
-            <span style={{ fontSize: 14, color: "#A1A1AA" }}>{t.desc}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Section: Google integration
 // ---------------------------------------------------------------------------
 function GoogleSection() {
@@ -1343,13 +1288,6 @@ function N8nSection() {
 
       <H3>Exemple de payload n8n → Lynaris</H3>
       <CodeBlock filename="n8n-to-lynaris.json">{n8nWebhookExample}</CodeBlock>
-
-      <H3>Utilisation avec Orion</H3>
-      <InfoCard
-        title="Orion peut créer et déclencher des workflows"
-        desc='Décrivez le workflow en langage naturel à Orion : "Quand un nouveau lead entre dans Elio, envoie une notification Slack et crée une tâche Notion." Orion génère le workflow n8n et le déploie.'
-        color="#64748B"
-      />
     </div>
   )
 }
@@ -1770,7 +1708,6 @@ function buildDocContent(onNavigate: (id: string) => void): Record<string, React
     max: <MaxSection />,
     nova: <NovaSection />,
     alba: <AlbaSection />,
-    orion: <OrionSection />,
     google: <GoogleSection />,
     twilio: <TwilioSection />,
     elevenlabs: <ElevenLabsSection />,

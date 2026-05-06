@@ -39,7 +39,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/agents/max",     changeFrequency: "monthly", priority: 0.8 },
     { path: "/agents/nova",    changeFrequency: "monthly", priority: 0.8 },
     { path: "/agents/alba",    changeFrequency: "monthly", priority: 0.8 },
-    { path: "/agents/orion",   changeFrequency: "monthly", priority: 0.8 },
   ]
 
   return marketingRoutes.map(({ path, changeFrequency, priority }) => ({

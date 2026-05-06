@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AgentAvatar — SVG cartoon 3D avatars pour chaque agent Lynaris.
  * Style "clay/Memoji" : gradient sphérique, highlight spéculaire, visage expressif,
  * accessoire caractéristique du rôle de chaque agent.
@@ -37,7 +37,6 @@ const AVATAR_3D_MAP: Record<string, string> = {
   max: "/agents/avatars/max.webp",
   nova: "/agents/avatars/nova.webp",
   alba: "/agents/avatars/alba.webp",
-  orion: "/agents/avatars/orion.webp",
   aria: "/agents/avatars/aria.webp",
 }
 
@@ -304,51 +303,6 @@ function AlbaAvatar({ id }: { id: string }) {
   )
 }
 
-function OrionAvatar({ id }: { id: string }) {
-  const gearAngles = [0, 45, 90, 135, 180, 225, 270, 315]
-  return (
-    <>
-      <defs>
-        <radialGradient id={`${id}-bg`} cx="35%" cy="28%" r="75%">
-          <stop offset="0%" stopColor="#CBD5E1" />
-          <stop offset="100%" stopColor="#3F4F61" />
-        </radialGradient>
-        <radialGradient id={`${id}-face`} cx="40%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#E2E8F0" />
-          <stop offset="100%" stopColor="#94A3B8" />
-        </radialGradient>
-      </defs>
-      <circle cx="40" cy="40" r="38" fill={`url(#${id}-bg)`} />
-      <ellipse cx="28" cy="20" rx="14" ry="9" fill="rgba(255,255,255,0.38)" />
-      <path d="M 18 35 Q 19 10 40 9 Q 61 10 62 35 Q 63 20 60 15 Q 52 8 40 8 Q 28 8 20 15 Q 17 20 18 35" fill="#1E293B" />
-      <rect x="20" y="22" width="40" height="16" rx="8" fill="#0F172A" opacity="0.9" />
-      <rect x="22" y="24" width="36" height="12" rx="6" fill="#0EA5E9" opacity="0.3" />
-      <ellipse cx="40" cy="50" rx="17" ry="19" fill={`url(#${id}-face)`} />
-      <rect x="28" y="40" width="10" height="7" rx="2" fill="#1E293B" />
-      <rect x="42" y="40" width="10" height="7" rx="2" fill="#1E293B" />
-      <rect x="30" y="42" width="6" height="3" rx="1" fill="#38BDF8" />
-      <rect x="44" y="42" width="6" height="3" rx="1" fill="#38BDF8" />
-      <rect x="31" y="54" width="18" height="4" rx="2" fill="#1E293B" />
-      <rect x="33" y="55.5" width="3" height="1" rx="0.5" fill="#38BDF8" />
-      <rect x="38" y="55.5" width="3" height="1" rx="0.5" fill="#38BDF8" />
-      <rect x="43" y="55.5" width="3" height="1" rx="0.5" fill="#38BDF8" />
-      <circle cx="65" cy="62" r="8" fill="#334155" />
-      <circle cx="65" cy="62" r="4" fill="#64748B" />
-      {gearAngles.map((angle) => (
-        <rect
-          key={angle}
-          x="63"
-          y="52"
-          width="4"
-          height="4"
-          rx="1"
-          fill="#334155"
-          transform={`rotate(${angle} 65 62)`}
-        />
-      ))}
-    </>
-  )
-}
 
 // ─── Fallback ─────────────────────────────────────────────────────────────────
 
@@ -361,7 +315,6 @@ const AGENT_COLORS: Record<string, [string, string]> = {
   max: ["#F9A8D4", "#BE185D"],
   nova: ["#A5B4FC", "#3730A3"],
   alba: ["#DDD6FE", "#7C3AED"],
-  orion: ["#CBD5E1", "#334155"],
 }
 
 function FallbackAvatar({ slug, id }: { slug: string; id: string }) {
@@ -402,7 +355,6 @@ const AVATAR_MAP: Record<string, React.FC<{ id: string }>> = {
   max: MaxAvatar,
   nova: NovaAvatar,
   alba: AlbaAvatar,
-  orion: OrionAvatar,
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

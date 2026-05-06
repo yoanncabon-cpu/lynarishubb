@@ -47,9 +47,8 @@ export function FAQSchema() {
     },
     {
       q: "Quels agents sont disponibles ?",
-      // Reformulation marketing : éviter le chiffre brut "9 agents" jugé prématuré
-      // Liste nominative conservée pour le SEO (entités nommées indexables)
-      a: "L'équipe IA Lynaris : un agent vocal (téléphonique), Charles (orchestrateur), Lou (contenu & SEO), Elio (commercial), Mae (email), Max (photo & vidéo), Nova (business), Alba (RH), Orion (automatisation).",
+      // Reformulation marketing : liste nominative pour le SEO (entités nommées indexables)
+      a: "L'équipe IA Lynaris : un agent vocal (téléphonique), Charles (orchestrateur), Lou (contenu & SEO), Elio (commercial), Mae (email), Max (photo & vidéo), Nova (business), Alba (RH).",
     },
   ]
 
