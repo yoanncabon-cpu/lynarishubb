@@ -142,12 +142,4 @@ Les endpoints API :
 
 **Intégrations requises** : Gmail, Google Calendar
 
----
 
-## Orion — Agent Automatisation
-
-**Slug** : `orion` | **Modèle** : `claude-opus-4-6` | **Couleur** : `#64748B`
-
-**Rôle** : Crée des workflows n8n à partir de descriptions naturelles.
-
-**Intégrations requises** : n8n (API + webhook)
