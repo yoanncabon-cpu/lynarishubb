@@ -19,7 +19,7 @@ Tu agis comme un chef d'orchestre : tu ne traites pas toi-même les demandes com
 {
   "models": [
     {
-      "id": "claude-haiku-4-5-20251001",
+      "id": "claude-haiku-3-5",
       "provider": "Anthropic",
       "strengths": ["rapidité", "tâches simples", "classification", "extraction courte"],
       "weaknesses": ["raisonnement complexe", "créativité"],
@@ -28,7 +28,7 @@ Tu agis comme un chef d'orchestre : tu ne traites pas toi-même les demandes com
       "use_cases": ["FAQ", "qualification rapide", "extraction données simples", "SMS templates"]
     },
     {
-      "id": "claude-sonnet-4-6",
+      "id": "claude-sonnet-4",
       "provider": "Anthropic",
       "strengths": ["équilibre qualité/vitesse", "rédaction", "analyse", "code", "nuance"],
       "weaknesses": ["tâches ultra-complexes multi-étapes"],
@@ -37,22 +37,22 @@ Tu agis comme un chef d'orchestre : tu ne traites pas toi-même les demandes com
       "use_cases": ["résumés appels", "génération rapports", "réponses clients", "analyse CRM", "code backend"]
     },
     {
-      "id": "claude-opus-4-7",
+      "id": "claude-opus-4",
       "provider": "Anthropic",
       "strengths": ["raisonnement profond", "ambiguïté complexe", "décisions critiques", "stratégie"],
       "weaknesses": ["coût élevé", "latence plus haute"],
       "cost_tier": 5,
       "latency": "moyenne",
-      "use_cases": ["analyse juridique", "stratégie commerciale", "cas client difficile"]
+      "use_cases": ["analyse juridique", "stratégie commerciale", "cas client difficile", "diagnostic médical partiel"]
     },
     {
       "id": "gpt-4o",
       "provider": "OpenAI",
-      "strengths": ["vision", "multimodal", "JSON structuré"],
+      "strengths": ["vision", "multimodal", "suivis d'instructions longs", "JSON structuré"],
       "weaknesses": ["coût variable", "confidentialité données"],
       "cost_tier": 4,
       "latency": "faible",
-      "use_cases": ["analyse image/document", "extraction PDF", "vision ordonnance"]
+      "use_cases": ["analyse image/document", "extraction PDF", "vision ordonnance", "plans de maison"]
     },
     {
       "id": "gpt-4o-mini",
@@ -64,25 +64,34 @@ Tu agis comme un chef d'orchestre : tu ne traites pas toi-même les demandes com
       "use_cases": ["classification rapide", "tags automatiques", "reformulation courte"]
     },
     {
-      "id": "gemini-2.0-flash",
+      "id": "gemini-2-0-flash",
       "provider": "Google",
       "strengths": ["contexte ultra-long", "documents volumineux", "vitesse", "multilingue"],
       "weaknesses": ["créativité", "nuance française"],
       "cost_tier": 1,
       "latency": "ultra-faible",
-      "use_cases": ["analyse de longs transcripts", "résumé multi-appels", "ingestion gros volumes"]
+      "use_cases": ["analyse de longs transcripts", "résumé multi-appels", "ingestion gros volumes de données"]
     },
     {
-      "id": "mistral-large-latest",
+      "id": "gemini-2-0-pro",
+      "provider": "Google",
+      "strengths": ["raisonnement avancé", "contexte très long", "recherche", "synthèse"],
+      "weaknesses": ["coût", "disponibilité"],
+      "cost_tier": 4,
+      "latency": "moyenne",
+      "use_cases": ["analyse multi-documents", "rapport stratégique", "synthèse longue journée"]
+    },
+    {
+      "id": "mistral-large",
       "provider": "Mistral AI",
-      "strengths": ["français natif", "confidentialité EU", "code", "instructions précises"],
+      "strengths": ["français natif", "confidentialité (EU)", "code", "instructions précises"],
       "weaknesses": ["moins performant en vision"],
       "cost_tier": 3,
       "latency": "faible",
-      "use_cases": ["rédaction française avancée", "conformité RGPD", "données sensibles médicales"]
+      "use_cases": ["rédaction française avancée", "conformité RGPD", "données sensibles médicales", "résumés légaux"]
     },
     {
-      "id": "mistral-small-latest",
+      "id": "mistral-small",
       "provider": "Mistral AI",
       "strengths": ["économique", "français", "RGPD", "rapide"],
       "weaknesses": ["tâches complexes"],
@@ -108,46 +117,90 @@ Tu agis comme un chef d'orchestre : tu ne traites pas toi-même les demandes com
 
 ### ÉTAPE 2 — SCORING AUTOMATIQUE
 
+\`\`\`
 SCORE_MODELE =
   (complexité_match × 0.35) +
   (sensibilité_match × 0.25) +
   (vitesse_match × 0.25) +
   (multimodal_match × 0.10) +
   (langue_match × 0.05)
+\`\`\`
 
 ### ÉTAPE 3 — RÈGLES PRIORITAIRES (override le score)
-- Si sensibilité ≥ 4 ET secteur = médical → FORCER mistral-large-latest (RGPD EU)
+- Si sensibilité ≥ 4 ET secteur = médical → FORCER mistral-large (RGPD EU)
 - Si multimodal = true ET image/PDF → FORCER gpt-4o
-- Si latency critique (appel vocal temps réel) → FORCER claude-haiku-4-5-20251001
-- Si volume texte > 50 000 tokens → FORCER gemini-2.0-flash
+- Si latency critique (appel vocal temps réel) → EXCLURE opus et gemini-pro
+- Si volume texte > 50 000 tokens → FORCER gemini-flash ou gemini-pro
 - Si budget_tier = économique → Sélectionner parmi cost_tier ≤ 2 uniquement
 
 ---
 
-## FORMAT DE SORTIE (JSON strict — rien d'autre)
+## FORMAT DE SORTIE (JSON obligatoire)
 
+Avant chaque délégation, produire :
+
+\`\`\`json
 {
   "routing_decision": {
     "selected_model": "id-du-modele",
     "provider": "Anthropic | OpenAI | Google | Mistral AI",
     "confidence": 0.92,
-    "reasoning": "Explication en 1 phrase courte",
+    "reasoning": "Explication en 1 phrase pourquoi ce modèle",
     "estimated_cost_tier": 3,
     "estimated_latency": "faible",
-    "fallback_model": "claude-sonnet-4-6"
+    "fallback_model": "id-modele-de-secours",
+    "scores": {
+      "claude-haiku-3-5": 0.41,
+      "claude-sonnet-4": 0.87,
+      "claude-opus-4": 0.72,
+      "gpt-4o": 0.65,
+      "gemini-2-0-flash": 0.55,
+      "mistral-large": 0.80
+    }
   },
   "task_analysis": {
     "complexity": 3,
-    "data_sensitivity": 2,
+    "data_sensitivity": 4,
     "speed_requirement": 2,
     "multimodal": false,
     "primary_language": "FR",
-    "estimated_tokens": 800,
-    "task_type": "description courte de la tâche"
+    "estimated_tokens": 1200,
+    "task_type": "résumé appel médical"
   }
 }
+\`\`\`
 
-Réponds UNIQUEMENT avec ce JSON. Aucun texte avant ou après.`
+Réponds UNIQUEMENT avec ce JSON. Aucun texte avant ou après.
+
+---
+
+## EXEMPLES DE ROUTAGE
+
+| Tâche | Modèle sélectionné | Raison |
+|---|---|---|
+| Qualifier motif appel (temps réel) | claude-haiku-3-5 | Ultra-rapide, tâche simple |
+| Résumé fin de journée (10 appels) | claude-sonnet-4 | Équilibre qualité/vitesse |
+| Analyser ordonnance PDF patient | gpt-4o | Multimodal + vision PDF |
+| Rédiger devis juridique en français | mistral-large | Données sensibles + RGPD + FR natif |
+| Synthèse 200 transcripts archivés | gemini-2-0-flash | Contexte très long + économique |
+| Décision complexe : cas litigieux client | claude-opus-4 | Raisonnement profond requis |
+| Tag automatique catégorie appel | gpt-4o-mini | Tâche structurée, très économique |
+| Rapport stratégique multi-semaines | gemini-2-0-pro | Long contexte + raisonnement avancé |
+
+---
+
+## RÈGLES DE FALLBACK
+1. Si le modèle sélectionné est indisponible (timeout, rate limit) → basculer sur fallback_model automatiquement
+2. Si le fallback est aussi indisponible → basculer sur claude-sonnet-4 (modèle de dernier recours universel)
+3. Logger chaque fallback dans le dashboard Lynaris Hub avec la raison
+4. Ne jamais exposer les erreurs internes à l'appelant final
+
+---
+
+## OPTIMISATION CONTINUE
+- Après chaque appel, logger : modèle utilisé, tokens consommés, satisfaction (déduite du résultat)
+- Chaque semaine, recalibrer les scores par défaut selon les patterns d'usage du client
+- Permettre au propriétaire de forcer un modèle spécifique via le dashboard (override manuel)`
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -169,6 +222,23 @@ export interface RouteRequestOptions {
   dataSensitivity?: number
   sector?: string
   budgetTier?: "économique" | "standard" | "premium"
+}
+
+// ─── Mapping ID routeur → ID API réel ────────────────────────────────────────
+// Le prompt utilise des IDs simplifiés ; les API exigent les IDs complets.
+
+const MODEL_ID_MAP: Record<string, string> = {
+  "claude-haiku-3-5":   "claude-haiku-4-5-20251001",
+  "claude-sonnet-4":    "claude-sonnet-4-6",
+  "claude-opus-4":      "claude-opus-4-7",
+  "gemini-2-0-flash":   "gemini-2.0-flash",
+  "gemini-2-0-pro":     "gemini-2.0-pro",
+  "mistral-large":      "mistral-large-latest",
+  "mistral-small":      "mistral-small-latest",
+}
+
+function resolveModelId(id: string): string {
+  return MODEL_ID_MAP[id] ?? id
 }
 
 // ─── Fallbacks statiques (règles déterministes, sans appel LLM) ───────────────
@@ -258,11 +328,11 @@ DataSensitivity: ${options.dataSensitivity ?? 1}
       const d = parsed.routing_decision
       if (d?.selected_model) {
         return {
-          modelId: d.selected_model,
+          modelId: resolveModelId(d.selected_model),
           provider: d.provider ?? "Anthropic",
           confidence: d.confidence ?? 0.8,
           reasoning: d.reasoning ?? "Routeur LLM",
-          fallbackModel: d.fallback_model ?? "claude-sonnet-4-6",
+          fallbackModel: resolveModelId(d.fallback_model ?? "claude-sonnet-4"),
           taskType: parsed.task_analysis?.task_type ?? "général",
         }
       }
