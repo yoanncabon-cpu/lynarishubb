@@ -149,8 +149,8 @@ export function HowItWorksSection() {
           }}
         >
           <Image
-            src="/marketing/how-it-works.webp"
-            alt="Intégrations, agent IA actif, et analytics — les 3 étapes Lynaris"
+            src="/marketing/how-it-works-new.png"
+            alt="Dashboard Lynaris sur MacBook et iPhone — interface propre et professionnelle"
             width={1600}
             height={900}
             sizes="(max-width: 1024px) 100vw, 960px"

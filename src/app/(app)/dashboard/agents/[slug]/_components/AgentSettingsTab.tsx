@@ -15,7 +15,6 @@ interface AgentSettings {
   autonomy: boolean
   notifications: boolean
   isActive: boolean
-  modelId: string
   // Agent-specific (free-form)
   specific: Record<string, string>
 }
@@ -98,17 +97,6 @@ const AGENT_SPECIFIC_FIELDS: Record<string, SpecificField[]> = {
 const TONE_OPTIONS: AgentSettings["tone"][] = ["Professionnel", "Décontracté", "Formel", "Chaleureux"]
 const LANG_OPTIONS: AgentSettings["language"][] = ["Français", "English", "Español"]
 
-const AI_MODELS = [
-  { id: "claude-haiku-4-5",   label: "Claude Haiku 4.5",  provider: "Anthropic", color: "#34D399" },
-  { id: "claude-sonnet-4-6",  label: "Claude Sonnet 4.6", provider: "Anthropic", color: "#E86F4D" },
-  { id: "claude-opus-4-6",    label: "Claude Opus 4.6",   provider: "Anthropic", color: "#A78BFA" },
-  { id: "gpt-4o",             label: "GPT-4o",            provider: "OpenAI",    color: "#10B981" },
-  { id: "gpt-4o-mini",        label: "GPT-4o mini",       provider: "OpenAI",    color: "#22D3EE" },
-  { id: "gpt-4-turbo",        label: "GPT-4 Turbo",       provider: "OpenAI",    color: "#6366F1" },
-  { id: "gemini-2.0-flash",   label: "Gemini 2.0 Flash",  provider: "Google",    color: "#4285F4" },
-  { id: "gemini-1.5-pro",     label: "Gemini 1.5 Pro",    provider: "Google",    color: "#34A853" },
-  { id: "gemini-1.5-flash",   label: "Gemini 1.5 Flash",  provider: "Google",    color: "#FBBC04" },
-] as const
 
 function buildDefaults(agentName: string): AgentSettings {
   return {
@@ -119,7 +107,6 @@ function buildDefaults(agentName: string): AgentSettings {
     autonomy: false,
     notifications: false,
     isActive: true,
-    modelId: "claude-sonnet-4-6",
     specific: {},
   }
 }
@@ -473,49 +460,7 @@ export function AgentSettingsTab({ agent }: { agent: Agent }) {
           </div>
         </div>
 
-        {/* Section 3: Modèle IA */}
-        <div style={sectionStyle}>
-          <p style={sectionTitleStyle}>Modèle IA</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {AI_MODELS.map((m) => (
-              <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                <input
-                  type="radio"
-                  name="modelId"
-                  value={m.id}
-                  checked={settings.modelId === m.id}
-                  onChange={() => setSettings((s) => ({ ...s, modelId: m.id }))}
-                  style={{ accentColor: m.color }}
-                />
-                <span
-                  style={{
-                    flex: 1, fontSize: 13,
-                    color: settings.modelId === m.id ? "#F5EFE6" : "rgba(255,255,255,0.6)",
-                    fontWeight: settings.modelId === m.id ? 600 : 400,
-                  }}
-                >
-                  {m.label}
-                </span>
-                <span
-                  style={{
-                    fontSize: 10, color: m.color,
-                    background: `${m.color}14`,
-                    padding: "1px 6px", borderRadius: 4,
-                  }}
-                >
-                  {m.provider}
-                </span>
-              </label>
-            ))}
-          </div>
-          {settings.modelId.startsWith("gpt-") && (
-            <p style={{ fontSize: 11, color: "#F59E0B", marginTop: 8 }}>
-              Nécessite une clé OpenAI configurée dans les intégrations.
-            </p>
-          )}
-        </div>
-
-        {/* Section 4: Configuration avancée (agent-specific) */}
+        {/* Section 3: Configuration avancée (agent-specific) */}
         {specificFields.length > 0 && (
           <div style={sectionStyle}>
             <p style={sectionTitleStyle}>Configuration avancée</p>
