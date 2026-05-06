@@ -2,6 +2,7 @@
 
 import React from "react"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
+import { ExternalLink } from "lucide-react"
 
 export interface ActivityItem {
   slug: string
@@ -9,6 +10,7 @@ export interface ActivityItem {
   agentColor: string
   action: string
   time: string
+  href?: string
 }
 
 export interface ActivityTimelineProps {
@@ -22,7 +24,7 @@ function hexToRgb(hex: string) {
 }
 
 /**
- * Timeline d'activité — cartes glass-3 empilées dans un conteneur glass-2.
+ * Timeline d'activité — cartes cliquables, chaque item navigue vers l'agent ou la conversation.
  */
 export function ActivityTimeline({ items, emptyState }: ActivityTimelineProps) {
   if (items.length === 0 && emptyState) {
@@ -33,9 +35,11 @@ export function ActivityTimeline({ items, emptyState }: ActivityTimelineProps) {
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {items.map((item, idx) => {
         const rgb = hexToRgb(item.agentColor)
+        const href = item.href ?? `/dashboard/agents/${item.slug}`
         return (
-          <div
+          <a
             key={`${item.slug}-${idx}`}
+            href={href}
             className="lg-surface-3 lg-sheen"
             style={{
               borderRadius: 14,
@@ -44,6 +48,17 @@ export function ActivityTimeline({ items, emptyState }: ActivityTimelineProps) {
               alignItems: "center",
               gap: 12,
               borderLeft: `3px solid rgba(${rgb}, 0.55)`,
+              cursor: "pointer",
+              textDecoration: "none",
+              transition: "background 120ms, box-shadow 120ms",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = `rgba(${rgb}, 0.06)`
+              ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 0 0 1px rgba(${rgb}, 0.18)`
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = ""
+              ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = ""
             }}
           >
             <AgentAvatar slug={item.slug} size={30} />
@@ -63,17 +78,20 @@ export function ActivityTimeline({ items, emptyState }: ActivityTimelineProps) {
                 {item.action}
               </p>
             </div>
-            <span
-              style={{
-                fontSize: 11,
-                color: "rgba(250,250,250,0.45)",
-                whiteSpace: "nowrap",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {item.time}
-            </span>
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "rgba(250,250,250,0.45)",
+                  whiteSpace: "nowrap",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {item.time}
+              </span>
+              <ExternalLink size={11} color="rgba(250,250,250,0.25)" aria-hidden />
+            </div>
+          </a>
         )
       })}
     </div>

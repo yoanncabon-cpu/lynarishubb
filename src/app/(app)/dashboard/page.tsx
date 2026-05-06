@@ -202,12 +202,17 @@ export default function DashboardPage() {
     const slug = ev.agent ?? "charles"
     const agentData = agents.find((a) => a.slug === slug)
     const agentName = agentData?.name ?? slug
+    const convId = typeof ev.payload?.conversationId === "string" ? ev.payload.conversationId : null
+    const href = convId
+      ? `/dashboard/conversations/${convId}`
+      : `/dashboard/agents/${slug}`
     return {
       slug,
       agentName,
       agentColor: agentData?.color ?? "#34D399",
       action: buildActivityLabel(ev.action ?? "", agentName, ev.payload ?? null),
       time: ev.time ? relTime(ev.time) : "maintenant",
+      href,
     }
   })
 

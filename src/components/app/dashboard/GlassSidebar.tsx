@@ -37,6 +37,7 @@ const AGENT_GROUPS = [
     { slug: "mae", name: "Mae", color: "#F59E0B", role: "Mail", status: "online" as const },
     { slug: "nova", name: "Nova", color: "#6366F1", role: "Analytics", status: "idle" as const },
     { slug: "alba", name: "Alba", color: "#8B5CF6", role: "RH", status: "idle" as const },
+    { slug: "aria", name: "Aria", color: "#F97316", role: "Assistante Universelle", status: "online" as const },
   ]},
 ] as const
 
@@ -141,6 +142,7 @@ export function GlassSidebar({ collapsed = false }: GlassSidebarProps) {
             )}
             {group.agents.map((agent) => {
               const active = isActive(`/dashboard/agents/${agent.slug}`)
+              const isCharles = agent.slug === "charles"
               return (
                 <Link
                   key={agent.slug}
@@ -151,19 +153,40 @@ export function GlassSidebar({ collapsed = false }: GlassSidebarProps) {
                     marginBottom: 1,
                     padding: "0 8px",
                     gap: 8,
-                    ...(active ? {
+                    ...(isCharles ? {
+                      background: active
+                        ? "linear-gradient(135deg, rgba(124,58,237,0.28), rgba(124,58,237,0.12))"
+                        : "linear-gradient(135deg, rgba(124,58,237,0.10), rgba(124,58,237,0.04))",
+                      border: "1px solid rgba(124,58,237,0.30)",
+                      boxShadow: "0 0 12px rgba(124,58,237,0.12), inset 0 1px 0 rgba(167,139,250,0.08)",
+                    } : active ? {
                       background: "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(124,58,237,0.08))",
                       border: `1px solid ${agent.color}30`,
                     } : { color: "#A1A1AA" }),
                   }}
-                  onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)" }}
-                  onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent" }}
+                  onMouseEnter={(e) => { if (!active && !isCharles) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)" }}
+                  onMouseLeave={(e) => { if (!active && !isCharles) (e.currentTarget as HTMLElement).style.background = "transparent" }}
                 >
                   <AgentAvatarGlass name={agent.name} color={agent.color} size={26} radius="8px" />
                   {!collapsed && (
                     <>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12.5, fontWeight: 600, color: active ? "#F5F5F7" : "#A1A1AA", margin: 0, letterSpacing: "-0.01em", lineHeight: 1.2 }}>{agent.name}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <p style={{ fontSize: 12.5, fontWeight: 600, color: isCharles || active ? "#F5F5F7" : "#A1A1AA", margin: 0, letterSpacing: "-0.01em", lineHeight: 1.2 }}>{agent.name}</p>
+                          {isCharles && (
+                            <span style={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              letterSpacing: "0.04em",
+                              color: "#A78BFA",
+                              background: "rgba(124,58,237,0.18)",
+                              border: "1px solid rgba(124,58,237,0.35)",
+                              borderRadius: 4,
+                              padding: "1px 5px",
+                              lineHeight: 1.5,
+                            }}>PRO</span>
+                          )}
+                        </div>
                         <p style={{ fontSize: 10, color: "#52525B", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{agent.role}</p>
                       </div>
                       <StatusDot status={agent.status} size={5} />

@@ -69,14 +69,15 @@ function dbMemberToTeamMember(m: DbMember, idx: number): TeamMember {
 }
 
 const ALL_AGENTS = [
-  { slug: "marine", name: "Marine", color: "#22D3EE" },
   { slug: "charles", name: "Charles", color: "#7C3AED" },
+  { slug: "marine", name: "Marine", color: "#22D3EE" },
   { slug: "lou", name: "Lou", color: "#F472B6" },
   { slug: "elio", name: "Elio", color: "#10B981" },
   { slug: "mae", name: "Mae", color: "#F59E0B" },
   { slug: "max", name: "Max", color: "#EC4899" },
   { slug: "nova", name: "Nova", color: "#6366F1" },
   { slug: "alba", name: "Alba", color: "#8B5CF6" },
+  { slug: "aria", name: "Aria", color: "#F97316" },
 ]
 
 const DEFAULT_AGENT_ACCESS: AgentAccessMap = Object.fromEntries(
