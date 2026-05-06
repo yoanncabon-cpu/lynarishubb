@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard, Sparkles, Plug, MessageSquare, BarChart3,
-  Users, CreditCard, Settings, Sparkle,
+  Users, CreditCard, Settings, Sparkle, FileCode2,
 } from "lucide-react"
 import { AgentAvatarGlass } from "@/components/app/glass/AgentAvatarGlass"
 import { StatusDot } from "@/components/app/glass/StatusDot"
@@ -20,6 +20,7 @@ const PRIMARY_NAV = [
 ] as const
 
 const FOOTER_NAV = [
+  { href: "/dashboard/prompts", label: "System Prompts", icon: FileCode2 },
   { href: "/dashboard/team", label: "Équipe", icon: Users },
   { href: "/dashboard/billing", label: "Facturation", icon: CreditCard },
   { href: "/dashboard/settings", label: "Paramètres", icon: Settings },

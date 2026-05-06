@@ -19,7 +19,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       {/* Logo Lynaris ghost watermark — fixed derrière tout le site */}
       <SiteLogoWatermark />
       <Navbar />
-      <main className="flex-1 relative z-10">{children}</main>
+      <main className="flex-1 relative z-10" style={{ backgroundColor: "var(--ly-bg)" }}>{children}</main>
       <Footer />
       <CookieBanner />
     </>
