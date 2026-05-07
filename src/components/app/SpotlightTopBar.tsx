@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, ChevronDown, Search, Settings, LogOut, CreditCard, X, Zap } from "lucide-react"
+import { Bell, ChevronDown, Search, Settings, LogOut, CreditCard, X, Zap, Menu } from "lucide-react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -701,6 +701,27 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
           )}
         </div>
       </div>
+
+      {/* Bouton hamburger — mobile only, caché sur desktop (lg+) */}
+      <button
+        type="button"
+        onClick={onMenuClick}
+        aria-label="Ouvrir le menu"
+        className="flex items-center justify-center lg:hidden lg-focus"
+        style={{
+          width: 36, height: 36, borderRadius: 11,
+          border: "1px solid transparent",
+          background: "transparent",
+          color: "rgba(250,250,250,0.75)",
+          cursor: "pointer",
+          flexShrink: 0,
+          transition: "background 220ms var(--ease-apple)",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)" }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
+      >
+        <Menu size={18} />
+      </button>
 
       {/* Eviter unused warning sur limits */}
       <span hidden>{isPro ? "" : ""}{limits.agents.length}</span>
