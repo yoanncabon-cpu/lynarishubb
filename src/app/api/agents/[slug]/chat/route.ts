@@ -111,8 +111,14 @@ export async function POST(
         })
 
         for await (const chunk of agentStream) {
-          const data = `data: ${JSON.stringify({ content: chunk })}\n\n`
-          controller.enqueue(encoder.encode(data))
+          // Marker spécial émis par l'executor pour les délégations inter-agents
+          if (chunk.startsWith("\x01") && chunk.endsWith("\x01")) {
+            const data = `data: ${chunk.slice(1, -1)}\n\n`
+            controller.enqueue(encoder.encode(data))
+          } else {
+            const data = `data: ${JSON.stringify({ content: chunk })}\n\n`
+            controller.enqueue(encoder.encode(data))
+          }
         }
 
         controller.enqueue(encoder.encode("data: [DONE]\n\n"))

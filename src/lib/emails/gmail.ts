@@ -32,6 +32,11 @@ interface GmailEmailOptions {
   text?: string
   replyTo?: string
   from?: string
+  attachments?: Array<{
+    filename: string
+    content: Buffer | Uint8Array
+    contentType: string
+  }>
 }
 
 export async function sendGmail(
@@ -58,6 +63,10 @@ export async function sendGmail(
         html: options.html,
         text: options.text ?? "",
         replyTo: options.replyTo ?? customFromEmail,
+        attachments: (options.attachments ?? []).map(a => ({
+          filename: a.filename,
+          content: Buffer.from(a.content),
+        })),
       })
       if (error) {
         console.warn("[email] Resend échec, fallback Gmail SMTP:", error.message)
@@ -78,6 +87,11 @@ export async function sendGmail(
         from: fallbackFrom, to: toField,
         subject: options.subject, html: options.html,
         text: options.text, replyTo: options.replyTo,
+        attachments: (options.attachments ?? []).map(a => ({
+          filename: a.filename,
+          content: Buffer.from(a.content),
+          contentType: a.contentType,
+        })),
       })
       console.info("[gmail] Envoyé via Gmail SMTP (fallback) →", toField)
       return { success: true }

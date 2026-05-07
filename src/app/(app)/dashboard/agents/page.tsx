@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { agents } from "@/lib/agents/data"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
-import { ArrowRight, Lock, Zap } from "lucide-react"
+import { ArrowRight, Lock, Send, Zap } from "lucide-react"
 import { usePlan } from "@/hooks/usePlan"
 import { GlassCard, GlassChip } from "@/components/app/glass"
 
@@ -130,11 +130,21 @@ function AgentCard({
   const router = useRouter()
   const rgb = hexToRgb(agent.color)
   const requiredPlan = plan === "trial" || plan === "decouverte" ? "Pro" : "Sur-mesure"
+  const [quickInput, setQuickInput] = useState("")
 
   function handleClick() {
     if (locked) {
       router.push("/dashboard/billing")
     }
+  }
+
+  function goAgent() {
+    const q = quickInput.trim()
+    if (q) {
+      localStorage.setItem(`agent_prefill_${agent.slug}`, q)
+      localStorage.setItem(`agent_autosubmit_${agent.slug}`, "true")
+    }
+    router.push(`/dashboard/agents/${agent.slug}`)
   }
 
   return (
@@ -284,37 +294,63 @@ function AgentCard({
               Passer au plan {requiredPlan}
             </button>
           ) : (
-            <Link
-              href={`/dashboard/agents/${agent.slug}`}
-              className="lg-focus"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                height: 40,
-                borderRadius: 11,
-                background: `linear-gradient(135deg, rgba(${rgb},0.20) 0%, rgba(${rgb},0.10) 100%)`,
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-                border: `1px solid rgba(${rgb},0.32)`,
-                boxShadow: `0 8px 22px -6px rgba(${rgb},0.30), inset 0 1px 0 rgba(255,255,255,0.10)`,
-                fontSize: 13,
-                fontWeight: 600,
-                color: agent.color,
-                textDecoration: "none",
-                transition: "transform 220ms var(--ease-apple)",
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLElement).style.transform = "translateY(0)"
-              }}
-            >
-              Discuter avec {agent.name}
-              <ArrowRight size={13} aria-hidden />
-            </Link>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={quickInput}
+                onChange={(e) => setQuickInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") goAgent() }}
+                placeholder={`Demande à ${agent.name}…`}
+                aria-label={`Message à ${agent.name}`}
+                style={{
+                  flex: 1,
+                  height: 40,
+                  padding: "0 14px",
+                  borderRadius: 11,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#FAFAFA",
+                  fontSize: 13,
+                  outline: "none",
+                  fontFamily: "inherit",
+                  transition: "border-color 220ms, background 220ms",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = `rgba(${rgb},0.5)`
+                  e.currentTarget.style.background = "rgba(255,255,255,0.09)"
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"
+                  e.currentTarget.style.background = "rgba(255,255,255,0.06)"
+                }}
+              />
+              <button
+                type="button"
+                onClick={goAgent}
+                aria-label="Envoyer"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 11,
+                  border: "none",
+                  flexShrink: 0,
+                  background: `linear-gradient(135deg, rgba(${rgb},0.9) 0%, rgba(${rgb},0.7) 100%)`,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: `0 6px 18px -4px rgba(${rgb},0.5)`,
+                  transition: "transform 150ms, box-shadow 150ms",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.05)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)"
+                }}
+              >
+                <Send size={14} color="#fff" aria-hidden />
+              </button>
+            </div>
           )}
         </div>
       </GlassCard>

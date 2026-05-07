@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { desc, eq } from "drizzle-orm"
-import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
 import { supportTickets } from "@/lib/db/schema"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
@@ -169,24 +169,41 @@ export async function POST(req: Request): Promise<NextResponse> {
     userEmail = data.user?.email ?? null
   } catch { /* session optionnelle */ }
 
-  // Upload des pièces jointes vers Supabase Storage
+  // Upload des pièces jointes — client admin (bypasse RLS, pas besoin de policy bucket)
   const rawFiles = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0)
   const filesToUpload = rawFiles.slice(0, MAX_FILES).filter(f => ALLOWED_TYPES.has(f.type) && f.size <= MAX_FILE_SIZE)
   const attachmentUrls: string[] = []
+  const attachmentFiles: Array<{ filename: string; content: Uint8Array; contentType: string }> = []
 
-  for (const file of filesToUpload) {
+  if (filesToUpload.length > 0) {
     try {
-      const ext = file.name.split(".").pop() ?? "bin"
-      const path = `tickets/${ticketId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const arrayBuf = await file.arrayBuffer()
-      const { error: uploadErr } = await supabase.storage
-        .from("support-attachments")
-        .upload(path, arrayBuf, { contentType: file.type, upsert: false })
-      if (!uploadErr) {
-        const { data: urlData } = supabase.storage.from("support-attachments").getPublicUrl(path)
-        if (urlData.publicUrl) attachmentUrls.push(urlData.publicUrl)
+      const adminStorage = createSupabaseAdminClient()
+
+      // Crée le bucket si absent (idempotent — ignore l'erreur "already exists")
+      await adminStorage.storage.createBucket("support-attachments", { public: true }).catch(() => {})
+
+      for (const file of filesToUpload) {
+        try {
+          const ext = file.name.split(".").pop() ?? "bin"
+          const storagePath = `tickets/${ticketId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+          const arrayBuf = await file.arrayBuffer()
+          const { error: uploadErr } = await adminStorage.storage
+            .from("support-attachments")
+            .upload(storagePath, arrayBuf, { contentType: file.type, upsert: false })
+          if (uploadErr) {
+            console.error("[support/ticket] Upload échoué:", uploadErr.message, "fichier:", file.name)
+          } else {
+            attachmentFiles.push({ filename: file.name, content: new Uint8Array(arrayBuf), contentType: file.type })
+            const { data: urlData } = adminStorage.storage.from("support-attachments").getPublicUrl(storagePath)
+            if (urlData.publicUrl) attachmentUrls.push(urlData.publicUrl)
+          }
+        } catch (err) {
+          console.error("[support/ticket] Exception upload fichier:", err)
+        }
       }
-    } catch { /* fichier ignoré si upload échoue */ }
+    } catch (err) {
+      console.error("[support/ticket] Impossible d'initialiser le storage admin:", err)
+    }
   }
 
   // Persister en DB — URLs des pièces jointes stockées dans pageUrl (JSON)
@@ -214,10 +231,43 @@ export async function POST(req: Request): Promise<NextResponse> {
     ...(userEmail ? { replyTo: userEmail } : {}),
     subject: `[Support][${fields.priority}] ${fields.category} — ${fields.subject}`,
     html: buildEmailHtml(fields, ticketId, userEmail, attachmentUrls),
+    attachments: attachmentFiles,
   })
 
   if (!success) {
     console.error("[support/ticket] Gmail error:", error)
+  }
+
+  // Copie de confirmation à l'utilisateur
+  if (userEmail) {
+    await sendGmail({
+      from: "Lynaris Support <support@lynarisai.com>",
+      to: userEmail,
+      subject: `[Ticket ${ticketId}] Confirmation de réception — ${fields.subject}`,
+      html: emailLayout(`
+        <h1 style="font-size:22px;font-weight:700;color:#FAFAFA;margin:0 0 8px;font-family:system-ui,-apple-system,sans-serif;">Ticket reçu ✓</h1>
+        <p style="font-size:14px;color:rgba(250,250,250,0.55);margin:0 0 24px;font-family:system-ui,-apple-system,sans-serif;">
+          Ton ticket <strong style="color:#E86F4D">${ticketId}</strong> a bien été envoyé. On revient vers toi sous 24h.
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-bottom:${attachmentUrls.length ? "24px" : "8px"}">
+          ${emailInfoRow("Sujet", fields.subject)}
+          ${emailInfoRow("Catégorie", fields.category)}
+          ${emailInfoRow("Priorité", fields.priority)}
+        </table>
+        ${attachmentUrls.filter(isImageUrl).length > 0 ? `
+        <div style="margin-top:4px">
+          <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:rgba(250,250,250,0.45);margin:0 0 12px;text-transform:uppercase;font-family:system-ui,-apple-system,sans-serif">
+            Captures jointes (${attachmentUrls.filter(isImageUrl).length})
+          </p>
+          ${attachmentUrls.filter(isImageUrl).map(url => `
+            <a href="${url}" style="display:block;margin-bottom:10px;text-decoration:none">
+              <img src="${url}" alt="Pièce jointe" style="display:block;max-width:100%;height:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.07)" />
+            </a>
+          `).join("")}
+        </div>` : ""}
+      `),
+      attachments: attachmentFiles,
+    })
   }
 
   return NextResponse.json({ success: true, ticketId })

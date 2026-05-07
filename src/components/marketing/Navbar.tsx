@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Menu, X, ChevronDown } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LynarisLogo } from "@/components/shared/LynarisLogo"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
@@ -30,7 +30,6 @@ const navLinks = [
 export function Navbar() {
   const pathname = usePathname()
   const [isScrolled, setIsScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [agentsOpen, setAgentsOpen] = useState(false)
   const headerRef = useRef<HTMLElement>(null)
@@ -47,11 +46,6 @@ export function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
-
-  useEffect(() => {
-    const t = setTimeout(() => setMenuOpen(false), 0)
-    return () => clearTimeout(t)
-  }, [pathname])
 
   // Close agents dropdown on outside click
   useEffect(() => {
@@ -255,66 +249,27 @@ export function Navbar() {
             </Link>
           </div>
 
-          {/* Menu burger mobile */}
-          <button
-            type="button"
-            className="md:hidden p-2 rounded-lg text-[#71717A] hover:text-[#F5F5F7] hover:bg-[#14141C] transition-colors"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {/* CTA mobile — directement visible, pas de hamburger */}
+          <div className="md:hidden flex items-center gap-2">
+            <Link
+              href="/login"
+              className="inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-medium text-[#71717A] hover:text-[#F5F5F7] hover:bg-white/5 transition-all"
+            >
+              Connexion
+            </Link>
+            <Link
+              href="/tarifs"
+              className="inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-semibold text-white"
+              style={{
+                background: "linear-gradient(135deg, #E86F4D 0%, #C8522F 100%)",
+                boxShadow: "0 0 16px rgba(232,111,77,0.35)",
+              }}
+            >
+              Essai gratuit
+            </Link>
+          </div>
         </nav>
       </header>
-
-      {/* Menu mobile */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-x-0 top-16 z-40 border-b border-[rgba(255,255,255,0.08)] bg-[#0A0A0F]/95 backdrop-blur-[40px] [-webkit-backdrop-filter:blur(40px)] md:hidden"
-          >
-            <nav className="px-4 py-4 flex flex-col gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "px-3 py-3 rounded-lg text-base font-medium transition-colors",
-                    pathname === link.href
-                      ? "text-[#F5F5F7] bg-[#14141C]"
-                      : "text-[#71717A] hover:text-[#F5F5F7] hover:bg-[#14141C]"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="mt-4 flex flex-col gap-2 border-t border-[rgba(255,255,255,0.08)] pt-4">
-                <Link
-                  href="/login"
-                  className="px-3 py-3 rounded-lg text-base font-medium text-[#71717A] hover:text-[#F5F5F7] hover:bg-[#14141C] transition-colors text-center"
-                >
-                  Se connecter
-                </Link>
-                <Link
-                  href="/tarifs"
-                  className="flex items-center justify-center h-12 rounded-xl text-white font-semibold text-base transition-shadow"
-                  style={{
-                    background: "linear-gradient(135deg, #E86F4D 0%, #C8522F 100%)",
-                    boxShadow: "0 0 30px rgba(232,111,77,0.45)",
-                  }}
-                >
-                  Essai gratuit — 14 jours →
-                </Link>
-              </div>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   )
 }

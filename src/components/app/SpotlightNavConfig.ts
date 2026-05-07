@@ -22,6 +22,7 @@ import {
   CreditCard,
   Settings,
   LifeBuoy,
+  CalendarDays,
 } from "lucide-react"
 
 export interface SubItem {
@@ -61,6 +62,7 @@ export const NAV_HUBS: NavHub[] = [
       { href: "/dashboard/documents", label: "Documents", icon: FileText },
       { href: "/dashboard/workspace", label: "Espace de travail", icon: LayoutGrid },
       { href: "/dashboard/automatisations", label: "Automatisations", icon: Clock },
+      { href: "/dashboard/calendrier", label: "Calendrier", icon: CalendarDays },
       { href: "/dashboard/conversations", label: "Conversations", icon: MessageSquare },
     ],
   },

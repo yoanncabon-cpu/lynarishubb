@@ -390,6 +390,11 @@ const toolHandlers: Record<
   },
 
   // ─── Charles tools ────────────────────────────────────────────────────
+  show_email_format_picker: async () => {
+    // Résultat symbolique — l'executor yield le marker SSE avant d'exécuter ce tool
+    return { picker_shown: true, waiting_for_user_selection: true }
+  },
+
   delegate_to_agent: async (input, ctx) => {
     const agentSlug = input["agent_slug"] as string
     const task = (input["task"] as string | undefined) ?? (input["task_description"] as string | undefined) ?? ""

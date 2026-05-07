@@ -3,6 +3,7 @@ import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { runAgent } from "@/lib/agents/executor"
 import { getAgent } from "@/lib/agents/registry"
+import type { EmailStyleConfig } from "@/lib/db/schema"
 import {
   buildAccessDeniedPayload,
   checkPreTurnAccess,
@@ -55,13 +56,20 @@ export async function POST(
 
   const messages: MessageParam[] = [{ role: "user", content: body.message }]
 
+  // Extraire email_style du config de délégation (passé par Charles)
+  const rawConfig = body.config ?? {}
+  const emailStyle = (rawConfig["email_style"] as EmailStyleConfig | undefined) ?? null
+  const cleanConfig = { ...rawConfig }
+  delete cleanConfig["email_style"]
+
   try {
     const result = await runAgent({
       agentSlug: slug,
       messages,
-      config: body.config ?? {},
+      config: cleanConfig,
       orgId,
       conversationId: body.conversationId,
+      emailStyle,
     })
     return NextResponse.json(result)
   } catch (err) {

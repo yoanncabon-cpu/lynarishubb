@@ -176,8 +176,8 @@ export default function DashboardPage() {
   function goCharles() {
     const q = charlesInput.trim()
     if (q) {
-      localStorage.setItem("prefill_charles", q)
-      localStorage.setItem("autosubmit_charles", "true")
+      localStorage.setItem("agent_prefill_charles", q)
+      localStorage.setItem("agent_autosubmit_charles", "true")
     }
     router.push("/dashboard/agents/charles")
   }

@@ -640,6 +640,30 @@ export const phoneNumbers = pgTable(
   ]
 )
 
+// ─── Calendar ────────────────────────────────────────────────────────────────
+
+export const calendarEventTypeEnum   = pgEnum("calendar_event_type",   ["rdv", "contenu", "automatisation", "tache", "autre"])
+export const calendarEventStatusEnum = pgEnum("calendar_event_status",  ["confirmed", "tentative", "cancelled"])
+
+export const calendarEvents = pgTable("calendar_events", {
+  id:               uuid("id").primaryKey().defaultRandom(),
+  orgId:            uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  title:            text("title").notNull(),
+  description:      text("description"),
+  startAt:          timestamp("start_at", { withTimezone: true }).notNull(),
+  endAt:            timestamp("end_at", { withTimezone: true }).notNull(),
+  allDay:           boolean("all_day").notNull().default(false),
+  type:             calendarEventTypeEnum("type").notNull().default("rdv"),
+  agentSlug:        text("agent_slug"),
+  color:            text("color"),
+  location:         text("location"),
+  googleEventId:    text("google_event_id"),
+  googleCalendarId: text("google_calendar_id"),
+  status:           calendarEventStatusEnum("status").notNull().default("confirmed"),
+  createdAt:        timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt:        timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ─── Relations ───────────────────────────────────────────────────────────────
 
 export const organizationsRelations = relations(

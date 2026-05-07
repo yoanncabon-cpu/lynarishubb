@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, ChevronDown, Menu, Search, Settings, LogOut, CreditCard, X, Zap } from "lucide-react"
+import { Bell, ChevronDown, Search, Settings, LogOut, CreditCard, X, Zap } from "lucide-react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -184,30 +184,6 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
         height: "100%",
       }}
     >
-      {/* Burger — visible sur mobile + tablette (jusqu'à lg) */}
-      <button
-        type="button"
-        onClick={onMenuClick}
-        className="lg:hidden lg-focus"
-        aria-label="Menu"
-        style={{
-          padding: 10,
-          minWidth: 44,
-          minHeight: 44,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 10,
-          background: "transparent",
-          border: "none",
-          color: "rgba(250,250,250,0.65)",
-          cursor: "pointer",
-          flexShrink: 0,
-        }}
-      >
-        <Menu size={20} />
-      </button>
-
       {/* Logo — retour vers la home publique */}
       <Link
         href="/"

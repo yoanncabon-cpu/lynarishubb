@@ -68,15 +68,54 @@ async function loadContactsFromDb(orgId: string): Promise<UserContact[]> {
 }
 
 /**
- * Augmente le system prompt d'un agent avec le carnet d'adresses utilisateur.
- * Le bloc est mis EN TÊTE du prompt pour maximiser sa visibilité par le LLM.
+ * Génère le bloc date/heure Paris en temps réel.
+ * Injecté EN TÊTE de chaque system prompt pour que les agents connaissent
+ * toujours la date exacte et ne devinent jamais une année ou un jour faux.
+ */
+function buildTemporalContext(): string {
+  const now = new Date()
+  const parisFormatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })
+  const timeFormatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  })
+  const dateStr = parisFormatter.format(now)
+  const timeStr = timeFormatter.format(now)
+
+  return `# CONTEXTE TEMPOREL — TEMPS RÉEL
+
+**Date actuelle (Paris) :** ${dateStr}
+**Heure actuelle (Paris) :** ${timeStr}
+
+RÈGLES ABSOLUES :
+- N'invente JAMAIS une date. Utilise exclusivement la date ci-dessus.
+- Pour "mercredi prochain", "la semaine prochaine", "dans 3 jours" : calcule à partir de la date ci-dessus.
+- Ne dis JAMAIS "je suppose que nous sommes en…" — la date réelle t'est fournie.
+
+---
+
+`
+}
+
+/**
+ * Augmente le system prompt d'un agent avec la date/heure Paris + le carnet d'adresses.
+ * Ces blocs sont mis EN TÊTE du prompt pour maximiser leur visibilité par le LLM.
  */
 function augmentSystemPrompt(base: string, config: AgentConfig): string {
   const raw = config["contacts"]
-  // Log debug temporaire pour vérifier que les contacts arrivent bien côté serveur
-  console.log("[augmentSystemPrompt] contacts reçus :", Array.isArray(raw) ? `${raw.length} contact(s)` : `type=${typeof raw}`)
 
-  if (!Array.isArray(raw) || raw.length === 0) return base
+  // Toujours injecter le contexte temporel, même sans contacts
+  const temporalBlock = buildTemporalContext()
+
+  if (!Array.isArray(raw) || raw.length === 0) return temporalBlock + base
 
   const contacts = raw as UserContact[]
   const list = contacts
@@ -97,8 +136,8 @@ function augmentSystemPrompt(base: string, config: AgentConfig): string {
 
   if (!list) return base
 
-  // Bloc EN TÊTE — premier paragraphe lu par le modèle, donc priorité absolue
-  return `# CARNET D'ADRESSES — DONNÉES TEMPS RÉEL DE L'UTILISATEUR
+  // Bloc EN TÊTE — temporel + contacts
+  return temporalBlock + `# CARNET D'ADRESSES — DONNÉES TEMPS RÉEL DE L'UTILISATEUR
 
 Tu disposes du carnet d'adresses complet de l'utilisateur, synchronisé en temps réel depuis sa page /dashboard/contacts. Voici la liste des ${contacts.length} contact(s) connu(s) :
 
@@ -469,6 +508,23 @@ export async function* streamAgent(
       ...currentMessages,
       { role: "assistant", content: allContent },
     ]
+
+    // Signal special events before executing tools
+    for (const tu of toolUseInputs) {
+      if (tu.name === "delegate_to_agent") {
+        let parsedInput: Record<string, unknown> = {}
+        try { parsedInput = JSON.parse(tu.inputStr) as Record<string, unknown> } catch {}
+        const delegatedSlug = String(parsedInput["agent_slug"] ?? "")
+        if (delegatedSlug) {
+          yield `\x01{"type":"agent_join","agentSlug":"${delegatedSlug}"}\x01`
+        }
+      }
+      if (tu.name === "show_email_format_picker") {
+        // Mae rejoint visuellement dès qu'un email est demandé
+        yield `\x01{"type":"agent_join","agentSlug":"mae"}\x01`
+        yield `\x01{"type":"email_format_picker"}\x01`
+      }
+    }
 
     const toolResults = await Promise.all(
       toolUseInputs.map(async (tu) => {

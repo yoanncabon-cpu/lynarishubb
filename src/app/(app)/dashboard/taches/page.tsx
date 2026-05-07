@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { CheckSquare, Plus, X, Trash2, Calendar as CalIcon, Flag } from "lucide-react"
+import { CheckSquare, Plus, X, Trash2, Flag, Calendar as CalIcon } from "lucide-react"
+import { DatePickerPopover } from "@/app/(app)/dashboard/calendrier/_components/DatePickerPopover"
 import { GlassCard } from "@/components/app/glass/GlassCard"
 import { GlassChip } from "@/components/app/glass/GlassChip"
 
@@ -171,9 +172,11 @@ function TaskModal({ task, onClose, onSaved }: { task?: Task; onClose: () => voi
           {/* Échéance */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(250,250,250,0.55)", letterSpacing: "0.04em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Échéance <span style={{ fontWeight: 400, textTransform: "none", color: "rgba(250,250,250,0.4)" }}>(optionnel)</span></label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-              className="ly-input"
-              style={{ padding: "10px 12px", fontSize: 13 }}
+            <DatePickerPopover
+              value={dueDate}
+              onChange={setDueDate}
+              placeholder="Choisir une échéance"
+              clearable
             />
           </div>
 
