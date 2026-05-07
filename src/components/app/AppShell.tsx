@@ -86,6 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             padding: "clamp(8px, 1.5vw, 16px)",
             gap: "clamp(8px, 1vw, 12px)",
             boxSizing: "border-box",
+            isolation: "isolate",
           }}
         >
           <SpotlightTopBar
@@ -104,6 +105,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               scrollbarWidth: "thin",
               scrollbarColor: "rgba(255,255,255,0.12) transparent",
               borderRadius: 22,
+              contain: "layout paint",
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {children}

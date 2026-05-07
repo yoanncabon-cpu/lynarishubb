@@ -85,11 +85,9 @@
 /* ─── Reset global ──────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html {
-  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -436,6 +434,8 @@ h1, h2, h3, h4 {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  isolation: isolate;
+  contain: strict;
 }
 
 .lg-aurora__blob {

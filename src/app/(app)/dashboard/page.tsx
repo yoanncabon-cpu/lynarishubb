@@ -342,8 +342,6 @@ export default function DashboardPage() {
                 radius={24}
                 padding={24}
                 hover={false}
-                specular
-                iridescent
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: 18, height: "100%" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -562,7 +560,7 @@ export default function DashboardPage() {
 
           {/* Stat live tile */}
           <motion.div variants={tileVariants} className="lg-bento__live">
-            <GlassCard tint="rgba(232,111,77,0.20)" radius={20} padding={20} hover={false} specular>
+            <GlassCard tint="rgba(232,111,77,0.20)" radius={20} padding={20} hover={false}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span className="lg-pulse-dot" aria-hidden />
@@ -825,7 +823,7 @@ function BentoHubTile({
   // Header (icône + titre + arrow) = Link vers le hub principal.
   // Chaque chip d'entry = Link vers sa sous-page (cliquable individuellement).
   return (
-    <GlassCard tint={tint} radius={20} padding={20} specular hover={false}>
+    <GlassCard tint={tint} radius={20} padding={20} hover={false}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
         {/* Header — clic = page principale du hub */}
         <Link

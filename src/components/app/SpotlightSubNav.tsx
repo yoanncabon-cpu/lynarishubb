@@ -97,7 +97,7 @@ export function SpotlightSubNav({ isAdmin }: Props) {
                 <motion.span
                   layoutId="subnav-active-bg"
                   aria-hidden
-                  transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                  transition={{ type: "tween", duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
                   style={{
                     position: "absolute",
                     inset: 0,
