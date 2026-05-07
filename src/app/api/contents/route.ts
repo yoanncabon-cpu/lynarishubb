@@ -115,7 +115,10 @@ export async function GET(req: NextRequest) {
     thumbnail: attachmentsMap.get(row.id) ?? null,
   }))
 
-  return NextResponse.json({ items, total: rows.length, offset, limit })
+  return NextResponse.json(
+    { items, total: rows.length, offset, limit },
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } }
+  )
 }
 
 export async function POST(req: NextRequest) {

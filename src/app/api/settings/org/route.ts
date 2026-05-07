@@ -33,7 +33,10 @@ export async function GET() {
     return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 })
   }
 
-  return NextResponse.json({ org })
+  return NextResponse.json(
+    { org },
+    { headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=600" } }
+  )
 }
 
 export async function PATCH(request: NextRequest) {

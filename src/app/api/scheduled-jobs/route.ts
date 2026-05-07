@@ -82,7 +82,10 @@ export async function GET() {
       return { ...job, nextRunAt: fresh }
     }))
 
-    return NextResponse.json({ jobs: healed })
+    return NextResponse.json(
+      { jobs: healed },
+      { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } }
+    )
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error("[scheduled-jobs GET]", msg)

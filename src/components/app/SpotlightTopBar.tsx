@@ -99,7 +99,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
         .catch(() => {})
     }
     load()
-    const id = setInterval(load, 120_000)
+    const id = setInterval(load, 300_000) // 5 min — notifs ne sont pas temps-réel
     function onVisibility() {
       if (document.visibilityState === "visible") load()
     }
