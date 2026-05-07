@@ -529,32 +529,38 @@ function TicketDetailPanel({
           let urls: string[] = []
           try { urls = JSON.parse(ticket.pageUrl) as string[] } catch { urls = [ticket.pageUrl] }
           if (!urls.length) return null
+          const imgExts = new Set(["jpg","jpeg","png","gif","webp"])
+          const isImg = (u: string) => imgExts.has(u.split("?")[0]?.split(".").pop()?.toLowerCase() ?? "")
           return (
             <div style={{ marginTop: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: S.textMuted, margin: 0, marginBottom: 10, textTransform: "uppercase" }}>
                 Pièces jointes
               </p>
-              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                {urls.map((url, i) => (
-                  <li key={i}>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "flex", alignItems: "center", gap: 7,
-                        padding: "7px 10px", borderRadius: 8,
-                        background: "rgba(232,111,77,0.07)", border: "1px solid rgba(232,111,77,0.15)",
-                        fontSize: 12.5, color: S.accent, textDecoration: "none",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}
-                    >
-                      <Paperclip size={12} aria-hidden />
-                      {decodeURIComponent(url.split("/").pop() ?? url)}
-                    </a>
-                  </li>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {urls.map((url, i) => isImg(url) ? (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: "block", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={decodeURIComponent(url.split("/").pop() ?? "image")} style={{ display: "block", maxWidth: "100%", height: "auto" }} />
+                  </a>
+                ) : (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "flex", alignItems: "center", gap: 7,
+                      padding: "7px 10px", borderRadius: 8,
+                      background: "rgba(232,111,77,0.07)", border: "1px solid rgba(232,111,77,0.15)",
+                      fontSize: 12.5, color: S.accent, textDecoration: "none",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Paperclip size={12} aria-hidden />
+                    {decodeURIComponent(url.split("/").pop() ?? url)}
+                  </a>
                 ))}
-              </ul>
+              </div>
             </div>
           )
         })()}
