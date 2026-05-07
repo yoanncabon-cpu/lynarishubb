@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server"
+import { db } from "@/lib/db"
+import { actionLogs, agentInstances, conversations } from "@/lib/db/schema"
+import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
+import { and, eq, gte, desc, count, avg } from "drizzle-orm"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 export interface MarineStatus {
   active_calls: number
@@ -12,18 +17,69 @@ export interface MarineStatus {
 }
 
 export async function GET() {
-  const twilioConfigured = !!(
-    process.env["TWILIO_ACCOUNT_SID"] && process.env["TWILIO_AUTH_TOKEN"]
-  )
+  const twilioConfigured = !!(process.env["TWILIO_ACCOUNT_SID"] && process.env["TWILIO_AUTH_TOKEN"])
 
-  const status: MarineStatus = {
-    active_calls: 0,
-    calls_today: 3,
-    avg_duration_seconds: 127,
-    last_call_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    twilio_configured: twilioConfigured,
-    appointments_booked_today: 2,
+  try {
+    const orgId = await getOrProvisionOrgId()
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0)
+
+    // Conversations voix Marine du jour
+    const [callStats] = await db
+      .select({
+        total:    count(),
+        lastCall: conversations.createdAt,
+      })
+      .from(conversations)
+      .where(and(
+        eq(conversations.orgId, orgId),
+        eq(conversations.agentSlug, "marine"),
+        gte(conversations.createdAt, startOfDay),
+      ))
+      .orderBy(desc(conversations.createdAt))
+      .limit(1)
+      .catch(() => [{ total: 0n, lastCall: null }])
+
+    // RDV créés aujourd'hui via logs Marine
+    const [apptStats] = await db
+      .select({ total: count() })
+      .from(actionLogs)
+      .innerJoin(agentInstances, eq(actionLogs.agentInstanceId, agentInstances.id))
+      .where(and(
+        eq(actionLogs.orgId, orgId),
+        eq(agentInstances.agentSlug, "marine"),
+        eq(actionLogs.type, "calendar_event"),
+        gte(actionLogs.createdAt, startOfDay),
+      ))
+      .catch(() => [{ total: 0n }])
+
+    // Durée moyenne (durationMs dans actionLogs type call_handled)
+    const [durStats] = await db
+      .select({ avgMs: avg(actionLogs.durationMs) })
+      .from(actionLogs)
+      .innerJoin(agentInstances, eq(actionLogs.agentInstanceId, agentInstances.id))
+      .where(and(
+        eq(actionLogs.orgId, orgId),
+        eq(agentInstances.agentSlug, "marine"),
+        eq(actionLogs.type, "call_handled"),
+      ))
+      .catch(() => [{ avgMs: null }])
+
+    const status: MarineStatus = {
+      active_calls:               0,
+      calls_today:                Number(callStats?.total ?? 0),
+      avg_duration_seconds:       Math.round((Number(durStats?.avgMs ?? 0)) / 1000),
+      last_call_at:               callStats?.lastCall?.toISOString() ?? null,
+      twilio_configured:          twilioConfigured,
+      appointments_booked_today:  Number(apptStats?.total ?? 0),
+    }
+
+    return NextResponse.json(status)
+  } catch {
+    // Fallback si DB indisponible
+    return NextResponse.json({
+      active_calls: 0, calls_today: 0, avg_duration_seconds: 0,
+      last_call_at: null, twilio_configured: twilioConfigured,
+      appointments_booked_today: 0,
+    } satisfies MarineStatus)
   }
-
-  return NextResponse.json(status)
 }

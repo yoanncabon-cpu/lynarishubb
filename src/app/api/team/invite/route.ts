@@ -4,6 +4,7 @@ import { z } from "zod"
 import { sendEmail } from "@/lib/emails/send"
 import { teamInviteEmail } from "@/lib/emails/templates"
 import { getAppUrl } from "@/lib/app-url"
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit"
 
 const schema = z.object({
   email: z.string().email(),
@@ -14,6 +15,9 @@ const schema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const rl = await checkRateLimit(request as never, "api")
+  if (rl !== null && !rl.success) return rateLimitResponse(rl.reset)
+
   let body: unknown
   try { body = await request.json() } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })

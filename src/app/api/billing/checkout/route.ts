@@ -4,6 +4,7 @@ import { z } from "zod"
 import { PLANS, planSchema } from "@/lib/pricing/plans"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -19,6 +20,9 @@ const schema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const rl = await checkRateLimit(request as never, "api")
+  if (rl !== null && !rl.success) return rateLimitResponse(rl.reset)
+
   // Authentification — orgId depuis la session, jamais depuis le body client
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()

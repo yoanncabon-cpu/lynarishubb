@@ -1,23 +1,42 @@
-﻿import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import twilio from "twilio"
 
 export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
-  const body = await request.formData()
+  const authToken = process.env["TWILIO_AUTH_TOKEN"]
 
-  const callSid = body.get("CallSid") as string | null
-  const callStatus = body.get("CallStatus") as string | null
-  const callDuration = body.get("CallDuration") as string | null
-  const orgId = request.nextUrl.searchParams.get("org") ?? "00000000-0000-0000-0000-000000000001"
+  // Parse formData avant validation (un seul .formData() autorisé)
+  const body = await request.formData()
+  const params: Record<string, string> = {}
+  body.forEach((v, k) => { params[k] = v.toString() })
+
+  if (authToken) {
+    const sig = request.headers.get("x-twilio-signature") ?? ""
+    const url = `${process.env["NEXT_PUBLIC_APP_URL"] ?? ""}/api/voice/status`
+    if (!twilio.validateRequest(authToken, sig, url, params)) {
+      return new Response("Forbidden", { status: 403 })
+    }
+  }
+
+  const callSid    = params["CallSid"]    ?? null
+  const callStatus = params["CallStatus"] ?? null
+  const callDuration = params["CallDuration"] ?? null
+  const orgId      = request.nextUrl.searchParams.get("org")
 
   console.info("[Voice] Call status update", {
     callSid: callSid?.slice(-6) ?? "unknown",
-    status: callStatus ?? "unknown",
+    status:   callStatus ?? "unknown",
     duration: callDuration ?? "0",
-    orgId,
+    orgId:    orgId ?? "(no org param)",
   })
 
-  // TODO: Phase 9 â€” persist call record to DB, generate summary via Claude Haiku
+  if (!orgId) {
+    // Twilio n'a pas fourni de org param — log et ignore sans erreur
+    return NextResponse.json({ received: true, warning: "no org param" })
+  }
+
+  // TODO Phase 9 — persister le record d'appel en DB
   // await db.update(conversations).set({
   //   endedAt: new Date(),
   //   metadata: { callSid, callStatus, callDuration },

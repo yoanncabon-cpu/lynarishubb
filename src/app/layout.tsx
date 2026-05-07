@@ -14,7 +14,7 @@ const fraunces = Fraunces({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://lynaris.ai"),
+  metadataBase: new URL(process.env["NEXT_PUBLIC_APP_URL"] ?? "https://lynaris.ai"),
   title: {
     default: "Lynaris — Ton équipe IA qui exécute",
     template: "%s — Lynaris",

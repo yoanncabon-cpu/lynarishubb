@@ -12,11 +12,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${process.env["NEXT_PUBLIC_APP_URL"]}/dashboard/integrations?error=google_auth_failed`)
   }
 
-  let orgId = "demo"
+  let orgId: string
   try {
     const decoded = JSON.parse(Buffer.from(stateRaw, "base64").toString()) as { orgId: string }
+    if (!decoded.orgId) throw new Error("orgId manquant dans state")
     orgId = decoded.orgId
-  } catch { /* ignore */ }
+  } catch {
+    return NextResponse.redirect(`${process.env["NEXT_PUBLIC_APP_URL"]}/dashboard/integrations?error=invalid_state`)
+  }
 
   try {
     const tokens = await exchangeGoogleCode(code)
