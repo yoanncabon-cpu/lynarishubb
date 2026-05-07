@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
-import { X, MapPin, AlignLeft, Clock } from "lucide-react"
+import { X, MapPin, AlignLeft, Clock, Calendar } from "lucide-react"
 import { DatePickerPopover } from "./DatePickerPopover"
 
 // ─── Tokens ───────────────────────────────────────────────────────────────────
