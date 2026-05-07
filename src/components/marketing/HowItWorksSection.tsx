@@ -149,7 +149,7 @@ export function HowItWorksSection() {
           }}
         >
           <Image
-            src="/marketing/how-it-works-new.png"
+            src="/marketing/how-it-works-new.webp"
             alt="Dashboard Lynaris sur MacBook et iPhone — interface propre et professionnelle"
             width={1600}
             height={900}

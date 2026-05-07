@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Home, Users, Zap, Puzzle, FileText, Users2, CreditCard, Settings, X, MessageSquare } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/auth/supabase-browser"
@@ -115,8 +116,7 @@ function UserProfile() {
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={displayName ?? "avatar"} width={28} height={28} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <Image src={avatarUrl} alt={displayName ?? "avatar"} width={28} height={28} unoptimized style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>{initials}</span>
         )}

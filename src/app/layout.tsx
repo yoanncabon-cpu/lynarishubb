@@ -4,7 +4,7 @@ import "./globals.css"
 import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister"
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"], display: "swap" })
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" })
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "optional" })
 const fraunces = Fraunces({
   variable: "--font-fraunces-var",
   subsets: ["latin"],

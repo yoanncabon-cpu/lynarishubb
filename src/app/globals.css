@@ -444,6 +444,10 @@ h1, h2, h3, h4 {
   filter: blur(80px);
   opacity: 0.85;
   will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .lg-aurora__blob--orange {
