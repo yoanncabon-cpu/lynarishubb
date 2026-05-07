@@ -93,6 +93,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -103,6 +104,9 @@ body {
   line-height: 1.55;
   min-height: 100dvh;
   overflow-x: hidden;
+  max-width: 100%;
+  /* Bloque tout débordement horizontal sur mobile */
+  position: relative;
 }
 
 /* Grain subtil — texture premium */

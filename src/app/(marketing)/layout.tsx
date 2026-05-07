@@ -11,7 +11,7 @@ import {
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div style={{ overflowX: "clip", width: "100%", maxWidth: "100vw", position: "relative" }}>
       <OrganizationSchema />
       <FAQSchema />
       <SoftwareAppSchema />
@@ -19,9 +19,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       {/* Logo Lynaris ghost watermark — fixed derrière tout le site */}
       <SiteLogoWatermark />
       <Navbar />
-      <main className="flex-1 relative z-10" style={{ backgroundColor: "var(--ly-bg)" }}>{children}</main>
+      <main className="flex-1 relative z-10" style={{ backgroundColor: "var(--ly-bg)", width: "100%", maxWidth: "100%" }}>{children}</main>
       <Footer />
       <CookieBanner />
-    </>
+    </div>
   )
 }

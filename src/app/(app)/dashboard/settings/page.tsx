@@ -1049,14 +1049,42 @@ function NotificationsTab({ toast }: { toast: (msg: string, type?: ToastItem["ty
     }
   }, [])
 
+  async function subscribePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const vapidKey = process.env["NEXT_PUBLIC_VAPID_PUBLIC_KEY"]
+      if (!vapidKey) { toast("VAPID non configuré — voir console", "error"); return }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+      const json = sub.toJSON()
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+      })
+    } catch (e) {
+      console.warn("[Push] Subscribe failed:", e)
+    }
+  }
+
   async function requestPushPermission() {
     if (typeof Notification === "undefined") return
     const result = await Notification.requestPermission()
     setPushPermission(result)
     if (result === "granted") {
-      toast("Notifications push activées", "success")
-      new Notification("Lynaris", { body: "Notifications activées !", icon: "/favicon.ico" })
+      await subscribePush()
+      toast("Notifications push activées ✓", "success")
     }
+  }
+
+  function urlBase64ToUint8Array(base64: string): Uint8Array {
+    const pad = base64.length % 4 === 0 ? "" : "=".repeat(4 - (base64.length % 4))
+    const b64 = (base64 + pad).replace(/-/g, "+").replace(/_/g, "/")
+    const raw = atob(b64)
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
   }
 
   // Mode vacances — état persisté en localStorage
@@ -1211,9 +1239,31 @@ function NotificationsTab({ toast }: { toast: (msg: string, type?: ToastItem["ty
           {typeof Notification === "undefined" ? (
             <span style={{ fontSize: 12, color: "rgba(245,245,247,0.3)", fontStyle: "italic" }}>Non supporté</span>
           ) : pushPermission === "granted" ? (
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#34D399", display: "flex", alignItems: "center", gap: 5 }}>
-              <Check size={13} /> Activé
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#34D399", display: "flex", alignItems: "center", gap: 5 }}>
+                <Check size={13} /> Activé
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/push/test", { method: "POST" })
+                    const d = await res.json() as { sent?: number; error?: string }
+                    if (!res.ok) toast(d.error ?? "Erreur", "error")
+                    else toast(`Notification envoyée à ${d.sent ?? 0} appareil(s) ✓`, "success")
+                  } catch { toast("Erreur réseau", "error") }
+                }}
+                style={{
+                  background: "rgba(52,211,153,0.1)",
+                  border: "1px solid rgba(52,211,153,0.25)",
+                  color: "#34D399",
+                  borderRadius: 8, padding: "4px 12px",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Tester →
+              </button>
+            </div>
           ) : pushPermission === "denied" ? (
             <span style={{ fontSize: 12, color: "#F87171" }}>Bloqué par le navigateur</span>
           ) : (

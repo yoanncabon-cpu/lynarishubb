@@ -931,3 +931,22 @@ export const orgProtectionStateRelations = relations(
     }),
   })
 )
+
+// ─── Push subscriptions (Web Push / VAPID) ───────────────────────────────────
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id:        uuid("id").primaryKey().defaultRandom(),
+    orgId:     uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    userId:    text("user_id"),
+    endpoint:  text("endpoint").notNull(),
+    p256dh:    text("p256dh").notNull(),
+    auth:      text("auth").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("push_sub_org_idx").on(t.orgId),
+    uniqueIndex("push_sub_endpoint_idx").on(t.endpoint),
+  ]
+)

@@ -111,17 +111,16 @@ export function HeroSection() {
             {/* Badge — social proof */}
             <div ref={badgeRef} className="inline-flex opacity-0">
               <div
-                className="inline-flex items-center gap-2.5 rounded-full border px-4 py-2 text-sm backdrop-blur-sm"
+                className="inline-flex flex-wrap items-center gap-2 rounded-full border px-4 py-2 text-sm backdrop-blur-sm max-w-full"
                 style={{
                   borderColor: "rgba(249,115,22,0.3)",
                   background: "linear-gradient(135deg, rgba(249,115,22,0.10) 0%, rgba(124,58,237,0.10) 100%)",
                 }}
               >
-                {/* Mention "cabinet de kinésithérapie à Taverny" retirée — pas d'accord de citation */}
                 <span className="text-[#F5F5F7] text-[13px]">
                   Bêta privée — accès anticipé sur demande.
-                </span>{" "}
-                <a href="/contact" style={{ color: "#E86F4D", textDecoration: "underline", fontSize: 13 }}>
+                </span>
+                <a href="/contact" style={{ color: "#E86F4D", textDecoration: "underline", fontSize: 13, whiteSpace: "nowrap" }}>
                   Rejoindre la bêta.
                 </a>
               </div>
