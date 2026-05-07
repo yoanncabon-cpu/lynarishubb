@@ -6,7 +6,6 @@ import { db } from "@/lib/db"
 import { pushSubscriptions } from "@/lib/db/schema"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { eq } from "drizzle-orm"
-import webpush from "web-push"
 
 function getVapidConfig() {
   const pub  = process.env["NEXT_PUBLIC_VAPID_PUBLIC_KEY"]
@@ -20,7 +19,18 @@ export async function POST(): Promise<NextResponse> {
   const vapid = getVapidConfig()
   if (!vapid) {
     return NextResponse.json(
-      { error: "VAPID non configuré — lance : node scripts/generate-vapid.mjs" },
+      { error: "VAPID non configuré — lance : node scripts/generate-vapid.mjs puis ajoute les clés dans .env" },
+      { status: 503 }
+    )
+  }
+
+  // Import dynamique — évite que le build échoue si web-push n'est pas installé
+  let webpush: typeof import("web-push")
+  try {
+    webpush = (await import("web-push")).default as unknown as typeof import("web-push")
+  } catch {
+    return NextResponse.json(
+      { error: "Package web-push manquant — lance : pnpm add web-push" },
       { status: 503 }
     )
   }
