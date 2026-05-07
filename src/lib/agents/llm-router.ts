@@ -332,13 +332,20 @@ export interface RouteRequestOptions {
 // Le prompt utilise des IDs simplifiés ; les API exigent les IDs complets.
 
 const MODEL_ID_MAP: Record<string, string> = {
-  "claude-haiku-3-5":   "claude-haiku-4-5-20251001",
-  "claude-sonnet-4":    "claude-sonnet-4-6",
-  "claude-opus-4":      "claude-opus-4-7",
-  "gemini-2-0-flash":   "gemini-2.0-flash",
-  "gemini-2-0-pro":     "gemini-2.0-pro",
-  "mistral-large":      "mistral-large-latest",
-  "mistral-small":      "mistral-small-latest",
+  "claude-haiku-3-5":         "claude-haiku-4-5-20251001",
+  "claude-haiku-4-5":         "claude-haiku-4-5-20251001",
+  "claude-sonnet-4":          "claude-sonnet-4-6",
+  "claude-sonnet-4-6":        "claude-sonnet-4-6",
+  "claude-opus-4":            "claude-opus-4-7",
+  "claude-opus-4-7":          "claude-opus-4-7",
+  "gemini-2-0-flash":         "gemini-2.0-flash",
+  "gemini-2.0-flash":         "gemini-2.0-flash",
+  "gemini-2-0-pro":           "gemini-2.0-pro",
+  "gemini-2.0-pro":           "gemini-2.0-pro",
+  "mistral-large":            "mistral-large-latest",
+  "mistral-small":            "mistral-small-latest",
+  "gpt-4o":                   "gpt-4o",
+  "gpt-4o-mini":              "gpt-4o-mini",
 }
 
 function resolveModelId(id: string): string {

@@ -6,5 +6,8 @@ import { listIntegrations } from "@/lib/integrations/manager"
 export async function GET(_request: NextRequest) {
   const orgId = await getOrProvisionOrgId()
   const list = await listIntegrations(orgId)
-  return NextResponse.json({ integrations: list })
+  return NextResponse.json(
+    { integrations: list },
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } }
+  )
 }

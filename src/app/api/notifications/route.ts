@@ -79,7 +79,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
           // Cache court 30s navigateur. Les dismiss font un optimistic update local
           // (cf. SpotlightTopBar.removeNotif) → l'utilisateur n'attend pas le refetch.
           // Le polling 2 min couvre l'arrivée de nouvelles notifs.
-          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
         },
       }
     )

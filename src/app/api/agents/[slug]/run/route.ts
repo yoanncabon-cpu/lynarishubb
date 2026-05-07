@@ -4,6 +4,7 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { runAgent } from "@/lib/agents/executor"
 import { getAgent } from "@/lib/agents/registry"
 import type { EmailStyleConfig } from "@/lib/db/schema"
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit"
 import {
   buildAccessDeniedPayload,
   checkPreTurnAccess,
@@ -22,6 +23,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const rl = await checkRateLimit(request as never, "api")
+  if (rl !== null && !rl.success) return rateLimitResponse(rl.reset)
+
   const { slug } = await params
   const agent = getAgent(slug)
   if (!agent) {

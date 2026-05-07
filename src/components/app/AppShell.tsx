@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
 import { SpotlightTopBar } from "@/components/app/SpotlightTopBar"
 import { SpotlightSubNav } from "@/components/app/SpotlightSubNav"
 import { SpotlightMobileDrawer } from "@/components/app/SpotlightMobileDrawer"
@@ -23,6 +24,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [cmdOpen, setCmdOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const router = useRouter()
+
+  // Prefetch routes fréquentes au montage (budget réseau libre avant interaction)
+  useEffect(() => {
+    const routes = [
+      "/dashboard",
+      "/dashboard/agents/marine",
+      "/dashboard/agents/charles",
+      "/dashboard/conversations",
+      "/dashboard/calendrier",
+      "/dashboard/taches",
+    ]
+    const id = requestIdleCallback
+      ? requestIdleCallback(() => routes.forEach(r => { try { router.prefetch(r) } catch {} }))
+      : setTimeout(() => routes.forEach(r => { try { router.prefetch(r) } catch {} }), 2000)
+    return () => { try { cancelIdleCallback(id as number) } catch {} }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

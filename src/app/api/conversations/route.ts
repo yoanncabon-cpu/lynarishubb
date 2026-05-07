@@ -108,7 +108,10 @@ export async function GET(req: Request) {
       }
     })
 
-    return Response.json({ conversations: result })
+    return Response.json(
+      { conversations: result },
+      { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } }
+    )
   } catch {
     return Response.json({ conversations: [] })
   }
