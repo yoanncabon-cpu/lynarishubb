@@ -5,18 +5,42 @@ import { sendEmail } from "@/lib/emails/send"
 import { teamInviteEmail } from "@/lib/emails/templates"
 import { getAppUrl } from "@/lib/app-url"
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit"
+import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
+import { db } from "@/lib/db"
+import { users, organizations } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 
 const schema = z.object({
   email: z.string().email(),
   role: z.enum(["admin", "member"]).default("member"),
   message: z.string().max(500).optional(),
-  inviterName: z.string().max(100).optional(),
-  orgName: z.string().max(100).optional(),
 })
 
 export async function POST(request: NextRequest) {
   const rl = await checkRateLimit(request as never, "api")
   if (rl !== null && !rl.success) return rateLimitResponse(rl.reset)
+
+  const supabase = await createSupabaseServerClient()
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  if (!authUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const userRow = await db.query.users.findFirst({
+    where: eq(users.id, authUser.id),
+    columns: { orgId: true, role: true, fullName: true, email: true },
+  })
+  if (!userRow?.orgId) {
+    return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 })
+  }
+  if (userRow.role === "member") {
+    return NextResponse.json({ error: "Droits insuffisants pour inviter" }, { status: 403 })
+  }
+
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, userRow.orgId),
+    columns: { name: true },
+  })
 
   let body: unknown
   try { body = await request.json() } catch {
@@ -28,16 +52,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
   }
 
-  const { email, role, message, inviterName, orgName } = parsed.data
+  const { email, role, message } = parsed.data
   const appUrl = getAppUrl()
 
-  // Token unique d'invitation — servira à pré-remplir le rôle à l'inscription
   const token = crypto.randomUUID()
   const signupUrl = `${appUrl}/signup?invite=${token}&role=${role}`
+  const inviterName = userRow.fullName ?? userRow.email
 
   const template = teamInviteEmail({
-    orgName: orgName ?? "votre espace",
-    inviterName: inviterName ?? "Un membre de l'équipe",
+    orgName: org?.name ?? "votre espace",
+    inviterName,
     role,
     message,
     signupUrl,
@@ -51,7 +75,6 @@ export async function POST(request: NextRequest) {
   })
 
   if (!result.success) {
-    console.error(`[Invite] Échec envoi email à ${email}:`, result.error)
     return NextResponse.json(
       { error: result.error ?? "Erreur lors de l'envoi de l'invitation" },
       { status: 500 }
@@ -61,7 +84,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     success: true,
     token,
-    message: `Invitation envoyée à ${email}`,
+    message: `Invitation envoyee a ${email}`,
     role,
   })
 }
