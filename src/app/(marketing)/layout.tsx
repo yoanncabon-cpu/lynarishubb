@@ -3,6 +3,7 @@ import { Footer } from "@/components/marketing/Footer"
 import { CookieBanner } from "@/components/shared/CookieBanner"
 import { SmoothScrollProvider } from "@/components/shared/SmoothScrollProvider"
 import { SiteLogoWatermark } from "@/components/marketing/SiteLogoWatermark"
+import { GsapPreloader } from "@/components/marketing/GsapPreloader"
 import {
   OrganizationSchema,
   FAQSchema,
@@ -15,6 +16,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <OrganizationSchema />
       <FAQSchema />
       <SoftwareAppSchema />
+      <GsapPreloader />
       <SmoothScrollProvider />
       {/* Logo Lynaris ghost watermark — fixed derrière tout le site */}
       <SiteLogoWatermark />

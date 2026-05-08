@@ -4,6 +4,7 @@
 import { useRef, useMemo, Suspense, useEffect, useState } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import * as THREE from "three"
+import "@/lib/three-compat"
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const NUM_FRAGMENTS = 6
@@ -74,8 +75,8 @@ function buildGeometries() {
   const edgesT = new THREE.EdgesGeometry(geoT, 12)
 
   // Fragments : combiner les deux géos non-indexées puis splitter
-  const niL = geoL.toNonIndexed()
-  const niT = geoT.toNonIndexed()
+  const niL = geoL.index ? geoL.toNonIndexed() : geoL
+  const niT = geoT.index ? geoT.toNonIndexed() : geoT
 
   const posL = Array.from(niL.attributes["position"]!.array as Float32Array)
   const norL = Array.from(niL.attributes["normal"]!.array as Float32Array)

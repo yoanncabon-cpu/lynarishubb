@@ -4,6 +4,7 @@
 import { useRef, useMemo, Suspense, useEffect } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import * as THREE from "three"
+import "@/lib/three-compat"
 import { useReducedMotion } from "framer-motion"
 
 const scrollProgress = { value: 0 }
