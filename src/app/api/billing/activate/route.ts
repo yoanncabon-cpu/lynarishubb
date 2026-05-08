@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { z } from "zod"
 import { desc, eq } from "drizzle-orm"
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/auth/supabase-server"
@@ -191,18 +192,18 @@ export async function POST(req: Request): Promise<NextResponse> {
             .from("support-attachments")
             .upload(storagePath, arrayBuf, { contentType: file.type, upsert: false })
           if (uploadErr) {
-            console.error("[support/ticket] Upload échoué:", uploadErr.message, "fichier:", file.name)
+            logger.error("[support/ticket] Upload échoué", { err: uploadErr.message, file: file.name })
           } else {
             attachmentFiles.push({ filename: file.name, content: new Uint8Array(arrayBuf), contentType: file.type })
             const { data: urlData } = adminStorage.storage.from("support-attachments").getPublicUrl(storagePath)
             if (urlData.publicUrl) attachmentUrls.push(urlData.publicUrl)
           }
         } catch (err) {
-          console.error("[support/ticket] Exception upload fichier:", err)
+          logger.error("[support/ticket] Exception upload fichier", { err: String(err) })
         }
       }
     } catch (err) {
-      console.error("[support/ticket] Impossible d'initialiser le storage admin:", err)
+      logger.error("[support/ticket] Impossible d'initialiser le storage admin", { err: String(err) })
     }
   }
 
@@ -221,7 +222,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       status: "open",
     })
   } catch (err) {
-    console.error("[support/ticket] DB insert error:", err)
+    logger.error("[support/ticket] DB insert error", { err: String(err) })
   }
 
   // Envoyer via Gmail SMTP
@@ -235,7 +236,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   })
 
   if (!success) {
-    console.error("[support/ticket] Gmail error:", error)
+    logger.error("[support/ticket] Gmail error", { err: String(error) })
   }
 
   // Copie de confirmation à l'utilisateur

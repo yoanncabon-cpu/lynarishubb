@@ -9,6 +9,7 @@ import {
   Phone, Building, X, User, Shield, Bell, AlertTriangle,
   Loader2, MoreHorizontal, AlertCircle, CheckCircle2, Camera
 } from "lucide-react"
+import { logger } from "@/lib/logger"
 
 // ─── Toast system ─────────────────────────────────────────────────────────────
 
@@ -1066,7 +1067,7 @@ function NotificationsTab({ toast }: { toast: (msg: string, type?: ToastItem["ty
         body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
       })
     } catch (e) {
-      console.warn("[Push] Subscribe failed:", e)
+      logger.warn("[Push] Subscribe failed", { err: String(e) })
     }
   }
 

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
@@ -110,7 +111,7 @@ export async function POST() {
     })
     .where(eq(organizations.id, orgId))
 
-  console.info("[billing/sync] Plan resynchronisé", { orgId, planId, billingCycle, customerId })
+  logger.info("[billing/sync] Plan resynchronisé", { orgId, planId, billingCycle, customerId })
 
   return NextResponse.json({
     success: true,

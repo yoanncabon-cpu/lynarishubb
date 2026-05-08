@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import twilio from "twilio"
+import { logger } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
   const callDuration = params["CallDuration"] ?? null
   const orgId      = request.nextUrl.searchParams.get("org")
 
-  console.info("[Voice] Call status update", {
+  logger.info("[Voice] Call status update", {
     callSid: callSid?.slice(-6) ?? "unknown",
     status:   callStatus ?? "unknown",
     duration: callDuration ?? "0",

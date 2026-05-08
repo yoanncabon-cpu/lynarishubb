@@ -1,4 +1,5 @@
 import type { ToolResult } from "./types"
+import { logger } from "@/lib/logger"
 import { db } from "@/lib/db"
 import { agentMemories, actionLogs, prospects, prospectingSequences, tasks, organizations } from "@/lib/db/schema"
 import type { EmailStyleConfig } from "@/lib/db/schema"
@@ -306,14 +307,14 @@ const toolHandlers: Record<
     messagingServiceSid ??= process.env["TWILIO_MESSAGING_SERVICE_SID"]
 
     if (!accountSid || !authToken || (!from && !messagingServiceSid)) {
-      console.error("[send_sms] Twilio non configuré", { hasSid: !!accountSid, hasToken: !!authToken, hasFrom: !!from, hasService: !!messagingServiceSid })
+      logger.error("[send_sms] Twilio non configuré", { hasSid: !!accountSid, hasToken: !!authToken, hasFrom: !!from, hasService: !!messagingServiceSid })
       return {
         success: false,
         error: "Intégration Twilio non connectée. Vérifie TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + (TWILIO_PHONE_NUMBER ou TWILIO_SENDER_ID ou TWILIO_MESSAGING_SERVICE_SID) dans .env, puis redémarre le serveur dev.",
       }
     }
 
-    console.log("[send_sms] Envoi", {
+    logger.debug("[send_sms] Envoi", {
       to,
       from: messagingServiceSid ? `service=${messagingServiceSid.slice(0, 6)}...` : from,
       accountSid: accountSid.slice(0, 6) + "...",
@@ -343,13 +344,13 @@ const toolHandlers: Record<
     const smsData = await twilioRes.json() as { sid?: string; error_message?: string; code?: number; status?: string }
     if (!twilioRes.ok) {
       // Twilio renvoie un message d'erreur lisible — on le propage pour qu'il remonte jusqu'à l'UI
-      console.error("[send_sms] Twilio refusé", { status: twilioRes.status, code: smsData.code, error: smsData.error_message })
+      logger.error("[send_sms] Twilio refusé", { status: twilioRes.status, code: smsData.code, errMsg: smsData.error_message })
       return {
         success: false,
         error: `Twilio refuse l'envoi (${smsData.code ?? twilioRes.status}) : ${smsData.error_message ?? "raison inconnue"}. Numéro normalisé envoyé : ${to}`,
       }
     }
-    console.log("[send_sms] OK", { sid: smsData.sid, status: smsData.status })
+    logger.info("[send_sms] OK", { sid: smsData.sid, status: smsData.status })
     void logContent({
       orgId: ctx.orgId,
       agentSlug: ctx.agentSlug,
