@@ -1,15 +1,23 @@
-﻿import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import twilio from "twilio"
 
 export const runtime = "nodejs"
 
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;")
+}
+
 export async function POST(request: NextRequest) {
-  // Validation signature Twilio — protège l'endpoint contre les appels non autorisés
+  // Validation signature Twilio — protege l'endpoint contre les appels non autorises
   const authToken = process.env["TWILIO_AUTH_TOKEN"]
   if (authToken) {
     const twilioSignature = request.headers.get("x-twilio-signature") ?? ""
     const url = `${process.env["NEXT_PUBLIC_APP_URL"] ?? ""}/api/voice/incoming`
-    // Lire formData avant de le consommer pour la validation
     const formDataForValidation = await request.formData()
     const params: Record<string, string> = {}
     formDataForValidation.forEach((value, key) => { params[key] = value.toString() })
@@ -19,12 +27,10 @@ export async function POST(request: NextRequest) {
       return new Response("Forbidden", { status: 403 })
     }
 
-    // Reconstruire le body depuis les params déjà parsés
-    const body = formDataForValidation
-    return handleIncoming(request, body)
+    return handleIncoming(request, formDataForValidation)
   }
 
-  // Dev mode : TWILIO_AUTH_TOKEN absent → pas de validation
+  // Dev mode : TWILIO_AUTH_TOKEN absent -> pas de validation
   const body = await request.formData()
   return handleIncoming(request, body)
 }
@@ -52,12 +58,12 @@ async function handleIncoming(request: NextRequest, body: FormData): Promise<Nex
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="${wsUrl}">
-      <Parameter name="org_id" value="${orgId}" />
-      <Parameter name="agent_slug" value="${agentSlug}" />
-      <Parameter name="callSid" value="${callSid}" />
-      <Parameter name="from" value="${from}" />
-      <Parameter name="to" value="${to}" />
+    <Stream url="${escapeXml(wsUrl)}">
+      <Parameter name="org_id" value="${escapeXml(orgId)}" />
+      <Parameter name="agent_slug" value="${escapeXml(agentSlug)}" />
+      <Parameter name="callSid" value="${escapeXml(callSid)}" />
+      <Parameter name="from" value="${escapeXml(from)}" />
+      <Parameter name="to" value="${escapeXml(to)}" />
     </Stream>
   </Connect>
 </Response>`
@@ -67,11 +73,11 @@ async function handleIncoming(request: NextRequest, body: FormData): Promise<Nex
   })
 }
 
-// Status callback â€” called by Twilio at end of call (configure as statusCallback URL)
+// Status callback — appele par Twilio en fin d'appel (configurer comme statusCallback URL)
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const callSid = searchParams.get("CallSid") ?? "unknown"
   const callStatus = searchParams.get("CallStatus") ?? "unknown"
-  console.info(`[Voice] Call ended (GET): ${callSid} â†’ ${callStatus}`)
+  console.info(`[Voice] Call ended (GET): ${callSid} -> ${callStatus}`)
   return new NextResponse("OK")
 }
