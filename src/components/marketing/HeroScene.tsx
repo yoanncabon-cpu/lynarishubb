@@ -4,6 +4,7 @@
 import { useRef, useMemo, useCallback } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
+import "@/lib/three-compat"
 
 const PARTICLE_COUNT = 100
 const CONNECTION_DISTANCE = 2.4
