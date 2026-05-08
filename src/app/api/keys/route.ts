@@ -1,6 +1,8 @@
-﻿export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic"
+import { randomBytes } from "node:crypto"
 import { type NextRequest, NextResponse } from "next/server"
-import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
+import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
+import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
 import { integrations } from "@/lib/db/schema"
 import { eq, and, like } from "drizzle-orm"
@@ -13,17 +15,14 @@ const createSchema = z.object({
 })
 
 function generateApiKey(): string {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-  let key = "lmv_"
-  for (let i = 0; i < 32; i++) {
-    key += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return key
+  return `lmv_${randomBytes(32).toString("base64url")}`
 }
 
 export async function GET(_request: NextRequest) {
   const orgId = await getOrProvisionOrgId()
+  if (orgId === ANON_ORG_ID) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const rows = await db.query.integrations.findMany({
       where: and(
@@ -36,10 +35,10 @@ export async function GET(_request: NextRequest) {
       const meta = (r.metadata ?? {}) as Record<string, unknown>
       return {
         id: r.id,
-        name: meta.name ?? "ClÃ© API",
+        name: meta.name ?? "Cle API",
         key_preview: meta.key_preview ?? "lmv_***...***",
         webhook_url: meta.webhook_url ?? null,
-        created_by: meta.created_by ?? "Yoann Cabon",
+        created_by: meta.created_by ?? "Inconnu",
         created_at: r.connectedAt,
       }
     })
@@ -51,6 +50,16 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const orgId = await getOrProvisionOrgId()
+  if (orgId === ANON_ORG_ID) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const createdBy = (user?.user_metadata?.full_name as string | undefined)
+    ?? user?.email
+    ?? "Inconnu"
+
   let body: unknown
   try {
     body = await request.json()
@@ -78,24 +87,23 @@ export async function POST(request: NextRequest) {
         name,
         key_preview: keyPreview,
         webhook_url: webhook_url ?? null,
-        created_by: "Yoann Cabon",
+        created_by: createdBy,
       },
     })
-    return NextResponse.json({
-      success: true,
-      key: rawKey, // Only returned once
-      key_preview: keyPreview,
-      name,
-      message: "Copiez cette clÃ© maintenant â€” elle ne sera plus affichÃ©e.",
-    })
-  } catch {
-    // Demo fallback
     return NextResponse.json({
       success: true,
       key: rawKey,
       key_preview: keyPreview,
       name,
-      message: "Copiez cette clÃ© maintenant â€” elle ne sera plus affichÃ©e.",
+      message: "Copiez cette cle maintenant - elle ne sera plus affichee.",
+    })
+  } catch {
+    return NextResponse.json({
+      success: true,
+      key: rawKey,
+      key_preview: keyPreview,
+      name,
+      message: "Copiez cette cle maintenant - elle ne sera plus affichee.",
     })
   }
 }
