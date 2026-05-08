@@ -2,16 +2,21 @@ export const dynamic = "force-dynamic"
 import { type NextRequest, NextResponse } from "next/server"
 import { getStripeClient } from "@/lib/integrations/stripe"
 import { getAppUrl } from "@/lib/app-url"
+import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { z } from "zod"
 
 const schema = z.object({
   amount: z.number().min(5).max(500),
   type: z.enum(["phone", "api"]),
-  org_id: z.string().optional(),
   org_email: z.string().email().optional(),
 })
 
 export async function POST(request: NextRequest) {
+  const orgId = await getOrProvisionOrgId()
+  if (orgId === ANON_ORG_ID) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   let body: unknown
   try {
     body = await request.json()
@@ -23,8 +28,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success)
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
 
-  const { amount, type, org_id, org_email } = parsed.data
-  const orgId = org_id ?? request.headers.get("x-org-id") ?? "00000000-0000-0000-0000-000000000001"
+  const { amount, type, org_email } = parsed.data
   const appUrl = getAppUrl()
 
   try {
