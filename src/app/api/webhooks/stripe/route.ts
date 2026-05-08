@@ -19,9 +19,14 @@ import { addVoicePackMinutes } from "@/lib/usage/service"
 export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
+  const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"]
+  if (!webhookSecret || webhookSecret.length < 10) {
+    console.error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET manquant ou invalide")
+    return new Response("Server misconfiguration", { status: 500 })
+  }
+
   const body = await request.text()
   const sig = request.headers.get("stripe-signature") ?? ""
-  const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"] ?? ""
 
   // Dynamically import stripe to avoid edge runtime issues
   const Stripe = (await import("stripe")).default
