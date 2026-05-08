@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { desc, eq, ilike, and, type SQL } from "drizzle-orm"
 import { isLynarisAdmin } from "@/lib/auth/is-admin"
 import { db } from "@/lib/db"
@@ -82,7 +83,7 @@ export async function GET(req: Request): Promise<NextResponse> {
       }
     )
   } catch (err) {
-    console.error("[admin/tickets] DB error:", err)
+    logger.error("[admin/tickets] DB error", { err: String(err) })
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 })
   }
 }

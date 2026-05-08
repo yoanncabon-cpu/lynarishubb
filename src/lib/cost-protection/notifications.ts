@@ -10,6 +10,7 @@
 // (sinon on bloque le lock). Le service tracking les déclenche via
 // `void notifyAdmin70(...)` après commit.
 
+import { logger } from "@/lib/logger"
 import type { PlanId } from "@/lib/pricing/plans"
 import type { ProtectionThreshold } from "./config"
 
@@ -40,31 +41,31 @@ export interface NotificationProvider {
  */
 export const stubNotificationProvider: NotificationProvider = {
   notifyAdmin70: async (ctx) => {
-    console.info("[cost-protection] 🟢 Admin notif 70%", {
+    logger.info("[cost-protection] admin notif 70%", {
       orgId: ctx.orgId,
       ratio: ctx.ratio,
     })
   },
   notifyAdmin90: async (ctx) => {
-    console.info("[cost-protection] 🟡 Admin notif 90%", {
+    logger.info("[cost-protection] admin notif 90%", {
       orgId: ctx.orgId,
       ratio: ctx.ratio,
     })
   },
   notifyClientUpsell90: async (ctx) => {
-    console.info("[cost-protection] 🟡 Client upsell 90%", {
+    logger.info("[cost-protection] client upsell 90%", {
       orgId: ctx.orgId,
       planId: ctx.planId,
     })
   },
   alertAdmin100: async (ctx) => {
-    console.info("[cost-protection] 🟠 Admin alert 100%", {
+    logger.warn("[cost-protection] admin alert 100%", {
       orgId: ctx.orgId,
       ratio: ctx.ratio,
     })
   },
   alertAdmin130: async (ctx) => {
-    console.warn("[cost-protection] 🔴 Admin alert 130% CRITIQUE", {
+    logger.warn("[cost-protection] admin alert 130% critique", {
       orgId: ctx.orgId,
       ratio: ctx.ratio,
     })

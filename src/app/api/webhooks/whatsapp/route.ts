@@ -9,6 +9,7 @@ import { decryptCredentials } from "@/lib/crypto"
 import { runAgent } from "@/lib/agents/executor"
 import { sendWhatsAppMessage, markWhatsAppRead } from "@/lib/whatsapp/meta-api"
 import { getHistory, pushHistory } from "@/lib/whatsapp/conversation-store"
+import { logger } from "@/lib/logger"
 
 // ── Types payload Meta ────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 // ── Traitement des messages ───────────────────────────────────────────────────
 
 async function processMessages(payload: MetaPayload): Promise<void> {
-  console.log("[WA webhook] processMessages called, entries:", payload.entry?.length ?? 0)
+  logger.debug("WA webhook processMessages appelé", { entries: payload.entry?.length ?? 0 })
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
@@ -142,7 +143,7 @@ async function processMessages(payload: MetaPayload): Promise<void> {
       if (!value) continue
 
       const phoneNumberId = value.metadata?.phone_number_id
-      console.log("[WA webhook] phoneNumberId:", phoneNumberId, "messages:", value.messages?.length ?? 0)
+      logger.debug("WA webhook phoneNumberId résolu", { phoneNumberId, messages: value.messages?.length ?? 0 })
       if (!phoneNumberId) continue
 
       const senderName = value.contacts?.[0]?.profile?.name
@@ -153,7 +154,7 @@ async function processMessages(payload: MetaPayload): Promise<void> {
         if (!text || !msg.from || !msg.id) continue
 
         const from = msg.from
-        console.log("[WA webhook] Message from:", from, "text:", text.slice(0, 50))
+        logger.debug("WA webhook message entrant", { from, text: text.slice(0, 50) })
 
         // Chercher l'org — d'abord par phone_number_id, sinon prendre le premier compte connecté
         let orgId: string | null = null
@@ -165,7 +166,7 @@ async function processMessages(payload: MetaPayload): Promise<void> {
             .from(integrations)
             .where(eq(integrations.provider, "whatsapp"))
 
-          console.log("[WA webhook] WA integrations found:", rows.length)
+          logger.debug("WA webhook intégrations trouvées", { count: rows.length })
 
           for (const row of rows) {
             if (!row.credentials) continue
@@ -177,20 +178,20 @@ async function processMessages(payload: MetaPayload): Promise<void> {
               if (creds.phone_number_id === phoneNumberId || rows.length === 1) {
                 orgId = row.orgId
                 accessToken = creds.access_token ?? null
-                console.log("[WA webhook] Matched org:", orgId, "token present:", !!accessToken)
+                logger.debug("WA webhook org matchée", { orgId, tokenPresent: !!accessToken })
                 break
               }
             } catch (decErr) {
-              console.error("[WA webhook] decrypt error:", decErr)
+              logger.error("WA webhook déchiffrement échoué", { err: String(decErr) })
             }
           }
         } catch (dbErr) {
-          console.error("[WA webhook] DB error:", dbErr)
+          logger.error("WA webhook erreur DB", { err: String(dbErr) })
           continue
         }
 
         if (!orgId || !accessToken) {
-          console.warn("[WA webhook] No org/token found — skipping message")
+          logger.warn("WA webhook org/token introuvable — message ignoré")
           continue
         }
 
@@ -204,7 +205,7 @@ async function processMessages(payload: MetaPayload): Promise<void> {
         // Appeler Charles
         let reply: string
         try {
-          console.log("[WA webhook] Calling Charles for org:", orgId)
+          logger.debug("WA webhook appel Charles", { orgId })
           const result = await runAgent({
             agentSlug: "charles",
             messages: history,
@@ -216,9 +217,9 @@ async function processMessages(payload: MetaPayload): Promise<void> {
             },
           })
           reply = result.content.trim()
-          console.log("[WA webhook] Charles replied:", reply.slice(0, 80))
+          logger.debug("WA webhook Charles a répondu", { reply: reply.slice(0, 80) })
         } catch (agentErr) {
-          console.error("[WA webhook] runAgent error:", agentErr)
+          logger.error("WA webhook runAgent échoué", { err: String(agentErr) })
           reply = "Désolé, une erreur est survenue. Réessaie dans quelques instants."
         }
 

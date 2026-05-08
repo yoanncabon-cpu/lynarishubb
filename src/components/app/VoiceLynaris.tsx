@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { logger } from "@/lib/logger"
 import { Mic, MicOff, X, Loader2 } from "lucide-react"
 import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { usePlan } from "@/hooks/usePlan"
@@ -258,7 +259,7 @@ export function VoiceLynaris() {
         if (name === "InvalidStateError") {
           isRunning = true
         } else {
-          console.warn("[VoiceLynaris] start failed:", name, (e as Error).message)
+          logger.warn("[VoiceLynaris] start failed", { name, err: (e as Error).message })
         }
       }
     }
@@ -295,7 +296,7 @@ export function VoiceLynaris() {
       isRunning = false
       if (err === "aborted" || err === "no-speech") return
       if (err === "not-allowed" || err === "service-not-allowed") {
-        console.warn("[VoiceLynaris] Permission micro refusée")
+        logger.warn("[VoiceLynaris] permission micro refusée")
         setMicOn(false)
         return
       }

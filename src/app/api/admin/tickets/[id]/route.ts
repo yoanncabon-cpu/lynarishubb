@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { z } from "zod"
 import { eq } from "drizzle-orm"
 import { isLynarisAdmin } from "@/lib/auth/is-admin"
@@ -80,7 +81,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error("[admin/tickets/[id]] DELETE error:", err)
+    logger.error("[admin/tickets/[id]] DELETE error", { err: String(err) })
     const msg = err instanceof Error ? err.message : ""
     if (
       msg.includes("support_tickets") ||
@@ -154,7 +155,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, ticket: updated })
   } catch (err) {
-    console.error("[admin/tickets/[id]] Error:", err)
+    logger.error("[admin/tickets/[id]] PATCH error", { err: String(err) })
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 })
   }
 }

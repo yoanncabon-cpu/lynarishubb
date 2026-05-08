@@ -4,6 +4,7 @@ import { organizations, users } from "@/lib/db/schema"
 import { eq, lte, gte, and } from "drizzle-orm"
 import { sendEmail } from "@/lib/emails/send"
 import { trialEnding } from "@/lib/emails/stripe-templates"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       })
 
       if (!owner?.email) {
-        console.warn(`[trial-check] Pas d'owner trouvé pour org ${org.id}`)
+        logger.warn("trial-check owner introuvable", { orgId: org.id })
         return org.id
       }
 

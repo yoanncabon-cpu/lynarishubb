@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis"
+import { logger } from "@/lib/logger"
 
 /**
  * Cache Redis Upstash partagé — chargé paresseusement.
@@ -27,9 +28,10 @@ export function getRedis(): Redis | null {
   // Validation : Upstash exige une URL https://*.upstash.io. Si l'env est mal configurée
   // (ex: collé une URL Vercel par erreur), on log + no-op au lieu de crasher l'app entière.
   if (!/^https:\/\//.test(url)) {
-    console.warn(
-      `[cache] UPSTASH_REDIS_REST_URL invalide (doit commencer par https://). Cache désactivé. Reçu: ${url.slice(0, 40)}...`
-    )
+    logger.warn("[cache] UPSTASH_REDIS_REST_URL invalide — cache désactivé", {
+      hint: "doit commencer par https://",
+      received: url.slice(0, 40),
+    })
     return null
   }
 
@@ -37,7 +39,7 @@ export function getRedis(): Redis | null {
     client = new Redis({ url, token })
     return client
   } catch (err) {
-    console.warn("[cache] Init Upstash Redis failed, fallback no-op:", err instanceof Error ? err.message : err)
+    logger.warn("[cache] Init Upstash Redis failed — fallback no-op", { err: err instanceof Error ? err.message : String(err) })
     return null
   }
 }
@@ -66,7 +68,7 @@ export async function cached<T>(
     const hit = await redis.get<T>(key)
     if (hit !== null && hit !== undefined) return hit
   } catch (err) {
-    console.warn("[cache] Redis GET failed, fallback to fetcher:", err instanceof Error ? err.message : err)
+    logger.warn("[cache] Redis GET failed — fallback to fetcher", { err: err instanceof Error ? err.message : String(err) })
     return fetcher()
   }
 
@@ -75,7 +77,7 @@ export async function cached<T>(
   try {
     await redis.set(key, fresh, { ex: ttlSeconds })
   } catch (err) {
-    console.warn("[cache] Redis SET failed (non-blocking):", err instanceof Error ? err.message : err)
+    logger.warn("[cache] Redis SET failed — non-blocking", { err: err instanceof Error ? err.message : String(err) })
   }
 
   return fresh
@@ -90,6 +92,6 @@ export async function invalidate(key: string): Promise<void> {
   try {
     await redis.del(key)
   } catch (err) {
-    console.warn("[cache] Redis DEL failed:", err instanceof Error ? err.message : err)
+    logger.warn("[cache] Redis DEL failed", { err: err instanceof Error ? err.message : String(err) })
   }
 }

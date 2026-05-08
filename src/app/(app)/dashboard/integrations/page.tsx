@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import React, { useState, useEffect, useCallback } from "react"
+import { logger } from "@/lib/logger"
 import dynamic from "next/dynamic"
 import { Search, CheckCircle2, X, Plug, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react"
 import { GlassCard, GlassChip, GlassPanel } from "@/components/app/glass"
@@ -856,7 +857,7 @@ export default function IntegrationsPage() {
       }
       setConnectedMap(map)
     } catch (e) {
-      console.error("[integrations] fetchStatus failed:", e)
+      logger.error("[integrations] fetchStatus failed", { err: String(e) })
     } finally {
       setLoading(false)
     }

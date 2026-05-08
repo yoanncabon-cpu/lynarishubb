@@ -6,6 +6,7 @@ import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { phoneNumbers } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
+import { logger } from "@/lib/logger"
 
 export async function GET(_req: NextRequest): Promise<NextResponse> {
   const orgId = await getOrProvisionOrgId()
@@ -22,7 +23,7 @@ export async function GET(_req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ numbers })
   } catch (err) {
-    console.error("[phone-numbers] GET error:", err)
+    logger.error("phone-numbers GET échoué", { err: String(err) })
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
   }
 }

@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger"
+
 const GH_API = "https://graph.facebook.com/v19.0"
 
 /** Envoie un message texte WhatsApp */
@@ -23,7 +25,7 @@ export async function sendWhatsAppMessage(
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    console.error("[WhatsApp] sendMessage failed:", JSON.stringify(err))
+    logger.error("[WhatsApp] sendMessage failed", { err: JSON.stringify(err) })
   }
   return res.ok
 }

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createSupabaseAdminClient } from "@/lib/auth/supabase-server"
 import { sendEmail } from "@/lib/emails/send"
 import { weeklySummaryEmail } from "@/lib/emails/notification-templates"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
   })
 
   if (error) {
-    console.error("[cron/weekly-summary] Erreur listUsers:", error.message)
+    logger.error("cron/weekly-summary listUsers échoué", { err: error.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -61,16 +62,14 @@ export async function GET(request: NextRequest) {
       if (result.success) {
         sent++
       } else {
-        console.error(`[cron/weekly-summary] Échec envoi à ${u.email}:`, result.error)
+        logger.error("cron/weekly-summary envoi échoué", { email: u.email, err: String(result.error) })
       }
     })
   )
 
   const failed = results.filter((r) => r.status === "rejected").length
 
-  console.info(
-    `[cron/weekly-summary] Résultat — éligibles: ${eligible.length}, envoyés: ${sent}, échoués: ${failed}, skipped (no email): ${skipped}`
-  )
+  logger.info("cron/weekly-summary terminé", { eligible: eligible.length, sent, failed, skipped })
 
   return NextResponse.json({
     eligible: eligible.length,

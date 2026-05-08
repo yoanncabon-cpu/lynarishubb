@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { upsertIntegration } from "@/lib/integrations/manager"
 import type { IntegrationProvider } from "@/lib/integrations/manager"
 import { OAUTH_CONFIGS } from "@/lib/integrations/oauth-configs"
+import { logger } from "@/lib/logger"
 
 function getBaseUrl(request: NextRequest) {
   return process.env["NEXT_PUBLIC_APP_URL"] ?? new URL(request.url).origin
@@ -127,7 +128,7 @@ export async function GET(
     return response
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Token exchange error"
-    console.error(`[oauth-callback] ${provider}:`, msg)
+    logger.error("oauth-callback token exchange échoué", { provider, err: msg })
     return NextResponse.redirect(
       `${baseUrl}/dashboard/integrations?error=${encodeURIComponent(msg.slice(0, 100))}&provider=${provider}`
     )

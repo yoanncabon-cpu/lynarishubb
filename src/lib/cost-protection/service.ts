@@ -15,6 +15,7 @@
 // - Mode ALERTE : flags marqués mais bascules éco/hard-cap NON activées
 // - Mode ACTIF : flags marqués + bascules activées
 
+import { logger } from "@/lib/logger"
 import { eq, sql } from "drizzle-orm"
 import { db } from "@/lib/db"
 import {
@@ -357,9 +358,9 @@ export async function trackUsage(
       if (t !== null) {
         // Fire-and-forget : on ne bloque pas l'appel principal
         dispatchNotification(notificationProvider, t, notifCtx).catch((err) => {
-          console.error("[cost-protection] notification failed", {
+          logger.error("[cost-protection] notification failed", {
             threshold: t,
-            err,
+            err: String(err),
           })
         })
       }

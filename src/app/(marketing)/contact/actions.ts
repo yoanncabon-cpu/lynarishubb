@@ -1,5 +1,6 @@
 "use server"
 
+import { logger } from "@/lib/logger"
 import { sendGmail } from "@/lib/emails/gmail"
 import { agents } from "@/lib/agents/data"
 
@@ -112,7 +113,7 @@ export async function submitContact(
   })
 
   if (!result.success) {
-    console.error("[Contact Form] Gmail error:", result.error)
+    logger.error("[Contact Form] Gmail error", { err: String(result.error) })
     return {
       status: "error",
       message: "L'envoi a échoué. Réessaie ou écris-nous directement à support@lynarisai.com.",

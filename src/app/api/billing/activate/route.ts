@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
           tags: ["payment-success", "plan-activation"],
         })
       } catch (emailErr) {
-        console.error("[billing/activate] Email send failed:", emailErr)
+        logger.error("[billing/activate] Email send failed", { err: String(emailErr) })
         // Non-bloquant — le plan est activé même si l'email échoue
       }
     }

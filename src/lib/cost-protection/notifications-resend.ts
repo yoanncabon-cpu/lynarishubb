@@ -9,6 +9,7 @@
 // Cache Upstash optionnel pour dedup ultra-rapide :
 //   protection:notif:{orgId}:{type}:{periodStart} TTL 31j
 
+import { logger } from "@/lib/logger"
 import { sendEmail } from "@/lib/emails/send"
 import {
   adminCostAlert70,
@@ -43,7 +44,7 @@ async function sendToAdmin(
       tags: [tag, "cost-protection", "admin"],
     })
   } catch (err) {
-    console.error("[cost-protection] sendToAdmin failed", { tag, err })
+    logger.error("[cost-protection] sendToAdmin failed", { tag, err: String(err) })
   }
 }
 
@@ -97,7 +98,7 @@ export const resendNotificationProvider: NotificationProvider = {
 
     // Stub en l'absence d'email — sera complété quand le service tracking
     // aura accès à l'email du customer (lookup organizations.users).
-    console.info("[cost-protection] Client upsell email prepared (subject)", {
+    logger.info("[cost-protection] client upsell email prepared", {
       orgId: ctx.orgId,
       subject: template.subject,
     })

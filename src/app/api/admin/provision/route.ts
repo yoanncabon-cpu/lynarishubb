@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { isLynarisAdmin } from "@/lib/auth/is-admin"
 import { createClient } from "@supabase/supabase-js"
 import { db } from "@/lib/db"
@@ -153,7 +154,7 @@ export async function POST(req: Request) {
       replyTo: "support@lynarisai.com",
     })
 
-    console.info("[provision] email result:", emailResult)
+    logger.info("[provision] email envoyé", { success: emailResult.success, error: emailResult.error })
 
     return NextResponse.json({
       success: true,
@@ -162,7 +163,7 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erreur serveur"
-    console.error("[admin/provision]", msg)
+    logger.error("[admin/provision] Erreur serveur", { err: msg })
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

@@ -7,6 +7,7 @@ import { db } from "@/lib/db"
 import { phoneNumbers } from "@/lib/db/schema"
 import twilio from "twilio"
 import { z } from "zod"
+import { logger } from "@/lib/logger"
 
 const bodySchema = z.object({
   phone_number: z.string().min(5),
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       await client.incomingPhoneNumbers(twilioSid).update({ voiceReceiveMode: "voice" })
     } catch {
       // Certaines API Twilio n'exposent pas voiceRegion via le SDK — on log et on continue
-      console.warn("[purchase] voiceRegion IE1 non appliqué via SDK — vérifier manuellement")
+      logger.warn("purchase voiceRegion IE1 non appliqué via SDK — vérifier manuellement")
     }
 
     // Étape 3 — Insert en DB
@@ -82,21 +83,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       status: "active",
     }).returning()
 
-    console.info("[purchase] Numéro acheté:", { orgId, phoneNumber: purchased.phoneNumber, twilioSid })
+    logger.info("purchase numéro acheté", { orgId, phoneNumber: purchased.phoneNumber, twilioSid })
 
     return NextResponse.json({ success: true, phoneNumber: inserted?.phoneNumber, id: inserted?.id })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur Twilio"
-    console.error("[purchase] Erreur:", message)
+    logger.error("purchase achat échoué", { err: message })
 
     // Rollback — libère le numéro Twilio si achat OK mais DB KO
     if (twilioSid) {
       try {
         const client = getTwilioClient()
         await client.incomingPhoneNumbers(twilioSid).remove()
-        console.info("[purchase] Rollback Twilio OK — numéro libéré:", twilioSid)
+        logger.info("purchase rollback Twilio OK", { twilioSid })
       } catch (rollbackErr) {
-        console.error("[purchase] Rollback Twilio FAILED:", rollbackErr)
+        logger.error("purchase rollback Twilio échoué", { err: String(rollbackErr) })
       }
     }
 

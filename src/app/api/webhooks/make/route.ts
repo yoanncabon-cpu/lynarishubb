@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyMakeWebhook } from "@/lib/integrations/make"
+import { logger } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  console.info("[Make callback]", {
+  logger.info("make webhook reçu", {
     run_id: payload.run_id,
     org_id: orgId,
     workflow: payload.workflow,
