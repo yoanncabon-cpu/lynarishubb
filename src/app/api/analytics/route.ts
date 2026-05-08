@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { conversations, actionLogs } from "@/lib/db/schema"
@@ -210,7 +211,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (err) {
-    console.error("Analytics API error:", err)
+    logger.error("Analytics API error", { err: String(err) })
     return NextResponse.json({
       totals: { conversations: 0, actions: 0, callsMinutes: 0, emailsProcessed: 0, deltaConversations: 0, deltaActions: 0 },
       dailyConversations: [],

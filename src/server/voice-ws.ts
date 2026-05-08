@@ -8,6 +8,7 @@
  * Start: npx tsx src/server/voice-ws.ts
  */
 
+import { logger } from "@/lib/logger"
 import { WebSocketServer, WebSocket } from "ws"
 import type { IncomingMessage } from "http"
 import Anthropic from "@anthropic-ai/sdk"
@@ -81,7 +82,7 @@ const sessions = new Map<string, CallSession>()
 async function sendAudioToTwilio(session: CallSession, text: string): Promise<void> {
   const apiKey = process.env["ELEVENLABS_API_KEY"]
   if (!apiKey) {
-    console.warn("[Voice] ELEVENLABS_API_KEY not set — skipping TTS")
+    logger.warn("[Voice] ELEVENLABS_API_KEY not set — skipping TTS")
     return
   }
 
@@ -107,7 +108,7 @@ async function sendAudioToTwilio(session: CallSession, text: string): Promise<vo
     )
 
     if (!response.ok || !response.body) {
-      console.error("[Voice] ElevenLabs HTTP error", { status: response.status })
+      logger.error("[Voice] ElevenLabs HTTP error", { status: response.status })
       return
     }
 
@@ -135,7 +136,7 @@ async function sendAudioToTwilio(session: CallSession, text: string): Promise<vo
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown"
-    console.error("[Voice] TTS error", { error: message })
+    logger.error("[Voice] TTS error", { error: message })
   }
 }
 
@@ -145,7 +146,7 @@ async function sendGreeting(session: CallSession): Promise<void> {
   const { getAgent } = await loadAgentRegistry()
   const agentDef = getAgent(session.agentSlug)
   if (!agentDef) {
-    console.error("[Voice] Agent not found", { slug: session.agentSlug })
+    logger.error("[Voice] agent not found", { slug: session.agentSlug })
     return
   }
 
@@ -217,7 +218,7 @@ async function processUserSpeech(session: CallSession, userText: string): Promis
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown"
-    console.error("[Voice] Claude error", { error: message })
+    logger.error("[Voice] Claude error", { error: message })
   } finally {
     session.isProcessing = false
   }
@@ -246,7 +247,7 @@ function createWss(port = 3001): WebSocketServer {
 
       switch (event.event) {
         case "connected":
-          console.info("[Voice] WebSocket connected")
+          logger.info("[Voice] WebSocket connected")
           break
 
         case "start": {
@@ -263,7 +264,7 @@ function createWss(port = 3001): WebSocketServer {
             ws,
           }
           sessions.set(streamSid, session)
-          console.info("[Voice] Call started", {
+          logger.info("[Voice] call started", {
             callSid: callSid.slice(-6),
             orgId: session.orgId,
           })
@@ -286,7 +287,7 @@ function createWss(port = 3001): WebSocketServer {
 
         case "stop": {
           if (!session) break
-          console.info("[Voice] Call ended", {
+          logger.info("[Voice] call ended", {
             callSid: session.callSid.slice(-6),
             transcriptLines: session.transcript.length,
           })
@@ -307,11 +308,11 @@ function createWss(port = 3001): WebSocketServer {
     })
 
     ws.on("error", (err: Error) => {
-      console.error("[Voice] WebSocket error", { error: err.message })
+      logger.error("[Voice] WebSocket error", { error: err.message })
     })
   })
 
-  console.info(`[Voice] WebSocket server listening on port ${port}`)
+  logger.info("[Voice] WebSocket server listening", { port })
   return wss
 }
 

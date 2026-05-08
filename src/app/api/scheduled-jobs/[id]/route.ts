@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm"
 import { z } from "zod"
 import { computeNextRunAt } from "@/lib/scheduler"
 import type { Frequency } from "@/lib/scheduler"
+import { logger } from "@/lib/logger"
 
 // Zod v4 a un bug avec .nullable().optional() ET .nullish() sur les champs
 // avec contraintes (min/max/int). Workaround : preprocess null → undefined
@@ -59,7 +60,7 @@ export async function PATCH(
   const body = await req.json().catch(() => null)
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) {
-    console.error("[scheduled-jobs PATCH] Validation Zod échouée", { body, issues: parsed.error.issues })
+    logger.error("scheduled-jobs PATCH validation Zod échouée", { issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) })
     return NextResponse.json({
       error: parsed.error.issues
         .map((i) => `${i.path.join(".")} : ${i.message}`)

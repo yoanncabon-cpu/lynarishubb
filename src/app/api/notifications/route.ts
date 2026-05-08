@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { actionLogs, agentInstances } from "@/lib/db/schema"
@@ -84,7 +85,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       }
     )
   } catch (err) {
-    console.error("[notifications] DB error:", err instanceof Error ? err.message : err)
+    logger.error("[notifications] DB error", { err: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ notifications: [] })
   }
 }
@@ -139,7 +140,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ ok: true, dismissed: "all" })
   } catch (err) {
-    console.error("[notifications DELETE] DB error:", err instanceof Error ? err.message : err)
+    logger.error("[notifications DELETE] DB error", { err: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ error: "Échec de l'effacement" }, { status: 500 })
   }
 }

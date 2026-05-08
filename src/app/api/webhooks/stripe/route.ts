@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { sendEmail } from "@/lib/emails/send"
 import {
   welcomeEmail,
@@ -21,7 +22,7 @@ export const runtime = "nodejs"
 export async function POST(request: NextRequest) {
   const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"]
   if (!webhookSecret || webhookSecret.length < 10) {
-    console.error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET manquant ou invalide")
+    logger.error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET manquant ou invalide")
     return new Response("Server misconfiguration", { status: 500 })
   }
 
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       const action = session.metadata?.["action"]
       const customerEmail = session.customer_email ?? session.customer_details?.email
 
-      console.info("[Stripe] Checkout completed", { orgId, sessionId: session.id, action })
+      logger.info("[Stripe] Checkout completed", { orgId, sessionId: session.id, action })
 
       // ── Voice pack Marine purchase (option Starter) ──────────────────
       if (action === "voice_pack_purchase" && orgId) {
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
               : []
 
             if (processed.includes(session.id)) {
-              console.info("[Stripe] Voice pack déjà traité — skip", { orgId, sessionId: session.id })
+              logger.info("[Stripe] Voice pack déjà traité — skip", { orgId, sessionId: session.id })
               break
             }
 
@@ -111,13 +112,13 @@ export async function POST(request: NextRequest) {
               })
               .where(eq(organizations.id, orgId))
 
-            console.info("[Stripe] Voice pack credited", {
+            logger.info("[Stripe] Voice pack credited", {
               orgId,
               minutes,
               newBalance: result.newBalance,
             })
           } catch (err) {
-            console.error("[Stripe] Failed to credit voice pack", err)
+            logger.error("[Stripe] Failed to credit voice pack", { err: String(err) })
           }
         }
         break
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
               : []
 
             if (processed.includes(session.id)) {
-              console.info("[Stripe] Recharge déjà traitée — skip", { orgId, sessionId: session.id })
+              logger.info("[Stripe] Recharge déjà traitée — skip", { orgId, sessionId: session.id })
               break
             }
 
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
               .set({ settings: updated })
               .where(eq(organizations.id, orgId))
 
-            console.info("[Stripe] Credits added (webhook)", { orgId, creditType, amountEur, newBalance })
+            logger.info("[Stripe] Credits added (webhook)", { orgId, creditType, amountEur, newBalance })
 
             // Email de confirmation — même template que le flow client
             if (customerEmail) {
@@ -221,11 +222,11 @@ export async function POST(request: NextRequest) {
                   tags: ["credit-recharge"],
                 })
               } catch (err) {
-                console.error("[Stripe] Failed to send recharge email", err)
+                logger.error("[Stripe] Failed to send recharge email", { err: String(err) })
               }
             }
           } catch (err) {
-            console.error("[Stripe] Failed to process recharge", err)
+            logger.error("[Stripe] Failed to process recharge", { err: String(err) })
           }
         }
         break
@@ -279,7 +280,7 @@ export async function POST(request: NextRequest) {
                   displayName = r.displayName
                 }
               } catch (e) {
-                console.warn("[Stripe] subscription retrieve failed", e)
+                logger.warn("[Stripe] subscription retrieve failed", { err: String(e) })
               }
             }
           }
@@ -298,12 +299,12 @@ export async function POST(request: NextRequest) {
                 ...(customerId ? { stripeCustomerId: customerId } : {}),
               })
               .where(eq(organizations.id, orgId))
-            console.info("[Stripe] Org plan activated", { orgId, planId: resolvedPlanId, billingMode })
+            logger.info("[Stripe] Org plan activated", { orgId, planId: resolvedPlanId, billingMode })
           } else {
-            console.warn("[Stripe] Plan non résolu — checkout.session", { orgId, sessionId: session.id })
+            logger.warn("[Stripe] Plan non résolu — checkout.session", { orgId, sessionId: session.id })
           }
         } catch (err) {
-          console.error("[Stripe] Failed to activate org plan", err)
+          logger.error("[Stripe] Failed to activate org plan", { err: String(err) })
         }
       }
 
@@ -322,7 +323,7 @@ export async function POST(request: NextRequest) {
           tags: ["welcome"],
         })
       } catch (err) {
-        console.error("[Stripe] Failed to send welcome email", err)
+        logger.error("[Stripe] Failed to send welcome email", { err: String(err) })
       }
 
       // ── Confirmation de paiement (si invoice présente) ───────────────
@@ -349,7 +350,7 @@ export async function POST(request: NextRequest) {
             tags: ["payment-success"],
           })
         } catch (err) {
-          console.error("[Stripe] Failed to send payment confirmation email", err)
+          logger.error("[Stripe] Failed to send payment confirmation email", { err: String(err) })
         }
       }
       break
@@ -368,7 +369,7 @@ export async function POST(request: NextRequest) {
           | undefined
       )?.items?.data?.[0]?.price?.id
 
-      console.info("[Stripe] Subscription updated", {
+      logger.info("[Stripe] Subscription updated", {
         subscriptionId: subscription.id,
         customerId,
         status,
@@ -388,10 +389,10 @@ export async function POST(request: NextRequest) {
             .update(organizations)
             .set({ planId: newPlanId, planActivatedAt: new Date() })
             .where(eq(organizations.stripeCustomerId, customerId))
-          console.info("[Stripe] Org plan updated", { customerId, planId: newPlanId, status })
+          logger.info("[Stripe] Org plan updated", { customerId, planId: newPlanId, status })
         }
       } catch (err) {
-        console.error("[Stripe] Failed to update org on subscription update", err)
+        logger.error("[Stripe] Failed to update org on subscription update", { err: String(err) })
       }
 
       // Email changement de plan — seulement si le price a changé
@@ -419,7 +420,7 @@ export async function POST(request: NextRequest) {
             })
           }
         } catch (err) {
-          console.error("[Stripe] Failed to send plan changed email", err)
+          logger.error("[Stripe] Failed to send plan changed email", { err: String(err) })
         }
       }
       break
@@ -433,7 +434,7 @@ export async function POST(request: NextRequest) {
       const priceId = subscription.items?.data?.[0]?.price?.id
       const { displayName: planName } = resolvePlan(priceId)
 
-      console.info("[Stripe] Subscription deleted", {
+      logger.info("[Stripe] Subscription deleted", {
         subscriptionId: subscription.id,
         customerId,
       })
@@ -448,10 +449,10 @@ export async function POST(request: NextRequest) {
             .update(organizations)
             .set({ planId: "discovery", planActivatedAt: new Date() })
             .where(eq(organizations.stripeCustomerId, customerId))
-          console.info("[Stripe] Org downgraded to discovery", { customerId })
+          logger.info("[Stripe] Org downgraded to discovery", { customerId })
         }
       } catch (err) {
-        console.error("[Stripe] Failed to downgrade org on subscription deleted", err)
+        logger.error("[Stripe] Failed to downgrade org on subscription deleted", { err: String(err) })
       }
 
       // Email annulation avec date d'accès restant
@@ -485,7 +486,7 @@ export async function POST(request: NextRequest) {
             })
           }
         } catch (err) {
-          console.error("[Stripe] Failed to send cancellation email", err)
+          logger.error("[Stripe] Failed to send cancellation email", { err: String(err) })
         }
       }
       break
@@ -496,7 +497,7 @@ export async function POST(request: NextRequest) {
         typeof invoice.customer_email === "string"
           ? invoice.customer_email
           : null
-      console.info("[Stripe] Payment succeeded", { invoiceId: invoice.id })
+      logger.info("[Stripe] Payment succeeded", { invoiceId: invoice.id })
 
       if (!customerEmail) break
 
@@ -532,7 +533,7 @@ export async function POST(request: NextRequest) {
             tags: ["subscription-renewed"],
           })
         } catch (err) {
-          console.error("[Stripe] Failed to send renewal email", err)
+          logger.error("[Stripe] Failed to send renewal email", { err: String(err) })
         }
       }
       break
@@ -543,7 +544,7 @@ export async function POST(request: NextRequest) {
         typeof invoice.customer_email === "string"
           ? invoice.customer_email
           : null
-      console.info("[Stripe] Payment failed", { invoiceId: invoice.id })
+      logger.info("[Stripe] Payment failed", { invoiceId: invoice.id })
 
       if (!customerEmail) break
 
@@ -588,12 +589,12 @@ export async function POST(request: NextRequest) {
           tags: ["payment-failed"],
         })
       } catch (err) {
-        console.error("[Stripe] Failed to send payment failed email", err)
+        logger.error("[Stripe] Failed to send payment failed email", { err: String(err) })
       }
       break
     }
     default:
-      console.info("[Stripe] Unhandled event", { type: event.type })
+      logger.info("[Stripe] Unhandled event", { type: event.type })
   }
 
   return NextResponse.json({ received: true })

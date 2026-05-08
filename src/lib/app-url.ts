@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger"
+
 /**
  * Source unique pour l'URL publique de l'application.
  *
@@ -14,18 +16,18 @@ export function getAppUrl(): string {
 
   if (!raw) {
     if (isProd) {
-      console.error(
-        "[app-url] NEXT_PUBLIC_APP_URL absent en prod — fallback localhost. " +
-          "Configure la variable dans Vercel → Settings → Environment Variables."
+      logger.error(
+        "[app-url] NEXT_PUBLIC_APP_URL absent en prod — fallback localhost",
+        { hint: "Configure la variable dans Vercel → Settings → Environment Variables." }
       )
     }
     return "http://localhost:3000"
   }
 
   if (isProd && raw.includes("localhost")) {
-    console.error(
-      "[app-url] NEXT_PUBLIC_APP_URL pointe sur localhost en prod. " +
-        "Mets l'URL Vercel ou ton domaine custom (https://lynarisai.com)."
+    logger.error(
+      "[app-url] NEXT_PUBLIC_APP_URL pointe sur localhost en prod",
+      { hint: "Mets l'URL Vercel ou ton domaine custom (https://lynarisai.com)." }
     )
   }
 

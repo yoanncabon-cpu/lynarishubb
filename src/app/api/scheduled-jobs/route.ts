@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { scheduledJobs } from "@/lib/db/schema"
@@ -88,7 +89,7 @@ export async function GET() {
     )
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error("[scheduled-jobs GET]", msg)
+    logger.error("[scheduled-jobs GET]", { err: msg })
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null)
     const parsed = createSchema.safeParse(body)
     if (!parsed.success) {
-      console.error("[scheduled-jobs POST] Validation Zod échouée", { body, issues: parsed.error.issues })
+      logger.error("[scheduled-jobs POST] Validation Zod échouée", { issues: JSON.stringify(parsed.error.issues) })
       return NextResponse.json({
         error: parsed.error.issues
           .map((i) => `${i.path.join(".")} : ${i.message}`)
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ job }, { status: 201 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error("[scheduled-jobs POST]", msg)
+    logger.error("[scheduled-jobs POST]", { err: msg })
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

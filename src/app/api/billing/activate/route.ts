@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
           tags: ["payment-success", "plan-activation"],
         })
       } catch (emailErr) {
-        console.error("[billing/activate] Email send failed:", emailErr)
+        logger.error("[billing/activate] Email send failed", { err: String(emailErr) })
         // Non-bloquant — le plan est activé même si l'email échoue
       }
     }

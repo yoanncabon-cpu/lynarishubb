@@ -1,6 +1,7 @@
 "use client"
 
 import { Bell, ChevronDown, Menu, Search, Settings, LogOut, CreditCard, X, Zap } from "lucide-react"
+import { logger } from "@/lib/logger"
 import { useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
@@ -155,7 +156,7 @@ export function Topbar({ onMenuClick, onSearchClick }: TopbarProps) {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (err) {
-      console.error("[notifications] dismiss failed, rollback", err)
+      logger.error("[notifications] dismiss failed, rollback", { err: String(err) })
       setNotifications(previous)
     }
   }
@@ -171,7 +172,7 @@ export function Topbar({ onMenuClick, onSearchClick }: TopbarProps) {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (err) {
-      console.error("[notifications] clear all failed, rollback", err)
+      logger.error("[notifications] clear all failed, rollback", { err: String(err) })
       setNotifications(previous)
     }
   }

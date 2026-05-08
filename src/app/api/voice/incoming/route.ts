@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import twilio from "twilio"
+import { logger } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
@@ -47,7 +48,7 @@ async function handleIncoming(request: NextRequest, body: FormData): Promise<Nex
   const wsProtocol = host.startsWith("localhost") ? "ws" : "wss"
   const wsUrl = `${wsProtocol}://${host}/api/voice/stream?org=${encodeURIComponent(orgId)}&agent=${encodeURIComponent(agentSlug)}`
 
-  console.info("[Voice] Incoming call", {
+  logger.info("[Voice] Incoming call", {
     callSid: callSid.slice(-6) || "unknown",
     from: from || "hidden",
     to: to || "unknown",
@@ -78,6 +79,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const callSid = searchParams.get("CallSid") ?? "unknown"
   const callStatus = searchParams.get("CallStatus") ?? "unknown"
-  console.info(`[Voice] Call ended (GET): ${callSid} -> ${callStatus}`)
+  logger.info("[Voice] Call ended (GET)", { callSid, callStatus })
   return new NextResponse("OK")
 }

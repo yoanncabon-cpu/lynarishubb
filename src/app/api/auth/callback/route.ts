@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 
 export async function GET(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
-      console.error("[auth/callback] exchangeCodeForSession error:", error.message)
+      logger.error("[auth/callback] exchangeCodeForSession error", { err: error.message })
       return NextResponse.redirect(`${origin}/login?error=auth_error`)
     }
 
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     return response
   } catch (err) {
-    console.error("[auth/callback] unexpected error:", err)
+    logger.error("[auth/callback] unexpected error", { err: String(err) })
     return NextResponse.redirect(`${origin}/login?error=auth_error`)
   }
 }

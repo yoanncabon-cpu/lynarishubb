@@ -7,6 +7,7 @@ import { db } from "@/lib/db"
 import { phoneNumbers } from "@/lib/db/schema"
 import { and, eq } from "drizzle-orm"
 import twilio from "twilio"
+import { logger } from "@/lib/logger"
 
 function getTwilioClient() {
   const sid = process.env["TWILIO_ACCOUNT_SID"]
@@ -50,11 +51,11 @@ export async function DELETE(
       .set({ status: "released", releasedAt: new Date() })
       .where(eq(phoneNumbers.id, id))
 
-    console.info("[phone-numbers] Numéro libéré:", { orgId, phoneNumber: num.phoneNumber })
+    logger.info("phone-numbers numéro libéré", { orgId, phoneNumber: num.phoneNumber })
     return NextResponse.json({ success: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur Twilio"
-    console.error("[phone-numbers] DELETE error:", message)
+    logger.error("phone-numbers DELETE échoué", { err: message })
     return NextResponse.json({ error: message }, { status: 502 })
   }
 }

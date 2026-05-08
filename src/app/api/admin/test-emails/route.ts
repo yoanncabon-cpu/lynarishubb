@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { isLynarisAdmin } from "@/lib/auth/is-admin"
 import { sendGmail } from "@/lib/emails/gmail"
 import { welcomeEmail, teamInviteEmail } from "@/lib/emails/templates"
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
       results.push({ name, success: res.success, error: res.error })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      console.error(`[test-emails] Erreur sur "${name}":`, message)
+      logger.error("[test-emails] Erreur envoi", { name, err: message })
       results.push({ name, success: false, error: message })
     }
     await delay(500)

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
+import { logger } from "@/lib/logger"
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -10,9 +11,7 @@ interface ErrorProps {
 
 export default function DashboardError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[Dashboard Error]", error)
-    }
+    logger.error("[Dashboard Error]", { err: String(error), digest: error.digest })
   }, [error])
 
   return (

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk"
+import { logger } from "@/lib/logger"
 import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { getAgent, type AgentConfig } from "./registry"
 import { executeTool } from "./tools/index"
@@ -474,7 +475,7 @@ export async function* streamAgent(
           providerRef: finalMsg.id,
         })
       } catch (err) {
-        console.error("[executor] streamAgent instrumentation failed", err)
+        logger.error("[executor] streamAgent instrumentation failed", { err: String(err) })
       }
     })()
 
@@ -484,11 +485,11 @@ export async function* streamAgent(
       try {
         parsedInput = JSON.parse(tu.inputStr) as Record<string, unknown>
       } catch (err) {
-        console.error('[executor] tool input parse error (allContent)', {
+        logger.error("[executor] tool input parse error (allContent)", {
           tool: tu.name,
           toolId: tu.id,
           rawInput: tu.inputStr,
-          error: err instanceof Error ? err.message : String(err),
+          err: err instanceof Error ? err.message : String(err),
         })
       }
       allContent.push({
@@ -532,11 +533,11 @@ export async function* streamAgent(
         try {
           parsedInput = JSON.parse(tu.inputStr) as Record<string, unknown>
         } catch (err) {
-          console.error('[executor] tool input parse error (toolResults)', {
+          logger.error("[executor] tool input parse error (toolResults)", {
             tool: tu.name,
             toolId: tu.id,
             rawInput: tu.inputStr,
-            error: err instanceof Error ? err.message : String(err),
+            err: err instanceof Error ? err.message : String(err),
           })
         }
 

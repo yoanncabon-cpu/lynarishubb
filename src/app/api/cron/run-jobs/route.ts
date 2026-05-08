@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { scheduledJobs } from "@/lib/db/schema"
 import { eq, and, lte, isNull, or } from "drizzle-orm"
+import { logger } from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   // Vérifie le secret Vercel Cron
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   const expectedSecret = process.env["CRON_SECRET"]
 
   if (!expectedSecret) {
-    console.error("[cron/run-jobs] CRON_SECRET non configuré")
+    logger.error("cron/run-jobs CRON_SECRET non configuré")
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 })
   }
   if (authHeader !== `Bearer ${expectedSecret}`) {

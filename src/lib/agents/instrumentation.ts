@@ -8,6 +8,7 @@
 //
 // Centralisé ici pour ne pas polluer executor.ts avec la logique pricing.
 
+import { logger } from "@/lib/logger"
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
@@ -157,14 +158,14 @@ export async function instrumentTurnComplete(
       economyModeUsed: input.economyModeUsed ?? false,
     })
   } catch (err) {
-    console.error("[instrumentation] trackUsage failed", { orgId: input.orgId, err })
+    logger.error("[instrumentation] trackUsage failed", { orgId: input.orgId, err: String(err) })
   }
 
   // 2. Compteur client (visible dashboard)
   try {
     await consumeAction(input.orgId, validSlug, actionType)
   } catch (err) {
-    console.error("[instrumentation] consumeAction failed", { orgId: input.orgId, err })
+    logger.error("[instrumentation] consumeAction failed", { orgId: input.orgId, err: String(err) })
   }
 }
 

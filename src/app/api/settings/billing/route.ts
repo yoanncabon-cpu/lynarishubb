@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
 import { users, organizations } from "@/lib/db/schema"
@@ -69,7 +70,7 @@ export async function GET(_request: NextRequest) {
       createdAt: org.createdAt,
     })
   } catch (err) {
-    console.error("[settings/billing] DB error:", err instanceof Error ? err.message : err)
+    logger.error("[settings/billing] DB error", { err: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ plan: null, error: "DB unavailable" }, { status: 500 })
   }
 }

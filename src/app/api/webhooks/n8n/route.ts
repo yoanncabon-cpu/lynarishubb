@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { n8nRuns } from "@/lib/db/schema"
 import { getIntegration } from "@/lib/integrations/manager"
 import { verifyN8nWebhook } from "@/lib/integrations/n8n"
+import { logger } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     })
     .where(eq(n8nRuns.id, payload.run_id))
 
-  console.info("[n8n callback]", {
+  logger.info("n8n webhook reçu", {
     run_id: payload.run_id,
     org_id: orgId,
     workflow: payload.workflow,

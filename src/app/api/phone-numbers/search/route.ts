@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { type NextRequest, NextResponse } from "next/server"
 import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import twilio from "twilio"
+import { logger } from "@/lib/logger"
 
 const CACHE: Map<string, { ts: number; data: unknown }> = new Map()
 const CACHE_TTL_MS = 5 * 60 * 1000
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ numbers })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur Twilio"
-    console.error("[phone-numbers/search] Twilio error:", message)
+    logger.error("phone-numbers/search Twilio échoué", { err: message })
     return NextResponse.json({ error: message }, { status: 502 })
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { eq } from "drizzle-orm"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { isLynarisAdmin } from "@/lib/auth/is-admin"
@@ -59,7 +60,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error("[support/ticket/[id]] DELETE error:", err)
+    logger.error("[support/ticket/[id]] DELETE error", { err: String(err) })
     const msg = err instanceof Error ? err.message : ""
     if (
       msg.includes("support_tickets") ||

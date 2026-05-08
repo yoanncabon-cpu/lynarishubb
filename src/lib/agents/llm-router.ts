@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk"
+import { logger } from "@/lib/logger"
 
 const anthropic = new Anthropic({ apiKey: process.env["ANTHROPIC_API_KEY"] })
 
@@ -448,7 +449,7 @@ is_voice_real_time: ${options.isVoiceRealTime ?? false}`.trim()
       }
     }
   } catch (err) {
-    console.error("[llm-router] routing failed, using fallback:", err instanceof Error ? err.message : String(err))
+    logger.error("[llm-router] routing failed, using fallback", { err: err instanceof Error ? err.message : String(err) })
   }
 
   return DEFAULT_FALLBACK

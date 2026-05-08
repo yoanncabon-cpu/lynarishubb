@@ -1,6 +1,7 @@
 "use client"
 
 import { Bell, ChevronDown, Search, Settings, LogOut, CreditCard, X, Zap, Menu } from "lucide-react"
+import { logger } from "@/lib/logger"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -137,7 +138,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (err) {
-      console.error("[notifications] dismiss failed, rollback", err)
+      logger.error("[notifications] dismiss failed, rollback", { err: String(err) })
       setNotifications(previous)
     }
   }
@@ -153,7 +154,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (err) {
-      console.error("[notifications] clear all failed, rollback", err)
+      logger.error("[notifications] clear all failed, rollback", { err: String(err) })
       setNotifications(previous)
     }
   }

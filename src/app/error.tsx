@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
+import { logger } from "@/lib/logger"
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -10,10 +11,7 @@ interface ErrorProps {
 
 export default function GlobalError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // Log to error monitoring in production
-    if (process.env.NODE_ENV === "development") {
-      console.error("[Global Error]", error)
-    }
+    logger.error("[Global Error]", { err: String(error), digest: error.digest })
   }, [error])
 
   return (

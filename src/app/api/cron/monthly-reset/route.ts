@@ -12,6 +12,7 @@
 // Idempotent : si une org a déjà sa période avancée, elle est skip.
 
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { db } from "@/lib/db"
 import {
   organizations,
@@ -126,14 +127,14 @@ export async function GET(request: NextRequest) {
   try {
     result.countersReset = await resetUsageCounters(now)
   } catch (err) {
-    console.error("[cron/monthly-reset] usage_counters error", err)
+    logger.error("[cron/monthly-reset] usage_counters error", { err: String(err) })
     result.errors++
   }
 
   try {
     result.protectionReset = await resetProtectionState(now)
   } catch (err) {
-    console.error("[cron/monthly-reset] protection_state error", err)
+    logger.error("[cron/monthly-reset] protection_state error", { err: String(err) })
     result.errors++
   }
 

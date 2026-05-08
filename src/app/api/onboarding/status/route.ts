@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
 import { users } from "@/lib/db/schema"
@@ -36,7 +37,7 @@ export async function GET() {
       }
     )
   } catch (err) {
-    console.error("[onboarding/status] DB error:", err instanceof Error ? err.message : err)
+    logger.error("[onboarding/status] DB error", { err: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ completed: false, currentStep: 0, skipped: false })
   }
 }

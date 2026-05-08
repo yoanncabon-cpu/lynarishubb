@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer"
+import { logger } from "@/lib/logger"
 import type { Transporter } from "nodemailer"
 import { Resend } from "resend"
 
@@ -69,13 +70,13 @@ export async function sendGmail(
         })),
       })
       if (error) {
-        console.warn("[email] Resend échec, fallback Gmail SMTP:", error.message)
+        logger.warn("[email] Resend échec, fallback Gmail SMTP", { err: error.message })
       } else {
-        console.info("[email] Envoyé via Resend →", toField, "| from:", customFromEmail, "| id:", data?.id)
+        logger.info("[email] Envoyé via Resend", { to: toField, from: customFromEmail, id: data?.id })
         return { success: true }
       }
     } catch (err) {
-      console.error("[email] Resend exception, fallback Gmail SMTP:", err instanceof Error ? err.message : err)
+      logger.error("[email] Resend exception, fallback Gmail SMTP", { err: err instanceof Error ? err.message : String(err) })
     }
   }
 
@@ -93,13 +94,13 @@ export async function sendGmail(
           contentType: a.contentType,
         })),
       })
-      console.info("[gmail] Envoyé via Gmail SMTP (fallback) →", toField)
+      logger.info("[gmail] Envoyé via Gmail SMTP (fallback)", { to: toField })
       return { success: true }
     } catch (err) {
-      console.error("[gmail] Erreur Gmail SMTP:", err instanceof Error ? err.message : err)
+      logger.error("[gmail] Erreur Gmail SMTP", { err: err instanceof Error ? err.message : String(err) })
     }
   }
 
-  console.warn("[email] Aucun provider n'a réussi. Vérifie RESEND_API_KEY ou GMAIL_APP_PASSWORD dans .env")
+  logger.warn("[email] Aucun provider n'a réussi. Vérifie RESEND_API_KEY ou GMAIL_APP_PASSWORD dans .env")
   return { success: false, error: "No email provider available" }
 }

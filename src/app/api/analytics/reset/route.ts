@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
 import { db } from "@/lib/db"
 import { actionLogs, conversations, messages } from "@/lib/db/schema"
@@ -69,7 +70,7 @@ export async function POST(): Promise<NextResponse> {
       },
     })
   } catch (err) {
-    console.error("[analytics/reset] error:", err instanceof Error ? err.message : err)
+    logger.error("[analytics/reset] error", { err: err instanceof Error ? err.message : String(err) })
     return NextResponse.json(
       { error: "Erreur lors de la réinitialisation" },
       { status: 500 }
