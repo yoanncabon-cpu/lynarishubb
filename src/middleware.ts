@@ -1,27 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
-// Routes publiques qui ne necessitent pas d'auth
-const PUBLIC_PATHS = [
-  "/",
-  "/agents",
-  "/tarifs",
-  "/contact",
-  "/a-propos",
-  "/blog",
-  "/legal",
-  "/mentions-legales",
-  "/cgu",
-  "/confidentialite",
-  "/login",
-  "/signup",
-  "/forgot-password",
-  "/api/auth",
-  "/api/webhooks",
-  "/api/demo",
+// Routes API qui bypass l'auth middleware (protegees au niveau handler via HMAC ou Bearer).
+// Allowlist explicite — pas de startsWith generique.
+const PUBLIC_API_EXACT = new Set<string>([
+  "/api/auth/callback",
   "/api/admin/test-emails",
-  // Cron Vercel — la route /api/cron/* vérifie elle-même l'Authorization Bearer ${CRON_SECRET}
-  "/api/cron",
+  "/api/health",
+])
+
+// Prefixes API autorises : TOUS les sous-chemins sont proteges dans leurs handlers.
+// webhooks : HMAC Stripe/Twilio/Resend verifie dans chaque route.
+// cron : Authorization Bearer ${CRON_SECRET} verifie dans chaque route.
+const PUBLIC_API_PREFIXES = [
+  "/api/webhooks/",
+  "/api/cron/",
 ]
 
 /**
@@ -57,12 +50,8 @@ function isStaticPublicPath(pathname: string): boolean {
 }
 
 function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some(
-    (p) =>
-      pathname === p ||
-      pathname.startsWith(p + "/") ||
-      pathname.startsWith("/agents/")
-  )
+  if (PUBLIC_API_EXACT.has(pathname)) return true
+  return PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))
 }
 
 export async function middleware(request: NextRequest) {
