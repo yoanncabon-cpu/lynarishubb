@@ -65,11 +65,17 @@ const CONFETTI_COLORS = [
 
 function Confetti() {
   const particles = Array.from({ length: 22 }, (_, i) => i)
+  const [reducedMotion, setReducedMotion] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  // Respecte prefers-reduced-motion
-  if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    return null
-  }
+  // Déplacé dans useEffect pour éviter hydration mismatch sur iOS Safari
+  useEffect(() => {
+    setMounted(true)
+    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+  }, [])
+
+  // Pas encore monté (SSR) ou motion réduite → ne pas afficher
+  if (!mounted || reducedMotion) return null
 
   return (
     <div
