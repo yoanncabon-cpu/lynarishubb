@@ -5,11 +5,9 @@ export function Ticker({ to, duration = 1200, style }: { to: number; duration?: 
   const [value, setValue] = useState(0)
   const frameRef = useRef<number>(0)
   const startRef = useRef<number>(0)
-  const reducedMotion = typeof window !== "undefined"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    : false
 
   useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (reducedMotion) { setValue(to); return }
     startRef.current = performance.now()
     function tick(now: number) {
@@ -21,7 +19,7 @@ export function Ticker({ to, duration = 1200, style }: { to: number; duration?: 
     }
     frameRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameRef.current)
-  }, [to, duration, reducedMotion])
+  }, [to, duration])
 
   return (
     <span style={{ fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-geist-mono, monospace)", ...style }}>
