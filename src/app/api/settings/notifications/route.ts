@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { z } from "zod"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -39,7 +40,8 @@ export async function PATCH(request: NextRequest) {
   })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    logger.error("[settings/notifications] updateUser failed", { err: error.message })
+    return NextResponse.json({ error: "Erreur lors de la mise à jour des préférences" }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

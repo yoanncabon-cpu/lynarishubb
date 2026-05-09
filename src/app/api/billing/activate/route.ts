@@ -12,21 +12,9 @@ import { sendEmail } from "@/lib/emails/send"
 import { paymentSuccess } from "@/lib/emails/stripe-templates"
 import { getPlanFromStripePriceId } from "@/lib/pricing/stripe-resolver"
 import { planSchema, type PlanId } from "@/lib/pricing/plans"
+import { LEGACY_PLAN_MAP } from "@/lib/billing/plan-map"
 
 const schema = z.object({ sessionId: z.string().min(1) })
-
-type DbPlan = "trial" | "starter" | "pro" | "scale"
-
-// Mapping plan_id metadata (nouveau enum UI) ⇄ enum legacy DB `plan`.
-// L'écriture moderne se fait sur `planId` (text). L'enum `plan` est conservé
-// pour rétrocompat tant que l'ancien code n'est pas migré.
-const LEGACY_PLAN_MAP: Record<PlanId, DbPlan> = {
-  discovery: "trial",
-  starter:   "starter",
-  pro:       "pro",
-  business:  "pro",   // legacy enum n'a pas "business" — fallback
-  custom:    "scale",
-}
 
 const PLAN_LABELS: Record<PlanId, string> = {
   discovery: "Découverte",

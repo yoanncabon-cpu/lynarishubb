@@ -15,17 +15,7 @@ import { organizations } from "@/lib/db/schema"
 import { getOrProvisionOrgId, ANON_ORG_ID } from "@/lib/auth/get-org-id"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { getPlanFromStripePriceId } from "@/lib/pricing/stripe-resolver"
-import type { PlanId } from "@/lib/pricing/plans"
-
-type DbPlan = "trial" | "starter" | "pro" | "scale"
-
-const LEGACY_PLAN_MAP: Record<PlanId, DbPlan> = {
-  discovery: "trial",
-  starter:   "starter",
-  pro:       "pro",
-  business:  "pro",
-  custom:    "scale",
-}
+import { LEGACY_PLAN_MAP } from "@/lib/billing/plan-map"
 
 export async function POST() {
   const supabase = await createSupabaseServerClient()

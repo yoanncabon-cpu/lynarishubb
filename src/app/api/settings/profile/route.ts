@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { users } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { z } from "zod"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -114,7 +115,8 @@ export async function PATCH(request: NextRequest) {
   const { error } = await admin.auth.admin.updateUserById(user.id, updatePayload)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    logger.error("[settings/profile] updateUserById failed", { err: error.message, userId: user.id })
+    return NextResponse.json({ error: "Erreur lors de la mise à jour du profil" }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

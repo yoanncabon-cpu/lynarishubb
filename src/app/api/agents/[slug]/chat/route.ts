@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getOrProvisionOrgId } from "@/lib/auth/get-org-id"
+import { logger } from "@/lib/logger"
 import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { streamAgent } from "@/lib/agents/executor"
 import { getAgent } from "@/lib/agents/registry"
@@ -73,8 +74,8 @@ export async function POST(
     if (row?.config) {
       dbConfig = row.config as Record<string, unknown>
     }
-  } catch {
-    // DB unavailable — proceed with empty config
+  } catch (dbErr) {
+    logger.warn("[chat] DB config unavailable — proceeding with empty config", { slug, err: String(dbErr) })
   }
 
   // Merge: DB config + request body config (body overrides DB)
@@ -97,7 +98,9 @@ export async function POST(
       })
       .returning({ id: agentInstances.id })
     instanceId = rows[0]?.id ?? null
-  } catch { /* ignore — log will be written without FK */ }
+  } catch (upsertErr) {
+    logger.warn("[chat] agentInstance upsert failed — log FK will be null", { slug, err: String(upsertErr) })
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -125,8 +128,8 @@ export async function POST(
         controller.close()
       } catch (err) {
         streamError = true
-        const message = err instanceof Error ? err.message : "Stream error"
-        const errorData = `data: ${JSON.stringify({ error: message })}\n\n`
+        logger.error("[chat] Stream error", { slug, err: String(err) })
+        const errorData = `data: ${JSON.stringify({ error: "Erreur de traitement de la requête" })}\n\n`
         controller.enqueue(encoder.encode(errorData))
         controller.close()
       }
@@ -140,7 +143,9 @@ export async function POST(
           status: streamError ? "error" : "success",
           payload: { agentSlug: slug },
         })
-      } catch { /* ne pas bloquer si DB KO */ }
+      } catch (logErr) {
+        logger.warn("[chat] action_log insert failed", { slug, err: String(logErr) })
+      }
     },
   })
 

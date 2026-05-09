@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     logger.error("cron/weekly-summary listUsers échoué", { err: error.message })
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: "Erreur lors de la récupération des utilisateurs" }, { status: 500 })
   }
 
   // Filtre les users avec la préférence activée

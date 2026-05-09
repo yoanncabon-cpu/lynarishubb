@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { z } from "zod"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -38,7 +39,10 @@ export async function PATCH(
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error("[documents/[id]] PATCH failed", { err: error.message })
+    return NextResponse.json({ error: "Erreur lors de la modification" }, { status: 500 })
+  }
 
   return NextResponse.json({ document: data })
 }
@@ -97,7 +101,10 @@ export async function DELETE(
     .eq("id", id)
     .eq("org_id", userData.org_id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error("[documents/[id]] DELETE failed", { err: error.message })
+    return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }

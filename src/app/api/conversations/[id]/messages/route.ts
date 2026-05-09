@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
+import { logger } from "@/lib/logger"
 
 interface MessageBody {
   role: "user" | "assistant" | "tool" | "system"
@@ -56,7 +57,10 @@ export async function POST(
       .select()
       .single()
 
-    if (error) return Response.json({ error: error.message }, { status: 500 })
+    if (error) {
+      logger.error("[conversations/messages] POST insert failed", { err: error.message })
+      return Response.json({ error: "Erreur serveur" }, { status: 500 })
+    }
     return Response.json({ message: data })
   } catch {
     return Response.json({ error: "Erreur serveur" }, { status: 500 })

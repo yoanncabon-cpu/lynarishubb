@@ -36,7 +36,9 @@ export async function GET(request: NextRequest) {
       // Fire-and-forget — ne bloque jamais le redirect
       void import("@/lib/email/resend").then(({ sendWelcomeEmail }) =>
         sendWelcomeEmail(user.email!, firstName)
-      )
+      ).catch((err: unknown) => {
+        logger.error("[auth/callback] sendWelcomeEmail failed", { err: String(err) })
+      })
     }
 
     const onboardingPath = plan

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
+import { logger } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
@@ -112,7 +113,8 @@ export async function DELETE(request: NextRequest) {
     const { error } = await query
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error("[charles/memory] DELETE failed", { err: error.message })
+      return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 500 })
     }
 
     return NextResponse.json({ deleted: true })

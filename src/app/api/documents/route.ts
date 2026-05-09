@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { z } from "zod"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -36,7 +37,10 @@ export async function GET(request: NextRequest) {
   }
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error("[documents] GET failed", { err: error.message })
+    return NextResponse.json({ error: "Erreur lors de la récupération des documents" }, { status: 500 })
+  }
 
   return NextResponse.json({ documents: data })
 }
@@ -84,7 +88,10 @@ export async function POST(request: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error("[documents] POST insert failed", { err: error.message })
+    return NextResponse.json({ error: "Erreur lors de la création du document" }, { status: 500 })
+  }
 
   return NextResponse.json({ document: data }, { status: 201 })
 }

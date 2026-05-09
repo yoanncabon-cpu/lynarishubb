@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { createClient } from "@supabase/supabase-js"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -31,7 +32,8 @@ export async function DELETE() {
   const { error } = await admin.auth.admin.deleteUser(user.id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    logger.error("[auth/account] deleteUser failed", { err: error.message, userId: user.id })
+    return NextResponse.json({ error: "Erreur lors de la suppression du compte" }, { status: 500 })
   }
 
   await supabase.auth.signOut()
