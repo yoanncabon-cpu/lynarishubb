@@ -24,18 +24,20 @@ export async function GET() {
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0)
 
     // Conversations voix Marine du jour
+    // Note: conversations.agentSlug n'existe pas dans le schéma — on join agentInstances
     const [callStats] = await db
       .select({
         total:    count(),
-        lastCall: conversations.createdAt,
+        lastCall: conversations.startedAt,
       })
       .from(conversations)
+      .innerJoin(agentInstances, eq(conversations.agentInstanceId, agentInstances.id))
       .where(and(
         eq(conversations.orgId, orgId),
-        eq(conversations.agentSlug, "marine"),
-        gte(conversations.createdAt, startOfDay),
+        eq(agentInstances.agentSlug, "marine"),
+        gte(conversations.startedAt, startOfDay),
       ))
-      .orderBy(desc(conversations.createdAt))
+      .orderBy(desc(conversations.startedAt))
       .limit(1)
       .catch(() => [{ total: 0n, lastCall: null }])
 
