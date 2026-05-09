@@ -8,7 +8,13 @@ import { SpotlightSubNav } from "@/components/app/SpotlightSubNav"
 import { SpotlightMobileDrawer } from "@/components/app/SpotlightMobileDrawer"
 import { NavigationProgress } from "@/components/app/NavigationProgress"
 import { NotificationProvider } from "@/components/app/NotificationProvider"
-import { VoiceLynaris } from "@/components/app/VoiceLynaris"
+const VoiceLynaris = dynamic(
+  () =>
+    import("@/components/app/VoiceLynaris").then((m) => ({
+      default: m.VoiceLynaris,
+    })),
+  { ssr: false }
+)
 import { OnboardingLoader } from "@/components/onboarding/OnboardingLoader"
 import { AuroraBackground } from "@/components/app/glass"
 
@@ -36,10 +42,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       "/dashboard/calendrier",
       "/dashboard/taches",
     ]
-    const id = requestIdleCallback
+    const id = typeof requestIdleCallback !== "undefined"
       ? requestIdleCallback(() => routes.forEach(r => { try { router.prefetch(r) } catch {} }))
       : setTimeout(() => routes.forEach(r => { try { router.prefetch(r) } catch {} }), 2000)
-    return () => { try { cancelIdleCallback(id as number) } catch {} }
+    return () => {
+      if (typeof cancelIdleCallback !== "undefined") {
+        try { cancelIdleCallback(id as number) } catch {}
+      } else {
+        clearTimeout(id as ReturnType<typeof setTimeout>)
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -60,8 +72,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const TS_KEY = "lynaris-is-admin-ts"
     const TTL = 5 * 60 * 1000 // 5 minutes
 
-    const cached = sessionStorage.getItem(KEY)
-    const cachedTs = parseInt(sessionStorage.getItem(TS_KEY) ?? "0", 10)
+    // iOS private mode bloque sessionStorage — on wrappe en try/catch
+    let cached: string | null = null
+    let cachedTs = 0
+    try {
+      cached = sessionStorage.getItem(KEY)
+      cachedTs = parseInt(sessionStorage.getItem(TS_KEY) ?? "0", 10)
+    } catch { /* ignore — private mode iOS */ }
     if (cached !== null && Date.now() - cachedTs < TTL) {
       setIsAdmin(cached === "1")
       return
@@ -71,8 +88,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .then((r) => {
         const result = r.ok
         setIsAdmin(result)
-        sessionStorage.setItem(KEY, result ? "1" : "0")
-        sessionStorage.setItem(TS_KEY, String(Date.now()))
+        try {
+          sessionStorage.setItem(KEY, result ? "1" : "0")
+          sessionStorage.setItem(TS_KEY, String(Date.now()))
+        } catch { /* ignore — private mode iOS */ }
       })
       .catch(() => {})
   }, [])
