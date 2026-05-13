@@ -149,7 +149,7 @@ export function HowItWorksSection() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/marketing/how-it-works-new.png"
+            src="/marketing/how-it-works-v2.png"
             alt="Dashboard Lynaris sur MacBook et iPhone — interface propre et professionnelle"
             className="w-full h-auto"
             loading="eager"
