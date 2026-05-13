@@ -139,27 +139,85 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Visuel Higgsfield — MacBook + iPhone dashboard */}
-        <div
-          className="relative mx-auto mb-20 rounded-3xl overflow-hidden"
-          style={{
-            maxWidth: 960,
-            boxShadow: "0 40px 80px -20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)",
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/marketing/how-it-works-v4.png"
-            alt="Dashboard Lynaris sur MacBook et iPhone — interface propre et professionnelle"
-            className="w-full h-auto"
-            loading="eager"
-          />
-          {/* Fade bottom pour raccord avec la timeline */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-            aria-hidden
-            style={{ background: "linear-gradient(to bottom, transparent, rgba(8,8,16,0.95))" }}
-          />
+        {/* Mockup device — vrai dashboard Lynaris */}
+        <div className="relative mx-auto mb-20" style={{ maxWidth: 960 }}>
+          <div className="flex items-end justify-center gap-4 sm:gap-6">
+
+            {/* MacBook */}
+            <div className="relative flex-1" style={{ maxWidth: 720 }}>
+              {/* Écran */}
+              <div
+                className="relative rounded-t-xl overflow-hidden"
+                style={{
+                  background: "#1a1a2e",
+                  border: "2px solid rgba(255,255,255,0.12)",
+                  borderBottom: "none",
+                  boxShadow: "0 0 60px rgba(124,58,237,0.2), 0 0 120px rgba(34,211,238,0.08)",
+                }}
+              >
+                {/* Barre de titre macOS */}
+                <div className="flex items-center gap-1.5 px-3 py-2" style={{ background: "rgba(0,0,0,0.4)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#FF5F57" }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#FEBC2E" }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#28C840" }} />
+                </div>
+                {/* Screenshot dashboard */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/marketing/dashboard-screenshot.png"
+                  alt="Dashboard Lynaris"
+                  className="w-full h-auto block"
+                  loading="eager"
+                />
+              </div>
+              {/* Pied MacBook */}
+              <div style={{ height: 10, background: "linear-gradient(to bottom, #2a2a3a, #1a1a28)", borderRadius: "0 0 4px 4px", border: "2px solid rgba(255,255,255,0.1)", borderTop: "none" }} />
+              <div style={{ height: 6, background: "#111118", borderRadius: "0 0 8px 8px", margin: "0 8%" }} />
+            </div>
+
+            {/* iPhone */}
+            <div
+              className="hidden sm:block shrink-0 relative"
+              style={{ width: 130, marginBottom: 16 }}
+            >
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  border: "2px solid rgba(255,255,255,0.15)",
+                  background: "#0a0a0f",
+                  boxShadow: "0 0 30px rgba(232,111,77,0.15), 0 20px 40px rgba(0,0,0,0.6)",
+                }}
+              >
+                {/* Notch iPhone */}
+                <div className="flex justify-center pt-2 pb-1" style={{ background: "#0a0a0f" }}>
+                  <div className="h-3 w-16 rounded-full" style={{ background: "#000" }} />
+                </div>
+                {/* Screenshot croppé — partie gauche du dashboard */}
+                <div style={{ overflow: "hidden", height: 260 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/marketing/dashboard-screenshot.png"
+                    alt="Lynaris mobile"
+                    style={{ width: "340%", maxWidth: "none", marginLeft: "-5%", marginTop: "-2%" }}
+                    loading="eager"
+                  />
+                </div>
+                {/* Barre de navigation iPhone */}
+                <div className="flex justify-center py-2" style={{ background: "#0a0a0f" }}>
+                  <div className="h-1 w-20 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Glow sous les devices */}
+          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-16 pointer-events-none" aria-hidden
+            style={{ background: "radial-gradient(ellipse, rgba(124,58,237,0.25) 0%, transparent 70%)", filter: "blur(20px)" }} />
+
+          {/* Fade bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" aria-hidden
+            style={{ background: "linear-gradient(to bottom, transparent, rgba(8,8,16,0.95))" }} />
         </div>
 
         {/* Timeline */}
