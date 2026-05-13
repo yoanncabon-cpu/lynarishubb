@@ -190,8 +190,8 @@ export function HeroSection() {
 
             {/* CTAs */}
             <div ref={ctaRef} className="flex flex-col sm:flex-row gap-3 opacity-0">
-              <div className="flex items-center gap-3">
-                <Button asChild size="lg" variant="primary" className="group relative overflow-hidden">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Button asChild size="lg" variant="primary" className="group relative overflow-hidden flex-1 sm:flex-none">
                   <Link href="/tarifs">
                     <span className="relative z-10 flex items-center gap-2">
                       Commencer gratuitement — 14 jours
