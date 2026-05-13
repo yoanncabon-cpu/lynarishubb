@@ -170,6 +170,19 @@ const tools: Tool[] = [
       required: ["prompt"],
     },
   },
+  {
+    name: "create_document",
+    description: "Crée un brief créatif, guide visuel, ou document structuré en format PDF téléchargeable. Utilise cet outil pour tout brief, moodboard textuel ou guide de style demandé.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string", description: "Titre du document" },
+        content: { type: "string", description: "Contenu complet en Markdown" },
+        type: { type: "string", enum: ["document", "guide", "report"], description: "Type de document" },
+      },
+      required: ["title", "content"],
+    },
+  },
 ]
 
 function systemPrompt(config: AgentConfig): string {

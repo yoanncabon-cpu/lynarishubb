@@ -151,6 +151,19 @@ const tools: Tool[] = [
       required: ["name", "phone", "reason"],
     },
   },
+  {
+    name: "create_document",
+    description: "Crée un rapport d'appel, résumé, guide ou document structuré en format PDF téléchargeable. Utilise cet outil pour tout rapport ou document demandé.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string", description: "Titre du document" },
+        content: { type: "string", description: "Contenu complet en Markdown" },
+        type: { type: "string", enum: ["report", "document", "guide"], description: "Type de document" },
+      },
+      required: ["title", "content"],
+    },
+  },
 ]
 
 function systemPrompt(config: AgentConfig): string {

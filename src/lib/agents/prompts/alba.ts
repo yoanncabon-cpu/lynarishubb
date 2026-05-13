@@ -254,6 +254,19 @@ const tools: Tool[] = [
       required: ["question"],
     },
   },
+  {
+    name: "create_document",
+    description: "Crée un document RH structuré (contrat, guide, rapport, politique RH) en format PDF téléchargeable. Utilise cet outil pour tout document RH demandé.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string", description: "Titre du document RH" },
+        content: { type: "string", description: "Contenu complet en Markdown" },
+        type: { type: "string", enum: ["document", "guide", "report"], description: "Type de document" },
+      },
+      required: ["title", "content"],
+    },
+  },
 ]
 
 function systemPrompt(config: AgentConfig): string {

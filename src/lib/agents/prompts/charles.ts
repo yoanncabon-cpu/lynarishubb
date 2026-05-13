@@ -388,6 +388,19 @@ const tools: Tool[] = [
       required: ["workflow_slug", "payload"],
     },
   },
+  {
+    name: "create_document",
+    description: "Crée un document professionnel complet (PDF, rapport, guide, cours, ebook) à partir d'un contenu structuré. Génère un fichier HTML téléchargeable et imprimable en PDF via Ctrl+P. Utilise cet outil chaque fois que l'utilisateur demande un PDF, un document Word, un rapport, un guide ou tout autre fichier texte structuré.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string", description: "Titre principal du document" },
+        content: { type: "string", description: "Contenu complet en Markdown (titres ##, listes -, texte). Doit être exhaustif et directement utilisable." },
+        type: { type: "string", enum: ["document", "report", "guide", "course", "ebook"], description: "Type de document" },
+      },
+      required: ["title", "content"],
+    },
+  },
 ]
 
 function systemPrompt(config: AgentConfig): string {

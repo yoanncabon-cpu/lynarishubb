@@ -150,6 +150,19 @@ const tools: Tool[] = [
       required: [],
     },
   },
+  {
+    name: "create_document",
+    description: "Crée un rapport, document ou analyse structurée en format PDF téléchargeable. Utilise cet outil pour tout rapport financier, dashboard exportable, analyse métier ou document structuré demandé.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string", description: "Titre du rapport ou document" },
+        content: { type: "string", description: "Contenu complet en Markdown avec sections, tableaux textuels et données" },
+        type: { type: "string", enum: ["report", "document", "guide"], description: "Type de document" },
+      },
+      required: ["title", "content"],
+    },
+  },
 ]
 
 function systemPrompt(config: AgentConfig): string {

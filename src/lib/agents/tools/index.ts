@@ -390,6 +390,119 @@ const toolHandlers: Record<
     }
   },
 
+  // ─── Document generation (all agents) ────────────────────────────────
+  create_document: async (input, ctx) => {
+    const title   = (input["title"]   as string | undefined) ?? "Document"
+    const content = (input["content"] as string | undefined) ?? ""
+    const docType = (input["type"]    as string | undefined) ?? "document"
+    const agentSlug = ctx.agentSlug
+
+    // Convertit le Markdown basique en HTML lisible
+    function mdToHtml(md: string): string {
+      return md
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+        .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+        .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+        .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
+        .replace(/^[-•] (.+)$/gm, "<li>$1</li>")
+        .replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>")
+        .replace(/\n\n+/g, "</p><p>")
+        .replace(/^(?!<[hup])(.+)$/gm, "<p>$1</p>")
+        .replace(/<p><\/p>/g, "")
+    }
+
+    const now = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    const htmlContent = mdToHtml(content)
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title.replace(/</g, "&lt;")}</title>
+<style>
+  @media print {
+    .no-print { display: none !important; }
+    body { margin: 0; }
+    h1,h2 { page-break-after: avoid; }
+    p,li { orphans:3; widows:3; }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, 'Times New Roman', serif; max-width: 820px; margin: 0 auto; padding: 40px 32px; color: #1C1C2A; line-height: 1.75; font-size: 16px; }
+  .no-print { background: #F5F5F7; border-bottom: 1px solid #ddd; padding: 10px 16px; margin: -40px -32px 40px; display: flex; align-items: center; gap: 12px; font-family: -apple-system, sans-serif; font-size: 13px; color: #555; }
+  .no-print button { background: #E86F4D; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .doc-header { border-bottom: 3px solid #E86F4D; padding-bottom: 20px; margin-bottom: 36px; }
+  .doc-header h1 { font-size: 2em; margin: 0 0 8px; color: #0F0F1A; letter-spacing: -0.02em; }
+  .doc-meta { font-family: -apple-system, sans-serif; font-size: 13px; color: #888; }
+  h1 { font-size: 1.7em; margin-top: 1.8em; color: #0F0F1A; }
+  h2 { font-size: 1.35em; color: #E86F4D; margin-top: 2em; border-left: 3px solid #E86F4D; padding-left: 12px; }
+  h3 { font-size: 1.1em; font-weight: 700; margin-top: 1.5em; }
+  p { margin: 0.9em 0; }
+  ul { padding-left: 24px; margin: 0.8em 0; }
+  li { margin: 0.4em 0; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+</style>
+</head>
+<body>
+<div class="no-print">
+  <span>Document généré par Lynaris •</span>
+  <button onclick="window.print()">Télécharger en PDF</button>
+  <span style="color:#aaa">Imprimer → Enregistrer en PDF dans la boîte de dialogue système</span>
+</div>
+<div class="doc-header">
+  <h1>${title.replace(/</g, "&lt;")}</h1>
+  <div class="doc-meta">Généré le ${now} — Lynaris Hub</div>
+</div>
+${htmlContent}
+</body>
+</html>`
+
+    // Sauvegarde dans Supabase Storage
+    let storageUrl: string | null = null
+    try {
+      const { createSupabaseAdminClient } = await import("@/lib/auth/supabase-server")
+      const supabase = createSupabaseAdminClient()
+      const filename = `${ctx.orgId}/${Date.now()}-${title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}.html`
+      const { error } = await supabase.storage
+        .from("contents")
+        .upload(filename, Buffer.from(html, "utf8"), { contentType: "text/html; charset=utf-8", upsert: false })
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from("contents").getPublicUrl(filename)
+        storageUrl = publicUrl
+      }
+    } catch {
+      // Storage non configuré — on continue sans URL de stockage
+    }
+
+    // Enregistrement dans la base de contenus
+    try {
+      await logContent({
+        orgId: ctx.orgId,
+        agentSlug,
+        contentType: "document",
+        title,
+        body: content,
+        attachments: storageUrl ? [{ type: "document" as const, url: storageUrl, mimeType: "text/html" }] : [],
+      })
+    } catch {
+      // Non bloquant si content-logger échoue
+    }
+
+    const appUrl = getAppUrl()
+    return {
+      success: true,
+      title,
+      type: docType,
+      url: storageUrl ?? `${appUrl}/dashboard/contenus`,
+      message: storageUrl
+        ? `Document "${title}" créé et accessible à : ${storageUrl} — L'utilisateur peut cliquer sur le lien pour l'ouvrir et l'imprimer en PDF via Ctrl+P → "Enregistrer en PDF".`
+        : `Document "${title}" généré et sauvegardé dans la bibliothèque de contenus.`,
+    }
+  },
+
   // ─── Charles tools ────────────────────────────────────────────────────
   show_email_format_picker: async () => {
     // Résultat symbolique — l'executor yield le marker SSE avant d'exécuter ce tool
