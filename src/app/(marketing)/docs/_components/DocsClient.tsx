@@ -236,6 +236,72 @@ function DocTable({
   )
 }
 
+function CodeBlock({ children, filename }: { children: string; filename?: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(children)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div
+      style={{
+        borderRadius: 10,
+        border: "1px solid rgba(255,255,255,0.08)",
+        overflow: "hidden",
+        marginBottom: 20,
+        fontFamily: "ui-monospace, Menlo, Monaco, 'Courier New', monospace",
+      }}
+    >
+      {filename && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "7px 14px",
+            background: "rgba(255,255,255,0.05)",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <span style={{ fontSize: 12, color: "rgba(245,245,247,0.5)", fontFamily: "inherit" }}>{filename}</span>
+          <button
+            type="button"
+            onClick={handleCopy}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 11,
+              color: copied ? "#34D399" : "rgba(245,245,247,0.45)",
+              fontFamily: "var(--font-geist-sans, sans-serif)",
+              transition: "color 150ms",
+            }}
+          >
+            {copied ? "Copié !" : "Copier"}
+          </button>
+        </div>
+      )}
+      <pre
+        style={{
+          margin: 0,
+          padding: "14px 16px",
+          background: "rgba(0,0,0,0.35)",
+          overflowX: "auto",
+          fontSize: 13,
+          lineHeight: 1.6,
+          color: "#E2E8F0",
+          whiteSpace: "pre" as const,
+        }}
+      >
+        <code>{children}</code>
+      </pre>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Section: Introduction
 // ---------------------------------------------------------------------------
