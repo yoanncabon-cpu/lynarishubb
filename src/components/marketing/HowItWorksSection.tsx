@@ -139,115 +139,120 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Mockup device — vrai dashboard Lynaris */}
-        <div className="relative mx-auto mb-20" style={{ maxWidth: 960 }}>
-          <div className="flex items-end justify-center gap-4 sm:gap-6">
+        {/* Mockup device cinématique — vrai dashboard Lynaris */}
+        <div
+          className="relative mx-auto mb-20 rounded-3xl overflow-hidden px-6 pt-10 pb-0"
+          style={{
+            maxWidth: 960,
+            background: "radial-gradient(ellipse at 30% 0%, rgba(232,111,77,0.08) 0%, transparent 60%), radial-gradient(ellipse at 70% 20%, rgba(124,58,237,0.1) 0%, transparent 60%), #07070e",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 40px 80px -20px rgba(0,0,0,0.8)",
+          }}
+        >
+          {/* Lumières ambiantes */}
+          <div className="absolute top-0 left-1/4 w-80 h-40 pointer-events-none" aria-hidden
+            style={{ background: "radial-gradient(ellipse, rgba(124,58,237,0.15) 0%, transparent 70%)", filter: "blur(40px)" }} />
+          <div className="absolute top-0 right-1/4 w-60 h-32 pointer-events-none" aria-hidden
+            style={{ background: "radial-gradient(ellipse, rgba(232,111,77,0.12) 0%, transparent 70%)", filter: "blur(30px)" }} />
+
+          <div className="flex items-end justify-center gap-5 sm:gap-8 relative z-10">
 
             {/* MacBook */}
-            <div className="relative flex-1" style={{ maxWidth: 720 }}>
-              {/* Écran */}
+            <div
+              className="relative flex-1"
+              style={{
+                maxWidth: 700,
+                filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.7)) drop-shadow(0 0 40px rgba(124,58,237,0.15))",
+              }}
+            >
+              {/* Corps écran */}
               <div
-                className="relative rounded-t-xl overflow-hidden"
+                className="rounded-t-2xl overflow-hidden"
                 style={{
-                  background: "#1a1a2e",
-                  border: "2px solid rgba(255,255,255,0.12)",
+                  background: "#111118",
+                  border: "1.5px solid rgba(255,255,255,0.1)",
                   borderBottom: "none",
-                  boxShadow: "0 0 60px rgba(124,58,237,0.2), 0 0 120px rgba(34,211,238,0.08)",
                 }}
               >
-                {/* Barre de titre macOS */}
-                <div className="flex items-center gap-1.5 px-3 py-2" style={{ background: "rgba(0,0,0,0.4)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                {/* Barre macOS */}
+                <div className="flex items-center gap-1.5 px-4 py-2.5" style={{ background: "rgba(0,0,0,0.6)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#FF5F57" }} />
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#FEBC2E" }} />
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#28C840" }} />
                 </div>
-                {/* Screenshot dashboard */}
+                {/* Dashboard avec overlay perso */}
                 <div className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/marketing/dashboard-screenshot.png"
-                    alt="Dashboard Lynaris"
-                    className="w-full h-auto block"
-                    loading="eager"
-                  />
-                  {/* Overlay données perso → exemple générique */}
-                  <div
-                    className="absolute left-0 right-0"
-                    style={{ top: "3.5%", padding: "0 1.5% 0 9%" }}
-                  >
-                    <div
-                      className="rounded-lg px-4 py-2"
-                      style={{ background: "rgba(10,10,15,0.97)" }}
-                    >
+                  <img src="/marketing/dashboard-screenshot.png" alt="Dashboard Lynaris" className="w-full h-auto block" loading="eager" />
+                  {/* Masque données perso */}
+                  <div className="absolute left-0 right-0" style={{ top: "3.2%", padding: "0 1% 0 8.5%" }}>
+                    <div className="rounded-xl px-4 py-2.5" style={{ background: "rgba(8,8,14,0.98)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #E86F4D, #7C3AED)", fontSize: 16, fontWeight: 700, color: "#fff" }}>S</div>
+                        <div className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, #E86F4D, #7C3AED)" }}>S</div>
                         <div>
-                          <div style={{ fontSize: "clamp(14px, 2vw, 22px)", fontWeight: 700, color: "#F5F5F7", letterSpacing: "-0.02em" }}>
-                            Bonjour, <span style={{ color: "#E86F4D" }}>Sophie</span> · <em style={{ fontFamily: "var(--font-fraunces-var)", color: "#A1A1AA", fontWeight: 400 }}>bonne journée</em>
+                          <div style={{ fontSize: "clamp(12px, 1.8vw, 20px)", fontWeight: 700, color: "#F5F5F7", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+                            Bonjour, <span style={{ color: "#E86F4D" }}>Sophie</span>{" "}
+                            <em style={{ fontFamily: "var(--font-fraunces-var)", color: "#71717A", fontWeight: 400 }}>· bonne journée</em>
                           </div>
-                          <div style={{ fontSize: "clamp(10px, 1.2vw, 13px)", color: "#52525B", marginTop: 2 }}>
-                            Lundi 5 mai · 09:15 &nbsp;·&nbsp; <span style={{ color: "#10B981" }}>●</span> 9 agents en ligne
+                          <div style={{ fontSize: "clamp(9px, 1vw, 12px)", color: "#3F3F46", marginTop: 2 }}>
+                            Lundi 5 mai · 09:15 &nbsp;·&nbsp; <span style={{ color: "#10B981" }}>●</span>&nbsp;9 agents en ligne
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                  {/* Reflet écran */}
+                  <div className="absolute inset-0 pointer-events-none" aria-hidden
+                    style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 40%)" }} />
                 </div>
               </div>
-              {/* Pied MacBook */}
-              <div style={{ height: 10, background: "linear-gradient(to bottom, #2a2a3a, #1a1a28)", borderRadius: "0 0 4px 4px", border: "2px solid rgba(255,255,255,0.1)", borderTop: "none" }} />
-              <div style={{ height: 6, background: "#111118", borderRadius: "0 0 8px 8px", margin: "0 8%" }} />
+              {/* Charnière + socle MacBook */}
+              <div style={{ height: 12, background: "linear-gradient(to bottom, #1c1c28, #141420)", border: "1.5px solid rgba(255,255,255,0.08)", borderTop: "none", borderRadius: "0 0 3px 3px" }} />
+              <div style={{ height: 5, background: "#0d0d14", borderRadius: "0 0 12px 12px", margin: "0 6%", boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }} />
+              {/* Reflet sol */}
+              <div className="mx-auto mt-1 opacity-20" style={{ height: 20, width: "80%", background: "linear-gradient(to bottom, rgba(124,58,237,0.3), transparent)", filter: "blur(8px)" }} aria-hidden />
             </div>
 
             {/* iPhone */}
             <div
               className="hidden sm:block shrink-0 relative"
-              style={{ width: 145, marginBottom: 16 }}
+              style={{
+                width: 148,
+                marginBottom: 28,
+                filter: "drop-shadow(0 30px 40px rgba(0,0,0,0.8)) drop-shadow(0 0 20px rgba(232,111,77,0.1))",
+              }}
             >
-              <div
-                className="rounded-3xl overflow-hidden"
-                style={{
-                  border: "2px solid rgba(255,255,255,0.15)",
-                  background: "#0a0a0f",
-                  boxShadow: "0 0 30px rgba(232,111,77,0.15), 0 20px 40px rgba(0,0,0,0.6)",
-                }}
-              >
-                {/* Dynamic island iPhone */}
-                <div className="flex justify-center pt-2.5 pb-1.5" style={{ background: "#0a0a0f" }}>
-                  <div className="h-2.5 w-12 rounded-full" style={{ background: "#000" }} />
+              <div className="rounded-[2.5rem] overflow-hidden" style={{ border: "1.5px solid rgba(255,255,255,0.12)", background: "#0a0a0f" }}>
+                {/* Dynamic Island */}
+                <div className="flex justify-center pt-3 pb-1" style={{ background: "#0a0a0f" }}>
+                  <div className="h-2.5 w-14 rounded-full" style={{ background: "#000" }} />
                 </div>
-                {/* Screenshot — zoom centré sur contenu principal */}
-                <div style={{ overflow: "hidden", height: 280, position: "relative" }}>
+                {/* Dashboard — zoom sur contenu central */}
+                <div style={{ overflow: "hidden", height: 285, position: "relative" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/marketing/dashboard-screenshot.png"
-                    alt="Lynaris mobile"
-                    style={{
-                      position: "absolute",
-                      width: "280%",
-                      maxWidth: "none",
-                      left: "-85%",
-                      top: "-8%",
-                    }}
+                    alt="Lynaris app"
+                    style={{ position: "absolute", width: "290%", maxWidth: "none", left: "-88%", top: "-5%" }}
                     loading="eager"
                   />
+                  {/* Reflet */}
+                  <div className="absolute inset-0 pointer-events-none" aria-hidden
+                    style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 35%)" }} />
                 </div>
-                {/* Home indicator */}
-                <div className="flex justify-center py-2" style={{ background: "#0a0a0f" }}>
-                  <div className="h-1 w-16 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+                {/* Home bar */}
+                <div className="flex justify-center py-2.5" style={{ background: "#0a0a0f" }}>
+                  <div className="h-1 w-16 rounded-full" style={{ background: "rgba(255,255,255,0.18)" }} />
                 </div>
               </div>
+              {/* Reflet sol iPhone */}
+              <div className="mx-auto mt-1 opacity-15" style={{ height: 16, width: "70%", background: "linear-gradient(to bottom, rgba(232,111,77,0.3), transparent)", filter: "blur(6px)" }} aria-hidden />
             </div>
 
           </div>
 
-          {/* Glow sous les devices */}
-          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-16 pointer-events-none" aria-hidden
-            style={{ background: "radial-gradient(ellipse, rgba(124,58,237,0.25) 0%, transparent 70%)", filter: "blur(20px)" }} />
-
-          {/* Fade bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" aria-hidden
-            style={{ background: "linear-gradient(to bottom, transparent, rgba(8,8,16,0.95))" }} />
+          {/* Sol réfléchissant */}
+          <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none" aria-hidden
+            style={{ background: "linear-gradient(to bottom, transparent, rgba(4,4,10,0.9))" }} />
         </div>
 
         {/* Timeline */}
