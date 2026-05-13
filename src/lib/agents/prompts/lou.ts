@@ -374,7 +374,7 @@ Language: ${(config.language as string | undefined) ?? "French"}`
 export const louDefinition: AgentDefinition = {
   slug: "lou",
   name: "Lou",
-  model: "claude-opus-4-6",
+  model: "claude-opus-4-7",
   description:
     "Content strategist — SEO articles, LinkedIn posts, newsletters, editorial calendar",
   systemPromptFn: systemPrompt,

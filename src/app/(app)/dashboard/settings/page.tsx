@@ -7,7 +7,8 @@ import {
   Save, Check, Plus, Trash2, ExternalLink,
   Copy, Key, RefreshCw, Download,
   Phone, Building, X, User, Shield, Bell, AlertTriangle,
-  Loader2, MoreHorizontal, AlertCircle, CheckCircle2, Camera
+  Loader2, MoreHorizontal, AlertCircle, CheckCircle2, Camera,
+  Palette, Upload, ImageIcon
 } from "lucide-react"
 import { logger } from "@/lib/logger"
 
@@ -2470,12 +2471,299 @@ function TelephoniTab({ toast }: { toast: (msg: string, type?: "success" | "erro
   )
 }
 
+// ─── MARQUE TAB ──────────────────────────────────────────────────────────────
+
+const EMAIL_STYLES = [
+  { id: "lynaris" as const, label: "Lynaris", desc: "Orange chaleureux, dégradé hero", accent: "#E86F4D", bg: "#FDF7F3" },
+  { id: "minimal" as const, label: "Minimal", desc: "Noir & blanc, sobre type Apple", accent: "#1F1F23", bg: "#F8F8F8" },
+  { id: "corporate" as const, label: "Corporate", desc: "Bleu nuit, formel type Stripe", accent: "#1E40AF", bg: "#F1F5F9" },
+]
+
+function MarqueTab({ toast }: { toast: (msg: string, type?: ToastItem["type"]) => void }) {
+  const [logoUrl, setLogoUrl] = useState("")
+  const [brandColor, setBrandColor] = useState("#E86F4D")
+  const [brandColorSecondary, setBrandColorSecondary] = useState("#7C3AED")
+  const [emailStyle, setEmailStyle] = useState<"lynaris" | "minimal" | "corporate">("lynaris")
+  const [emailSignature, setEmailSignature] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetch("/api/settings/org")
+      .then(r => r.json())
+      .then((d: { org: { settings?: Record<string, string> } }) => {
+        const s = d.org?.settings ?? {}
+        if (s["logoUrl"]) setLogoUrl(s["logoUrl"])
+        if (s["brandColor"]) setBrandColor(s["brandColor"])
+        if (s["brandColorSecondary"]) setBrandColorSecondary(s["brandColorSecondary"])
+        if (s["emailStyle"]) setEmailStyle(s["emailStyle"] as "lynaris" | "minimal" | "corporate")
+        if (s["emailSignature"]) setEmailSignature(s["emailSignature"])
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
+  }, [])
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: fd })
+      if (res.ok) {
+        const d = await res.json() as { url: string }
+        setLogoUrl(d.url)
+        toast("Logo uploadé", "success")
+      } else {
+        toast("Échec upload logo", "error")
+      }
+    } finally {
+      setUploading(false)
+      if (e.target) e.target.value = ""
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const res = await fetch("/api/settings/org", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl, brandColor, brandColorSecondary, emailStyle, emailSignature }),
+      })
+      if (res.ok) {
+        // Sync to localStorage pour que l'agent email picker auto-applique
+        try {
+          localStorage.setItem("org_brand", JSON.stringify({ logoUrl, brandColor, brandColorSecondary, emailStyle, emailSignature }))
+        } catch {}
+        toast("Charte graphique sauvegardée", "success")
+      } else {
+        toast("Erreur lors de la sauvegarde", "error")
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!loaded) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
+        <Loader2 size={24} color="var(--accent)" style={{ animation: "spin 1s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Logo */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: "#FAFAFA", margin: "0 0 18px", display: "flex", alignItems: "center", gap: 8 }}>
+          <ImageIcon size={16} color="var(--accent)" />
+          Logo de l'entreprise
+        </h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          {/* Preview */}
+          <div style={{
+            width: 80, height: 80, borderRadius: 16, flexShrink: 0, overflow: "hidden",
+            background: "rgba(255,255,255,0.06)", border: "1px solid var(--glass-border)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            ) : (
+              <ImageIcon size={28} color="rgba(250,250,250,0.2)" />
+            )}
+          </div>
+          {/* Controls */}
+          <div style={{ flex: 1, minWidth: 200, display: "flex", flexDirection: "column", gap: 8 }}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              style={{ display: "none" }}
+              onChange={handleLogoUpload}
+              aria-hidden="true"
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                style={{ ...btnSecondary, gap: 6, opacity: uploading ? 0.6 : 1 }}
+              >
+                {uploading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={13} />}
+                {uploading ? "Upload…" : "Uploader un fichier"}
+              </button>
+            </div>
+            <label style={labelStyle}>Ou coller une URL</label>
+            <FocusInput
+              type="url"
+              value={logoUrl}
+              onChange={e => setLogoUrl(e.target.value)}
+              placeholder="https://exemple.com/logo.png"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Couleurs */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: "#FAFAFA", margin: "0 0 18px", display: "flex", alignItems: "center", gap: 8 }}>
+          <Palette size={16} color="var(--accent)" />
+          Couleurs de la marque
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {/* Couleur principale */}
+          <div>
+            <label style={labelStyle}>Couleur principale</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ position: "relative", width: 40, height: 40, borderRadius: 10, overflow: "hidden", border: "1px solid var(--glass-border)", flexShrink: 0 }}>
+                <input
+                  type="color"
+                  value={brandColor}
+                  onChange={e => setBrandColor(e.target.value)}
+                  style={{ position: "absolute", inset: "-4px", width: "calc(100% + 8px)", height: "calc(100% + 8px)", border: "none", cursor: "pointer", padding: 0 }}
+                />
+              </div>
+              <FocusInput
+                type="text"
+                value={brandColor}
+                onChange={e => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) setBrandColor(e.target.value) }}
+                maxLength={7}
+                placeholder="#E86F4D"
+                style={{ ...inputStyle, fontFamily: "monospace" }}
+              />
+            </div>
+            <p style={{ fontSize: 11, color: "rgba(250,250,250,0.4)", margin: "6px 0 0" }}>
+              Boutons, liens, accents UI
+            </p>
+          </div>
+          {/* Couleur secondaire */}
+          <div>
+            <label style={labelStyle}>Couleur secondaire</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ position: "relative", width: 40, height: 40, borderRadius: 10, overflow: "hidden", border: "1px solid var(--glass-border)", flexShrink: 0 }}>
+                <input
+                  type="color"
+                  value={brandColorSecondary}
+                  onChange={e => setBrandColorSecondary(e.target.value)}
+                  style={{ position: "absolute", inset: "-4px", width: "calc(100% + 8px)", height: "calc(100% + 8px)", border: "none", cursor: "pointer", padding: 0 }}
+                />
+              </div>
+              <FocusInput
+                type="text"
+                value={brandColorSecondary}
+                onChange={e => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) setBrandColorSecondary(e.target.value) }}
+                maxLength={7}
+                placeholder="#7C3AED"
+                style={{ ...inputStyle, fontFamily: "monospace" }}
+              />
+            </div>
+            <p style={{ fontSize: 11, color: "rgba(250,250,250,0.4)", margin: "6px 0 0" }}>
+              Titres, badges, décors
+            </p>
+          </div>
+        </div>
+        {/* Aperçu live */}
+        <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid var(--glass-border)", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: brandColor, flexShrink: 0 }} />
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: brandColorSecondary, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <button type="button" style={{ padding: "6px 14px", borderRadius: 8, background: brandColor, color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "default" }}>
+              CTA primaire
+            </button>
+          </div>
+          <span style={{ fontSize: 11, color: "rgba(250,250,250,0.4)" }}>Aperçu</span>
+        </div>
+      </div>
+
+      {/* Style email */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: "#FAFAFA", margin: "0 0 6px" }}>
+          Style des emails
+        </h2>
+        <p style={{ fontSize: 13, color: "rgba(250,250,250,0.45)", margin: "0 0 16px" }}>
+          Tous les emails envoyés par vos agents appliqueront automatiquement ce style.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
+          {EMAIL_STYLES.map(s => {
+            const active = emailStyle === s.id
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setEmailStyle(s.id)}
+                style={{
+                  padding: "12px 10px", borderRadius: 12, cursor: "pointer", textAlign: "left", transition: "all 150ms",
+                  background: active ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.02)",
+                  border: `2px solid ${active ? s.accent : "rgba(255,255,255,0.08)"}`,
+                  outline: "none",
+                }}
+              >
+                {/* Miniature */}
+                <div style={{ background: s.bg, borderRadius: 7, overflow: "hidden", height: 44, marginBottom: 8 }}>
+                  <div style={{ height: 12, background: s.accent }} />
+                  <div style={{ padding: "4px 6px", display: "flex", flexDirection: "column", gap: 3 }}>
+                    <div style={{ height: 3, background: "rgba(0,0,0,0.15)", borderRadius: 2, width: "80%" }} />
+                    <div style={{ height: 3, background: "rgba(0,0,0,0.1)", borderRadius: 2, width: "60%" }} />
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? "#FAFAFA" : "rgba(250,250,250,0.65)", margin: 0 }}>{s.label}</p>
+                <p style={{ fontSize: 10, color: "rgba(250,250,250,0.38)", margin: "2px 0 0", lineHeight: 1.3 }}>{s.desc}</p>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Signature */}
+        <div>
+          <label style={labelStyle}>Signature email</label>
+          <textarea
+            value={emailSignature}
+            onChange={e => setEmailSignature(e.target.value)}
+            rows={4}
+            maxLength={600}
+            placeholder={"Prénom Nom, Titre\nEntreprise\n+33 6 00 00 00 00\nwebsite.com"}
+            style={{
+              ...inputStyle,
+              height: "auto",
+              padding: "10px 13px",
+              resize: "vertical" as const,
+              lineHeight: 1.6,
+            }}
+          />
+          <p style={{ fontSize: 11, color: "rgba(250,250,250,0.35)", margin: "4px 0 0", textAlign: "right" }}>
+            {emailSignature.length}/600
+          </p>
+        </div>
+      </div>
+
+      {/* Save */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button type="button" onClick={handleSave} disabled={saving} style={{ ...btnPrimary, opacity: saving ? 0.7 : 1 }}>
+          {saving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Save size={14} />}
+          {saving ? "Sauvegarde…" : "Sauvegarder la charte"}
+        </button>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 // ─── MAIN PAGE ───────────────────────────────────────────────────────────────
 
-type Tab = "entreprise" | "profil" | "securite" | "notifications" | "danger" | "api" | "telephonie"
+type Tab = "entreprise" | "marque" | "profil" | "securite" | "notifications" | "danger" | "api" | "telephonie"
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "entreprise", label: "Entreprise", icon: <Building size={14} /> },
+  { id: "marque", label: "Marque", icon: <Palette size={14} /> },
   { id: "profil", label: "Profil", icon: <User size={14} /> },
   { id: "securite", label: "Sécurité", icon: <Shield size={14} /> },
   { id: "notifications", label: "Notifications", icon: <Bell size={14} /> },
@@ -2534,6 +2822,7 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === "entreprise" && <EntrepriseTab toast={toast} />}
+      {activeTab === "marque" && <MarqueTab toast={toast} />}
       {activeTab === "profil" && <ProfilTab toast={toast} />}
       {activeTab === "securite" && <SecurityTab toast={toast} />}
       {activeTab === "notifications" && <NotificationsTab toast={toast} />}

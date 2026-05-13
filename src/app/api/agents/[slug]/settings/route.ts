@@ -8,7 +8,8 @@ import { getAgent } from "@/lib/agents/registry"
 import { z } from "zod"
 
 const VALID_MODELS = [
-  "claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-6",
+  "claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-sonnet-4-6",
+  "claude-opus-4-7", "claude-opus-4-6", // claude-opus-4-6 kept for legacy saved configs
   "gpt-4o", "gpt-4o-mini", "gpt-4-turbo",
   "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash",
 ] as const

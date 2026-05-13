@@ -212,11 +212,14 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
   let toolCallsCount = 0
   let iteration = 0
 
+  const DEPRECATED_MODELS: Record<string, string> = { "claude-opus-4-6": "claude-opus-4-7" }
+  const resolvedModel = DEPRECATED_MODELS[agentDef.model] ?? agentDef.model
+
   while (iteration < maxIterations) {
     iteration++
 
     const response = await anthropic.messages.create({
-      model: agentDef.model,
+      model: resolvedModel,
       max_tokens: agentDef.maxTokens,
       system: cachedSystem(systemPrompt),
       messages: trimHistory(currentMessages),
@@ -370,7 +373,12 @@ export async function* streamAgent(
           : false
 
   // Si le provider n'est pas configuré → fallback sur le modèle défini par l'agent
-  const effectiveModel = providerAvailable ? routing.modelId : agentDef.model
+  // Normalise les modèles dépréciés vers leur successeur valide
+  const DEPRECATED_MODEL_MAP: Record<string, string> = {
+    "claude-opus-4-6": "claude-opus-4-7",
+  }
+  const rawModel = providerAvailable ? routing.modelId : agentDef.model
+  const effectiveModel = DEPRECATED_MODEL_MAP[rawModel] ?? rawModel
   const provider = detectProvider(effectiveModel)
 
   // ── Providers non-Anthropic : pas de tool use, yield texte uniquement ────────

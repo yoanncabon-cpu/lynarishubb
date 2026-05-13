@@ -25,6 +25,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  Plus,
+  Upload,
+  Loader2,
+  FolderOpen,
 } from "lucide-react"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
 import { GlassCard, GlassPanel, GlassChip } from "@/components/app/glass"
@@ -831,6 +835,299 @@ function ContentDetailModal({
   )
 }
 
+// ─── Create Content Modal ─────────────────────────────────────────────────────
+
+const CREATABLE_TYPES = [
+  { key: "social_post", label: "Post social",  Icon: Globe,         color: "#3B82F6" },
+  { key: "article",     label: "Article",       Icon: FileText,      color: "#8B5CF6" },
+  { key: "email",       label: "Email",         Icon: Mail,          color: "#F59E0B" },
+  { key: "sms",         label: "SMS",           Icon: MessageCircle, color: "#22C55E" },
+  { key: "image",       label: "Image",         Icon: ImageIcon,     color: "#EC4899" },
+  { key: "video",       label: "Vidéo",         Icon: Video,         color: "#EF4444" },
+  { key: "document",    label: "Document",      Icon: FolderOpen,    color: "#6366F1" },
+  { key: "report",      label: "Rapport",       Icon: BarChart3,     color: "#10B981" },
+]
+
+const CREATABLE_PLATFORMS = [
+  { key: "", label: "Aucune plateforme" },
+  { key: "linkedin",  label: "LinkedIn" },
+  { key: "instagram", label: "Instagram" },
+  { key: "wordpress", label: "WordPress" },
+  { key: "gmail",     label: "Gmail" },
+  { key: "whatsapp",  label: "WhatsApp" },
+  { key: "twitter",   label: "Twitter/X" },
+]
+
+function CreateContentModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [contentType, setContentType] = useState("document")
+  const [agentSlug, setAgentSlug] = useState("charles")
+  const [title, setTitle] = useState("")
+  const [body, setBody] = useState("")
+  const [platform, setPlatform] = useState("")
+  const [attachmentUrl, setAttachmentUrl] = useState("")
+  const [attachmentName, setAttachmentName] = useState("")
+  const [attachmentMime, setAttachmentMime] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const selectedType = CREATABLE_TYPES.find(t => t.key === contentType) ?? CREATABLE_TYPES[6]!
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError("")
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: fd })
+      if (res.ok) {
+        const d = await res.json() as { url: string }
+        setAttachmentUrl(d.url)
+        setAttachmentName(file.name)
+        setAttachmentMime(file.type)
+        if (!title) setTitle(file.name.replace(/\.[^.]+$/, ""))
+      } else {
+        const d = await res.json() as { error?: string }
+        setError(d.error ?? "Échec de l'upload")
+      }
+    } catch {
+      setError("Erreur réseau lors de l'upload")
+    } finally {
+      setUploading(false)
+      if (e.target) e.target.value = ""
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim()) { setError("Le titre est requis"); return }
+    setSaving(true)
+    setError("")
+    try {
+      const attachments = attachmentUrl ? [{
+        type: contentType === "image" ? "image" as const : contentType === "video" ? "video" as const : "document" as const,
+        url: attachmentUrl,
+        mimeType: attachmentMime || undefined,
+      }] : undefined
+
+      const res = await fetch("/api/contents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentSlug,
+          contentType,
+          title: title.trim(),
+          body: body.trim() || undefined,
+          platform: platform || undefined,
+          attachments,
+        }),
+      })
+      if (res.ok) {
+        onCreated()
+        onClose()
+      } else {
+        const d = await res.json() as { error?: string }
+        setError(d.error ?? "Erreur lors de la création")
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        style={{ width: "100%", maxWidth: 600, maxHeight: "92dvh", overflowY: "auto", borderRadius: 22, background: "rgba(18,18,24,0.98)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 32px 80px rgba(0,0,0,0.65)", display: "flex", flexDirection: "column" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 0" }}>
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#FAFAFA", margin: 0 }}>Nouveau contenu</h2>
+            <p style={{ fontSize: 13, color: "rgba(250,250,250,0.45)", margin: "4px 0 0" }}>
+              Crée et stocke un fichier, image, document ou post.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fermer" style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(250,250,250,0.4)", padding: 6, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* Type selector */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "rgba(250,250,250,0.45)", display: "block", marginBottom: 10 }}>
+              Type de contenu
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {CREATABLE_TYPES.map(t => {
+                const active = contentType === t.key
+                const Icon = t.Icon as React.FC<{ size?: number; color?: string }>
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setContentType(t.key)}
+                    style={{
+                      padding: "10px 6px", borderRadius: 10, cursor: "pointer", textAlign: "center", transition: "all 150ms",
+                      background: active ? `rgba(${hexToRgb(t.color)},0.18)` : "rgba(255,255,255,0.03)",
+                      border: `1.5px solid ${active ? t.color : "rgba(255,255,255,0.08)"}`,
+                      outline: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    }}
+                  >
+                    <Icon size={20} color={active ? t.color : "rgba(250,250,250,0.4)"} />
+                    <span style={{ fontSize: 11, fontWeight: active ? 700 : 400, color: active ? "#FAFAFA" : "rgba(250,250,250,0.55)", lineHeight: 1.2 }}>{t.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Agent */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "rgba(250,250,250,0.45)", display: "block", marginBottom: 6 }}>
+              Attribuer à
+            </label>
+            <select
+              value={agentSlug}
+              onChange={e => setAgentSlug(e.target.value)}
+              style={{ width: "100%", height: 40, padding: "0 13px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 11, color: "#FAFAFA", fontSize: 14, outline: "none", fontFamily: "inherit", cursor: "pointer" }}
+            >
+              {Object.entries({
+                charles: "Charles", lou: "Lou", mae: "Mae", elio: "Elio",
+                max: "Max", nova: "Nova", marine: "Marine", alba: "Alba",
+              }).map(([slug, name]) => (
+                <option key={slug} value={slug}>{name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "rgba(250,250,250,0.45)", display: "block", marginBottom: 6 }}>
+              Titre <span style={{ color: "#F87171" }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder={`Titre de ce ${selectedType.label.toLowerCase()}…`}
+              maxLength={500}
+              required
+              style={{ width: "100%", height: 40, padding: "0 13px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 11, color: "#FAFAFA", fontSize: 14, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "rgba(250,250,250,0.45)", display: "block", marginBottom: 6 }}>
+              Contenu
+            </label>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              rows={5}
+              placeholder="Corps du contenu, texte de l'email, script, description…"
+              style={{ width: "100%", padding: "10px 13px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 11, color: "#FAFAFA", fontSize: 14, outline: "none", resize: "vertical" as const, fontFamily: "inherit", lineHeight: 1.6, boxSizing: "border-box" as const }}
+            />
+          </div>
+
+          {/* File upload */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "rgba(250,250,250,0.45)", display: "block", marginBottom: 8 }}>
+              Fichier joint
+            </label>
+            <input ref={fileRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.pptx" className="hidden" style={{ display: "none" }} onChange={handleFileUpload} aria-hidden="true" />
+
+            {attachmentUrl ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 10 }}>
+                {attachmentMime.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={attachmentUrl} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />
+                ) : (
+                  <FolderOpen size={20} color="#34D399" />
+                )}
+                <span style={{ flex: 1, fontSize: 13, color: "#FAFAFA", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{attachmentName}</span>
+                <button type="button" onClick={() => { setAttachmentUrl(""); setAttachmentName(""); setAttachmentMime("") }} style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(250,250,250,0.5)", display: "flex", padding: 2 }}>
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.03)", border: "1.5px dashed rgba(255,255,255,0.15)", borderRadius: 12, cursor: "pointer", color: "rgba(250,250,250,0.5)", fontSize: 13, transition: "all 150ms", justifyContent: "center" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.25)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.15)" }}
+              >
+                {uploading
+                  ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Upload en cours…</>
+                  : <><Upload size={15} /> Image, PDF, Excel, Word, vidéo…</>
+                }
+              </button>
+            )}
+          </div>
+
+          {/* Platform (optional) */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "rgba(250,250,250,0.45)", display: "block", marginBottom: 6 }}>
+              Plateforme <span style={{ color: "rgba(250,250,250,0.3)", fontWeight: 400 }}>(optionnel)</span>
+            </label>
+            <select
+              value={platform}
+              onChange={e => setPlatform(e.target.value)}
+              style={{ width: "100%", height: 40, padding: "0 13px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 11, color: "#FAFAFA", fontSize: 14, outline: "none", fontFamily: "inherit", cursor: "pointer" }}
+            >
+              {CREATABLE_PLATFORMS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <p style={{ fontSize: 13, color: "#F87171", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={13} /> {error}
+            </p>
+          )}
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 4 }}>
+            <button type="button" onClick={onClose} style={{ padding: "9px 18px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(250,250,250,0.65)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={saving || uploading || !title.trim()}
+              style={{ padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${selectedType?.color ?? "#E86F4D"} 0%, rgba(0,0,0,0.3) 200%)`, color: "#fff", fontSize: 13, fontWeight: 700, cursor: saving || uploading || !title.trim() ? "not-allowed" : "pointer", opacity: saving || uploading || !title.trim() ? 0.6 : 1, display: "flex", alignItems: "center", gap: 7 }}
+            >
+              {saving ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Création…</> : <><Plus size={13} /> Créer le contenu</>}
+            </button>
+          </div>
+        </form>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ContenuPage() {
@@ -841,6 +1138,7 @@ export default function ContenuPage() {
   const [activeAgent, setActiveAgent] = useState("all")
   const [sort, setSort] = useState<"recent" | "oldest">("recent")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [agentMenuOpen, setAgentMenuOpen] = useState(false)
   const agentMenuRef = useRef<HTMLDivElement>(null)
 
@@ -910,6 +1208,20 @@ export default function ContenuPage() {
               Calendrier — bientôt
             </span>
           </GlassChip>
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, height: 36, padding: "0 16px",
+              borderRadius: 10, border: "none",
+              background: "linear-gradient(135deg, var(--accent) 0%, #C2552A 100%)",
+              color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              boxShadow: "0 6px 18px -6px var(--accent-glow)",
+            }}
+          >
+            <Plus size={14} aria-hidden />
+            Nouveau contenu
+          </button>
         </div>
       </div>
 
@@ -1163,6 +1475,14 @@ export default function ContenuPage() {
             />
           ))}
         </div>
+      )}
+
+      {/* Create modal */}
+      {createOpen && (
+        <CreateContentModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={fetchItems}
+        />
       )}
 
       {/* Detail modal */}

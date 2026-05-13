@@ -547,7 +547,7 @@ Language: ${(config.language as string | undefined) ?? "French"}${memoriesSectio
 export const charlesDefinition: AgentDefinition = {
   slug: "charles",
   name: "Charles",
-  model: "claude-opus-4-6",
+  model: "claude-opus-4-7",
   description:
     "Personal AI chief of staff — orchestrates all agents, accessible via WhatsApp",
   systemPromptFn: systemPrompt,

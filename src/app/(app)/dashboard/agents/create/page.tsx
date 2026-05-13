@@ -53,7 +53,7 @@ const TEMPLATES: AgentTemplate[] = [
     icon: PenLine,
     baseSlug: "lou",
     color: "#F472B6",
-    defaultModel: "claude-opus-4-6",
+    defaultModel: "claude-opus-4-7",
     suggestedTools: ["web_search", "n8n"],
   },
   {
@@ -83,7 +83,7 @@ const TEMPLATES: AgentTemplate[] = [
     icon: BarChart2,
     baseSlug: "nova",
     color: "#6366F1",
-    defaultModel: "claude-opus-4-6",
+    defaultModel: "claude-opus-4-7",
     suggestedTools: ["stripe"],
   },
   {
@@ -101,7 +101,7 @@ const TEMPLATES: AgentTemplate[] = [
 const MODELS = [
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", provider: "Anthropic", badge: "Économique", color: "#34D399" },
   { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", provider: "Anthropic", badge: "Rapide", color: "#E86F4D" },
-  { id: "claude-opus-4-6", label: "Claude Opus 4.6", provider: "Anthropic", badge: "Puissant", color: "#A78BFA" },
+  { id: "claude-opus-4-7", label: "Claude Opus 4.7", provider: "Anthropic", badge: "Puissant", color: "#A78BFA" },
   { id: "gpt-4o", label: "GPT-4o", provider: "OpenAI", badge: "Multimodal", color: "#10B981" },
   { id: "gpt-4o-mini", label: "GPT-4o mini", provider: "OpenAI", badge: "Économique", color: "#6EE7B7" },
 ] as const

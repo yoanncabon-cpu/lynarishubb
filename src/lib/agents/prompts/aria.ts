@@ -252,7 +252,7 @@ export const ariaDefinition: AgentDefinition = {
   name: "Aria",
   description:
     "Assistante universelle qui combine 12 rôles professionnels : direction, marketing, SEO, commercial, relation client, comptabilité, juridique, recrutement, facturation, e-commerce, social et analyse de données.",
-  model: "claude-opus-4-6",
+  model: "claude-opus-4-7",
   maxTokens: 3072,
   requiredIntegrations: ["google_calendar", "gmail", "stripe"],
   tools,

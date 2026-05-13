@@ -128,8 +128,24 @@ export async function POST(
         controller.close()
       } catch (err) {
         streamError = true
-        logger.error("[chat] Stream error", { slug, err: String(err) })
-        const errorData = `data: ${JSON.stringify({ error: "Erreur de traitement de la requête" })}\n\n`
+        const errStr = String(err)
+        logger.error("[chat] Stream error", { slug, err: errStr })
+        // Classify error type for client-side friendlyError matching
+        let clientError = "Erreur de traitement de la requête"
+        if (/authentication_error|invalid.*api.?key|no api key|401/i.test(errStr)) {
+          clientError = "authentication_error"
+        } else if (/rate_limit|429|too many/i.test(errStr)) {
+          clientError = "rate_limit_error"
+        } else if (/overloaded|529|503/i.test(errStr)) {
+          clientError = "overloaded_error"
+        } else if (/not_found|model.*not.*found|404/i.test(errStr)) {
+          clientError = "model_not_found_error"
+        } else if (/timeout|timed out/i.test(errStr)) {
+          clientError = "timeout_error"
+        } else if (/context_length|too long|max_tokens/i.test(errStr)) {
+          clientError = "context_length_error"
+        }
+        const errorData = `data: ${JSON.stringify({ error: clientError })}\n\n`
         controller.enqueue(encoder.encode(errorData))
         controller.close()
       }

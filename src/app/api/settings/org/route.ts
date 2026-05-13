@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 const patchSchema = z.object({
+  // Infos entreprise
   name: z.string().min(1).optional(),
   website: z.string().optional(),
   sector: z.string().optional(),
@@ -19,6 +20,12 @@ const patchSchema = z.object({
   zip: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
+  // Charte graphique
+  logoUrl: z.string().optional(),
+  brandColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  brandColorSecondary: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  emailStyle: z.enum(["lynaris", "minimal", "corporate"]).optional(),
+  emailSignature: z.string().max(600).optional(),
 })
 
 export async function GET() {

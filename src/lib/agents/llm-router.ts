@@ -338,6 +338,7 @@ const MODEL_ID_MAP: Record<string, string> = {
   "claude-sonnet-4":          "claude-sonnet-4-6",
   "claude-sonnet-4-6":        "claude-sonnet-4-6",
   "claude-opus-4":            "claude-opus-4-7",
+  "claude-opus-4-6":          "claude-opus-4-7",
   "claude-opus-4-7":          "claude-opus-4-7",
   "gemini-2-0-flash":         "gemini-2.0-flash",
   "gemini-2.0-flash":         "gemini-2.0-flash",
