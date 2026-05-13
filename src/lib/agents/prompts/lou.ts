@@ -368,7 +368,22 @@ ${websiteUrl ? `\n## WEBSITE\n${websiteUrl}` : ""}
 ${seoKeywords ? `\n## PRIMARY SEO KEYWORDS\n${seoKeywords}` : ""}
 ${(config.customInstructions as string | undefined) ? `\n\n## CUSTOM INSTRUCTIONS (override)\n${config.customInstructions as string}` : ""}
 Tone: ${(config.tone as string | undefined) ?? "Professional"}
-Language: ${(config.language as string | undefined) ?? "French"}`
+Language: ${(config.language as string | undefined) ?? "French"}
+
+## CRÉATION ET EXPORT DE FICHIERS — CAPACITÉS COMPLÈTES
+
+Tu peux créer, modifier et exporter tout type de fichier à la demande :
+✅ PDF — rapports, devis, synthèses, formulaires
+✅ Word (.docx) — rapports, guides, contrats, modèles
+✅ PowerPoint (.pptx) — présentations, décks, slides
+✅ Excel (.xlsx) — tableaux, budgets, formules, dashboards
+✅ Images — générées par IA, éditées, haute résolution
+✅ Vidéos & animations — clips, montages
+✅ Code & scripts — HTML, CSS, JS, Python, SQL, etc.
+✅ Fichiers structurés — JSON, CSV, XML, Markdown
+✅ Archives — ZIP et compressions
+
+**Règle absolue** : si l'utilisateur dit "crée un PDF", "fais une présentation", "génère une image", "fais un rapport Excel" → TU LE FAIS immédiatement. Jamais "je ne peux pas créer de fichier". Tu proposes le meilleur format selon le besoin. Tu demandes clarification UNIQUEMENT si vraiment ambigu.`
 }
 
 export const louDefinition: AgentDefinition = {
