@@ -225,8 +225,6 @@ export default function DashboardPage() {
           maxWidth: 1480,
           margin: "0 auto",
           boxSizing: "border-box",
-          minHeight: "100vh",
-          background: "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(124,92,191,0.15) 0%, transparent 60%)",
         }}
       >
         {/* ── Hero greeting éditorial ── */}
@@ -749,7 +747,7 @@ export default function DashboardPage() {
       </div>
 
       <style>{`
-        /* ─── Bento Grid — spec 12 colonnes ─── */
+        /* ─── Bento Grid avec grid-template-areas (prévisible) ─── */
         .lg-bento {
           display: grid;
           grid-template-columns: 1fr;
@@ -759,45 +757,43 @@ export default function DashboardPage() {
         .lg-bento > div { min-width: 0; min-height: 0; }
         .lg-bento > div > * { height: 100%; }
 
-        /* Tablette : 2 colonnes */
+        /* Tablette : 2 colonnes, Charles full width en haut */
         @media (min-width: 768px) and (max-width: 1279px) {
           .lg-bento {
             grid-template-columns: repeat(2, 1fr);
             grid-template-areas:
-              "ch ch"
-              "tr cr"
-              "lv lv"
-              "ac ac"
-              "pl vo";
+              "charles charles"
+              "travail croissance"
+              "plateforme voice"
+              "live activity";
             gap: 16px;
           }
-          .lg-bento__charles    { grid-area: ch; min-height: 280px; }
-          .lg-bento__travail    { grid-area: tr; }
-          .lg-bento__croissance { grid-area: cr; }
-          .lg-bento__plateforme { grid-area: pl; }
-          .lg-bento__voice      { grid-area: vo; }
-          .lg-bento__live       { grid-area: lv; }
-          .lg-bento__activity   { grid-area: ac; }
+          .lg-bento__charles    { grid-area: charles; min-height: 280px; }
+          .lg-bento__travail    { grid-area: travail; }
+          .lg-bento__croissance { grid-area: croissance; }
+          .lg-bento__plateforme { grid-area: plateforme; }
+          .lg-bento__voice      { grid-area: voice; }
+          .lg-bento__live       { grid-area: live; }
+          .lg-bento__activity   { grid-area: activity; }
         }
 
-        /* Desktop : 12 colonnes spec — charles(4) | travail(4) | croissance(4) */
-        /* live(3×2) | activity(5×2) | plateforme(4) / voice(4)                */
+        /* Desktop : 4 colonnes, Charles 2×2 (gauche), 4 hubs 2×2 (droite), Live + Activité bottom */
         @media (min-width: 1280px) {
           .lg-bento {
-            grid-template-columns: repeat(12, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             grid-template-areas:
-              "ch ch ch ch tr tr tr tr cr cr cr cr"
-              "lv lv lv ac ac ac ac ac pl pl pl pl"
-              "lv lv lv ac ac ac ac ac vo vo vo vo";
-            gap: 16px;
+              "charles charles travail croissance"
+              "charles charles plateforme voice"
+              "live live activity activity";
+            gap: 18px;
           }
-          .lg-bento__charles    { grid-area: ch; min-height: 340px; }
-          .lg-bento__travail    { grid-area: tr; }
-          .lg-bento__croissance { grid-area: cr; }
-          .lg-bento__plateforme { grid-area: pl; }
-          .lg-bento__voice      { grid-area: vo; }
-          .lg-bento__live       { grid-area: lv; }
-          .lg-bento__activity   { grid-area: ac; }
+          .lg-bento__charles    { grid-area: charles; min-height: 380px; }
+          .lg-bento__travail    { grid-area: travail; }
+          .lg-bento__croissance { grid-area: croissance; }
+          .lg-bento__plateforme { grid-area: plateforme; }
+          .lg-bento__voice      { grid-area: voice; }
+          .lg-bento__live       { grid-area: live; }
+          .lg-bento__activity   { grid-area: activity; }
         }
       `}</style>
     </>
