@@ -189,40 +189,40 @@ export function HeroSection() {
             </p>
 
             {/* CTAs */}
-            <div ref={ctaRef} className="flex flex-col sm:flex-row gap-3 opacity-0">
-              <div className="flex items-center gap-3">
-                <Button asChild size="lg" variant="primary" className="group relative overflow-hidden">
-                  <Link href="/tarifs">
-                    <span className="relative z-10 flex items-center gap-2">
-                      Commencer gratuitement — 14 jours
-                      <ArrowRight
-                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
-                        aria-hidden
-                      />
-                    </span>
-                    {/* Shimmer */}
-                    <span
-                      className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
-                      style={{
-                        background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
-                      }}
+            <div ref={ctaRef} className="flex flex-col sm:flex-row sm:items-center gap-3 opacity-0">
+              <Button asChild size="lg" variant="primary" className="group relative overflow-hidden w-full sm:w-auto">
+                <Link href="/tarifs">
+                  <span className="relative z-10 flex items-center justify-center gap-2 text-sm sm:text-base">
+                    Commencer gratuitement — 14 jours
+                    <ArrowRight
+                      className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1"
                       aria-hidden
                     />
-                  </Link>
-                </Button>
-                {/* FREE badge */}
-                <span
-                  className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase"
-                  style={{
-                    background: "rgba(16,185,129,0.15)",
-                    color: "#10B981",
-                    border: "1px solid rgba(16,185,129,0.3)",
-                  }}
-                >
-                  GRATUIT
-                </span>
-              </div>
-              <Button asChild size="lg" variant="secondary">
+                  </span>
+                  {/* Shimmer */}
+                  <span
+                    className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+                    style={{
+                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
+                    }}
+                    aria-hidden
+                  />
+                </Link>
+              </Button>
+
+              {/* FREE badge — desktop uniquement (redondant avec "gratuitement" sur mobile) */}
+              <span
+                className="hidden sm:inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase"
+                style={{
+                  background: "rgba(16,185,129,0.15)",
+                  color: "#10B981",
+                  border: "1px solid rgba(16,185,129,0.3)",
+                }}
+              >
+                GRATUIT
+              </span>
+
+              <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
                 <a href="#demo" onClick={(e) => { e.preventDefault(); document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" }) }}>
                   Voir la démo →
                 </a>

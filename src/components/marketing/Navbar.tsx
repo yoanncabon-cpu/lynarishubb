@@ -80,6 +80,7 @@ export function Navbar() {
             : "bg-transparent"
         )}
         style={{
+          paddingTop: "env(safe-area-inset-top)",
           backgroundColor: isScrolled ? "rgba(10,10,15,0.65)" : "transparent",
           borderBottom: isScrolled
             ? "1px solid rgba(124,58,237,0.18)"
