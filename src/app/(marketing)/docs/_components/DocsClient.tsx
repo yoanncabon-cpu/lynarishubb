@@ -127,48 +127,6 @@ function Paragraph({ children }: { children: React.ReactNode }) {
   )
 }
 
-function CodeBlock({ filename, children }: { filename: string; children: string }) {
-  return (
-    <div
-      style={{
-        background: "#0D0D14",
-        border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 12,
-        padding: "20px 24px",
-        marginBottom: 24,
-        overflowX: "auto",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          marginBottom: 16,
-          paddingBottom: 12,
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        {(["#FF5F57", "#FEBC2E", "#28C840"] as string[]).map((c) => (
-          <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />
-        ))}
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginLeft: 8 }}>{filename}</span>
-      </div>
-      <pre
-        style={{
-          margin: 0,
-          fontSize: 13,
-          lineHeight: 1.7,
-          color: "#A1A1AA",
-          fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
-          whiteSpace: "pre-wrap" as const,
-        }}
-      >
-        <code>{children}</code>
-      </pre>
-    </div>
-  )
-}
 
 function InfoCard({
   title,
@@ -377,6 +335,9 @@ function IntroductionSection({ onNavigate }: { onNavigate: (id: string) => void 
   )
 }
 
+// ---------------------------------------------------------------------------
+// Section: Quick start
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // Section: Quick start
 // ---------------------------------------------------------------------------
