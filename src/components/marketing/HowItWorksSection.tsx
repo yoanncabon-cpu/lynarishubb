@@ -139,121 +139,15 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Mockup device cinématique — vrai dashboard Lynaris */}
-        {/* Wrapper avec fond atmosphérique */}
-        <div
-          className="relative mx-auto mb-20"
-          style={{ maxWidth: 980 }}
-        >
-          {/* Glows de fond */}
-          <div className="absolute inset-0 pointer-events-none" aria-hidden style={{
-            background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(124,58,237,0.18) 0%, transparent 70%)",
-            filter: "blur(20px)",
-          }} />
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-32 pointer-events-none" aria-hidden style={{
-            background: "radial-gradient(ellipse, rgba(124,58,237,0.12) 0%, transparent 70%)",
-            filter: "blur(30px)",
-          }} />
-
-          {/* Fenêtre browser principale */}
-          <div
-            className="relative rounded-2xl overflow-hidden"
-            style={{
-              border: "1px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 32px 64px -16px rgba(0,0,0,0.7), 0 0 80px -20px rgba(124,58,237,0.2)",
-              background: "#0d0d14",
-            }}
-          >
-            {/* Chrome browser */}
-            <div
-              className="flex items-center gap-2 px-4"
-              style={{ height: 38, background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-            >
-              <span className="h-3 w-3 rounded-full" style={{ background: "#FF5F57" }} />
-              <span className="h-3 w-3 rounded-full" style={{ background: "#FEBC2E" }} />
-              <span className="h-3 w-3 rounded-full" style={{ background: "#28C840" }} />
-              <div
-                className="mx-auto flex items-center gap-2 rounded-md px-3"
-                style={{ height: 22, background: "rgba(255,255,255,0.05)", fontSize: 11, color: "rgba(255,255,255,0.3)" }}
-              >
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1z" stroke="currentColor" strokeWidth="1.2"/><path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                app.lynaris.ai/dashboard
-              </div>
-            </div>
-
-            {/* Dashboard screenshot + overlay nom */}
-            <div className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/marketing/dashboard-screenshot.png"
-                alt="Dashboard Lynaris — Bonjour Sophie"
-                className="w-full h-auto block"
-                loading="eager"
-              />
-
-              {/* Overlay données perso */}
-              <div className="absolute left-0 right-0" style={{ top: "3.5%", padding: "0 1% 0 8.8%" }}>
-                <div className="rounded-xl px-4 py-2.5" style={{ background: "rgba(7,7,12,0.97)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, #E86F4D, #7C3AED)" }}>S</div>
-                    <div>
-                      <div style={{ fontSize: "clamp(11px, 1.6vw, 19px)", fontWeight: 700, color: "#F5F5F7", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
-                        Bonjour, <span style={{ color: "#E86F4D" }}>Sophie</span>{" "}
-                        <em style={{ fontFamily: "var(--font-fraunces-var)", color: "#71717A", fontWeight: 400 }}>· bonne journée</em>
-                      </div>
-                      <div style={{ fontSize: "clamp(9px, 0.9vw, 12px)", color: "#3F3F46", marginTop: 2 }}>
-                        Lundi 5 mai · 09:15 &nbsp;·&nbsp; <span style={{ color: "#10B981" }}>●</span>&nbsp;9 agents en ligne
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reflet subtil */}
-              <div className="absolute inset-0 pointer-events-none" aria-hidden
-                style={{ background: "linear-gradient(160deg, rgba(255,255,255,0.025) 0%, transparent 35%)" }} />
-
-              {/* iPhone flottant en bas à droite */}
-              <div
-                className="hidden sm:block absolute"
-                style={{
-                  bottom: "4%",
-                  right: "2%",
-                  width: 130,
-                  filter: "drop-shadow(-8px 16px 32px rgba(0,0,0,0.7)) drop-shadow(0 0 16px rgba(232,111,77,0.12))",
-                }}
-              >
-                <div
-                  className="rounded-[1.8rem] overflow-hidden"
-                  style={{
-                    border: "1.5px solid rgba(255,255,255,0.15)",
-                    background: "#0a0a0f",
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-                  }}
-                >
-                  <div className="flex justify-center pt-2.5 pb-1" style={{ background: "#0a0a0f" }}>
-                    <div className="h-2 w-10 rounded-full" style={{ background: "#000" }} />
-                  </div>
-                  <div style={{ overflow: "hidden", height: 235, position: "relative" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/marketing/dashboard-screenshot.png"
-                      alt=""
-                      aria-hidden
-                      style={{ position: "absolute", width: "310%", maxWidth: "none", left: "-92%", top: "-3%" }}
-                    />
-                  </div>
-                  <div className="flex justify-center py-2" style={{ background: "#0a0a0f" }}>
-                    <div className="h-[3px] w-12 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Fade bas */}
-              <div className="absolute bottom-0 left-0 right-0 pointer-events-none" aria-hidden
-                style={{ height: "18%", background: "linear-gradient(to bottom, transparent, rgba(7,7,12,0.85))" }} />
-            </div>
-          </div>
+        {/* Photo MacBook + iPhone sur bureau */}
+        <div className="relative mx-auto mb-20" style={{ maxWidth: 980 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/marketing/dashboard-mockup-photo.png"
+            alt="Dashboard Lynaris sur MacBook Pro et iPhone"
+            className="w-full h-auto block rounded-2xl"
+            loading="eager"
+          />
         </div>
 
         {/* Timeline */}
