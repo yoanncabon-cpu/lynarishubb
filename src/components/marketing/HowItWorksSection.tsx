@@ -1,7 +1,6 @@
 "use client"
 
 import { useRef, useEffect } from "react"
-import Image from "next/image"
 import { Plug, Cpu, BarChart3 } from "lucide-react"
 // gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
@@ -148,14 +147,12 @@ export function HowItWorksSection() {
             boxShadow: "0 40px 80px -20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)",
           }}
         >
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/marketing/how-it-works-new.png"
             alt="Dashboard Lynaris sur MacBook et iPhone — interface propre et professionnelle"
-            width={2688}
-            height={1520}
-            sizes="(max-width: 1024px) 100vw, 960px"
             className="w-full h-auto"
-            priority
+            loading="eager"
           />
           {/* Fade bottom pour raccord avec la timeline */}
           <div
