@@ -162,13 +162,37 @@ export function HowItWorksSection() {
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#28C840" }} />
                 </div>
                 {/* Screenshot dashboard */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/marketing/dashboard-screenshot.png"
-                  alt="Dashboard Lynaris"
-                  className="w-full h-auto block"
-                  loading="eager"
-                />
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/marketing/dashboard-screenshot.png"
+                    alt="Dashboard Lynaris"
+                    className="w-full h-auto block"
+                    loading="eager"
+                  />
+                  {/* Overlay données perso → exemple générique */}
+                  <div
+                    className="absolute left-0 right-0"
+                    style={{ top: "3.5%", padding: "0 1.5% 0 9%" }}
+                  >
+                    <div
+                      className="rounded-lg px-4 py-2"
+                      style={{ background: "rgba(10,10,15,0.97)" }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #E86F4D, #7C3AED)", fontSize: 16, fontWeight: 700, color: "#fff" }}>S</div>
+                        <div>
+                          <div style={{ fontSize: "clamp(14px, 2vw, 22px)", fontWeight: 700, color: "#F5F5F7", letterSpacing: "-0.02em" }}>
+                            Bonjour, <span style={{ color: "#E86F4D" }}>Sophie</span> · <em style={{ fontFamily: "var(--font-fraunces-var)", color: "#A1A1AA", fontWeight: 400 }}>bonne journée</em>
+                          </div>
+                          <div style={{ fontSize: "clamp(10px, 1.2vw, 13px)", color: "#52525B", marginTop: 2 }}>
+                            Lundi 5 mai · 09:15 &nbsp;·&nbsp; <span style={{ color: "#10B981" }}>●</span> 9 agents en ligne
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               {/* Pied MacBook */}
               <div style={{ height: 10, background: "linear-gradient(to bottom, #2a2a3a, #1a1a28)", borderRadius: "0 0 4px 4px", border: "2px solid rgba(255,255,255,0.1)", borderTop: "none" }} />
@@ -178,33 +202,39 @@ export function HowItWorksSection() {
             {/* iPhone */}
             <div
               className="hidden sm:block shrink-0 relative"
-              style={{ width: 130, marginBottom: 16 }}
+              style={{ width: 145, marginBottom: 16 }}
             >
               <div
-                className="rounded-2xl overflow-hidden"
+                className="rounded-3xl overflow-hidden"
                 style={{
                   border: "2px solid rgba(255,255,255,0.15)",
                   background: "#0a0a0f",
                   boxShadow: "0 0 30px rgba(232,111,77,0.15), 0 20px 40px rgba(0,0,0,0.6)",
                 }}
               >
-                {/* Notch iPhone */}
-                <div className="flex justify-center pt-2 pb-1" style={{ background: "#0a0a0f" }}>
-                  <div className="h-3 w-16 rounded-full" style={{ background: "#000" }} />
+                {/* Dynamic island iPhone */}
+                <div className="flex justify-center pt-2.5 pb-1.5" style={{ background: "#0a0a0f" }}>
+                  <div className="h-2.5 w-12 rounded-full" style={{ background: "#000" }} />
                 </div>
-                {/* Screenshot croppé — partie gauche du dashboard */}
-                <div style={{ overflow: "hidden", height: 260 }}>
+                {/* Screenshot — zoom centré sur contenu principal */}
+                <div style={{ overflow: "hidden", height: 280, position: "relative" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/marketing/dashboard-screenshot.png"
                     alt="Lynaris mobile"
-                    style={{ width: "340%", maxWidth: "none", marginLeft: "-5%", marginTop: "-2%" }}
+                    style={{
+                      position: "absolute",
+                      width: "280%",
+                      maxWidth: "none",
+                      left: "-85%",
+                      top: "-8%",
+                    }}
                     loading="eager"
                   />
                 </div>
-                {/* Barre de navigation iPhone */}
+                {/* Home indicator */}
                 <div className="flex justify-center py-2" style={{ background: "#0a0a0f" }}>
-                  <div className="h-1 w-20 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+                  <div className="h-1 w-16 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
                 </div>
               </div>
             </div>
