@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useEffect } from "react"
+import Image from "next/image"
 import { Plug, Cpu, BarChart3 } from "lucide-react"
 // gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
 
@@ -139,134 +140,29 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Mockup dashboard — fallback CSS en attendant l'image Higgsfield */}
+        {/* Visuel Higgsfield — MacBook + iPhone dashboard */}
         <div
-          className="relative mx-auto mb-20 rounded-2xl overflow-hidden"
+          className="relative mx-auto mb-20 rounded-3xl overflow-hidden"
           style={{
             maxWidth: 960,
-            boxShadow: "0 40px 80px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07)",
-            background: "rgba(12,12,20,1)",
+            boxShadow: "0 40px 80px -20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)",
           }}
         >
-          {/* Window chrome */}
+          <Image
+            src="/marketing/how-it-works-new.png"
+            alt="Dashboard Lynaris sur MacBook et iPhone — interface propre et professionnelle"
+            width={2688}
+            height={1520}
+            sizes="(max-width: 1024px) 100vw, 960px"
+            className="w-full h-auto"
+            priority
+          />
+          {/* Fade bottom pour raccord avec la timeline */}
           <div
-            className="flex items-center gap-2 px-4 py-3 border-b"
-            style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(18,18,28,1)" }}
-          >
-            <span className="h-3 w-3 rounded-full" style={{ background: "#FF5F57" }} />
-            <span className="h-3 w-3 rounded-full" style={{ background: "#FEBC2E" }} />
-            <span className="h-3 w-3 rounded-full" style={{ background: "#28C840" }} />
-            <span
-              className="ml-4 flex-1 rounded-md px-3 py-1 text-[11px] text-center"
-              style={{ background: "rgba(255,255,255,0.04)", color: "#52525B", maxWidth: 220, margin: "0 auto" }}
-            >
-              app.lynaris.ai/dashboard
-            </span>
-          </div>
-
-          {/* Dashboard body */}
-          <div className="flex" style={{ minHeight: 420 }}>
-            {/* Sidebar */}
-            <div className="hidden sm:flex flex-col gap-1 p-3 border-r shrink-0" style={{ width: 52, borderColor: "rgba(255,255,255,0.05)" }}>
-              {[
-                { color: "#7C3AED", active: true },
-                { color: "#22D3EE", active: false },
-                { color: "#10B981", active: false },
-                { color: "#F59E0B", active: false },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center"
-                  style={{
-                    background: item.active ? `${item.color}20` : "rgba(255,255,255,0.03)",
-                    border: item.active ? `1px solid ${item.color}30` : "1px solid transparent",
-                  }}
-                >
-                  <div className="h-2 w-2 rounded-sm" style={{ background: item.active ? item.color : "#3F3F46" }} />
-                </div>
-              ))}
-            </div>
-
-            {/* Main */}
-            <div className="flex-1 p-4 sm:p-6 space-y-4">
-              {/* Top bar */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="h-4 w-24 rounded-md" style={{ background: "rgba(255,255,255,0.07)" }} />
-                <div className="flex gap-2">
-                  <div className="h-7 w-20 rounded-lg" style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.25)" }} />
-                  <div className="h-7 w-7 rounded-lg" style={{ background: "rgba(255,255,255,0.04)" }} />
-                </div>
-              </div>
-
-              {/* 3 agent cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { name: "Marine", role: "Téléphonique", color: "#22D3EE", stat: "24 appels", badge: "Actif" },
-                  { name: "Lou", role: "Contenu & SEO", color: "#7C3AED", stat: "8 articles", badge: "En cours" },
-                  { name: "Elio", role: "Commercial", color: "#10B981", stat: "12 leads", badge: "Actif" },
-                ].map((agent) => (
-                  <div
-                    key={agent.name}
-                    className="rounded-xl p-4 space-y-3"
-                    style={{
-                      background: "rgba(255,255,255,0.025)",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full" style={{ background: `${agent.color}25`, border: `1px solid ${agent.color}40` }}>
-                          <div className="h-full w-full rounded-full flex items-center justify-center">
-                            <div className="h-3 w-3 rounded-full" style={{ background: agent.color }} />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[13px] font-semibold" style={{ color: "#F5F5F7" }}>{agent.name}</div>
-                          <div className="text-[10px]" style={{ color: "#52525B" }}>{agent.role}</div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: `${agent.color}15`, color: agent.color }}>
-                        {agent.badge}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full rounded-full" style={{ width: "72%", background: `linear-gradient(90deg, ${agent.color}80, ${agent.color})` }} />
-                    </div>
-                    <div className="text-[12px] font-medium" style={{ color: "#A1A1AA" }}>{agent.stat} aujourd&apos;hui</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: "Appels traités", value: "847", color: "#22D3EE" },
-                  { label: "Tâches auto", value: "2.4k", color: "#7C3AED" },
-                  { label: "Temps gagné", value: "38h", color: "#10B981" },
-                  { label: "Disponibilité", value: "99.9%", color: "#F59E0B" },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-xl p-3"
-                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}
-                  >
-                    <div className="text-[11px] mb-1" style={{ color: "#52525B" }}>{stat.label}</div>
-                    <div className="text-xl font-bold" style={{ color: stat.color }}>{stat.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Glows */}
-          <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full pointer-events-none" aria-hidden
-            style={{ background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)", filter: "blur(40px)" }} />
-          <div className="absolute bottom-0 right-1/4 w-48 h-48 rounded-full pointer-events-none" aria-hidden
-            style={{ background: "radial-gradient(circle, rgba(34,211,238,0.1) 0%, transparent 70%)", filter: "blur(30px)" }} />
-
-          {/* Fade bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" aria-hidden
-            style={{ background: "linear-gradient(to bottom, transparent, rgba(8,8,16,0.95))" }} />
+            className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+            aria-hidden
+            style={{ background: "linear-gradient(to bottom, transparent, rgba(8,8,16,0.95))" }}
+          />
         </div>
 
         {/* Timeline */}
