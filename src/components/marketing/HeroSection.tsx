@@ -192,10 +192,10 @@ export function HeroSection() {
             <div ref={ctaRef} className="flex flex-col sm:flex-row sm:items-center gap-3 opacity-0">
               <Button asChild size="lg" variant="primary" className="group relative overflow-hidden w-full sm:w-auto">
                 <Link href="/tarifs">
-                  <span className="relative z-10 flex items-center justify-center gap-2">
+                  <span className="relative z-10 flex items-center justify-center gap-2 text-sm sm:text-base">
                     Commencer gratuitement — 14 jours
                     <ArrowRight
-                      className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                      className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1"
                       aria-hidden
                     />
                   </span>
