@@ -306,29 +306,40 @@ export default function ConversationsPage() {
     loadConversations()
   }, []) // loadConversations est stable — pas de dépendances changeantes
 
-  // Charge les messages quand une conversation est sélectionnée
+  // Charge les messages quand l'ID de conversation change
+  // Dépend de selected?.id uniquement — évite les boucles sur setSelected
   useEffect(() => {
-    if (!selected) return
-    const selectedId = selected.id
-    if (selected.messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const selectedId = selected?.id
+    if (!selectedId) return
+
+    if ((selected?.messages.length ?? 0) > 0) {
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50)
       return
     }
+
     fetch(`/api/conversations/${selectedId}/messages`)
-      .then(r => r.json() as Promise<{ messages: Array<{ role: string; content: unknown; created_at: string }> }>)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json() as Promise<{ messages: Array<{ role: string; content: unknown; createdAt?: string; created_at?: string }> }>
+      })
       .then(({ messages }) => {
-        const mapped: ConvMessage[] = messages.map(m => ({
-          role: m.role === "user" ? "contact" : m.role === "assistant" ? "agent" : "system",
-          content: typeof m.content === "string"
-            ? m.content
-            : (m.content as { text?: string })?.text ?? "",
-          time: new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-        }))
+        const mapped: ConvMessage[] = (messages ?? [])
+          .filter(m => m.role === "user" || m.role === "assistant")
+          .map(m => ({
+            role: m.role === "user" ? "contact" : "agent" as ConvMessage["role"],
+            content: typeof m.content === "string"
+              ? m.content
+              : (m.content as { text?: string })?.text ?? JSON.stringify(m.content),
+            time: new Date((m.createdAt ?? m.created_at) as string).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+          }))
         setSelected(prev => prev?.id === selectedId ? { ...prev, messages: mapped } : prev)
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50)
       })
-      .catch(() => { /* ignore */ })
-  }, [selected])
+      .catch(() => {
+        // Fetch silencieux — ne casse pas l'UI
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id])
 
   // counts kept for future use
   const _counts = {

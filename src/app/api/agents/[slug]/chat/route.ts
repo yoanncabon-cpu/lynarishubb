@@ -27,13 +27,7 @@ export async function POST(
 ) {
   const { slug } = await params
 
-  // Rate limiting via Upstash Redis (type "ai" = 10 req/1min)
-  // Si Redis non configuré (dev local sans .env), checkRateLimit retourne null → fallback permissif
-  const rl = await checkRateLimit(request, "ai")
-  if (rl !== null && !rl.success) {
-    return rateLimitResponse(rl.reset)
-  }
-
+  // Validations synchrones — doivent passer avant de démarrer le stream
   const agent = getAgent(slug)
   if (!agent) {
     return NextResponse.json({ error: `Agent '${slug}' not found` }, { status: 404 })
@@ -50,62 +44,65 @@ export async function POST(
     return NextResponse.json({ error: "messages array is required" }, { status: 400 })
   }
 
-  const orgId = await getOrProvisionOrgId()
-
-  // Gating plan : vérifie que l'agent est accessible sur le plan courant
-  // (ex: Marine refusée sur Starter, 4e agent refusé sur Starter, etc.)
-  const access = await checkPreTurnAccess(orgId, slug, [])
-  if (!access.allowed) {
-    return NextResponse.json(buildAccessDeniedPayload(access.access), {
-      status: 403,
-    })
+  // Rate limiting via Redis (rapide — avant le stream)
+  const rl = await checkRateLimit(request, "ai")
+  if (rl !== null && !rl.success) {
+    return rateLimitResponse(rl.reset)
   }
 
-  // Load saved agent config from DB
-  let dbConfig: Record<string, unknown> = {}
-  try {
-    const row = await db.query.agentInstances.findFirst({
-      where: and(
-        eq(agentInstances.orgId, orgId),
-        eq(agentInstances.agentSlug, slug)
-      ),
-      columns: { config: true },
-    })
-    if (row?.config) {
-      dbConfig = row.config as Record<string, unknown>
-    }
-  } catch (dbErr) {
-    logger.warn("[chat] DB config unavailable — proceeding with empty config", { slug, err: String(dbErr) })
-  }
-
-  // Merge: DB config + request body config (body overrides DB)
-  const mergedConfig: Record<string, unknown> = {
-    ...dbConfig,
-    ...(body.config ?? {}),
-  }
-
+  // ─── Démarrer le stream IMMÉDIATEMENT ─────────────────────────────────────
+  // Tout le travail DB (orgId, access, config, instance) se fait à l'intérieur
+  // pour que les headers HTTP soient envoyés au client avant toute I/O lente.
+  // Cela évite les timeouts 504 sur Vercel et Vercel CLI dev.
   const encoder = new TextEncoder()
-
-  // Upsert agent instance — needed for action_log FK
-  let instanceId: string | null = null
-  try {
-    const rows = await db
-      .insert(agentInstances)
-      .values({ orgId, agentSlug: slug, isActive: true })
-      .onConflictDoUpdate({
-        target: [agentInstances.orgId, agentInstances.agentSlug],
-        set: { isActive: true },
-      })
-      .returning({ id: agentInstances.id })
-    instanceId = rows[0]?.id ?? null
-  } catch (upsertErr) {
-    logger.warn("[chat] agentInstance upsert failed — log FK will be null", { slug, err: String(upsertErr) })
-  }
 
   const stream = new ReadableStream({
     async start(controller) {
       let streamError = false
+      let orgId: string | null = null
+      let instanceId: string | null = null
+
       try {
+        // Récupération orgId + vérification access en parallèle
+        orgId = await getOrProvisionOrgId()
+
+        const access = await checkPreTurnAccess(orgId, slug, [])
+        if (!access.allowed) {
+          const payload = buildAccessDeniedPayload(access.access)
+          controller.enqueue(encoder.encode(
+            `data: ${JSON.stringify({ error: "access_denied", details: payload })}\n\n`
+          ))
+          controller.close()
+          return
+        }
+
+        // Config DB + upsert agent instance en parallèle
+        const [configRow, instanceRows] = await Promise.all([
+          db.query.agentInstances.findFirst({
+            where: and(
+              eq(agentInstances.orgId, orgId),
+              eq(agentInstances.agentSlug, slug)
+            ),
+            columns: { config: true },
+          }).catch(() => null),
+          db.insert(agentInstances)
+            .values({ orgId, agentSlug: slug, isActive: true })
+            .onConflictDoUpdate({
+              target: [agentInstances.orgId, agentInstances.agentSlug],
+              set: { isActive: true },
+            })
+            .returning({ id: agentInstances.id })
+            .catch(() => null),
+        ])
+
+        instanceId = instanceRows?.[0]?.id ?? null
+
+        const mergedConfig: Record<string, unknown> = {
+          ...((configRow?.config ?? {}) as Record<string, unknown>),
+          ...(body.config ?? {}),
+        }
+
+        // Démarrer le run agent
         const agentStream = streamAgent({
           agentSlug: slug,
           messages: body.messages,
@@ -114,7 +111,6 @@ export async function POST(
         })
 
         for await (const chunk of agentStream) {
-          // Marker spécial émis par l'executor pour les délégations inter-agents
           if (chunk.startsWith("\x01") && chunk.endsWith("\x01")) {
             const data = `data: ${chunk.slice(1, -1)}\n\n`
             controller.enqueue(encoder.encode(data))
@@ -130,7 +126,7 @@ export async function POST(
         streamError = true
         const errStr = String(err)
         logger.error("[chat] Stream error", { slug, err: errStr })
-        // Classify error type for client-side friendlyError matching
+
         let clientError = "Erreur de traitement de la requête"
         if (/authentication_error|invalid.*api.?key|no api key|401/i.test(errStr)) {
           clientError = "authentication_error"
@@ -145,22 +141,24 @@ export async function POST(
         } else if (/context_length|too long|max_tokens/i.test(errStr)) {
           clientError = "context_length_error"
         }
-        const errorData = `data: ${JSON.stringify({ error: clientError })}\n\n`
-        controller.enqueue(encoder.encode(errorData))
-        controller.close()
+
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: clientError })}\n\n`))
+          controller.close()
+        } catch { /* stream already closed */ }
       }
 
-      // Écriture action_log après chaque conversation
-      try {
-        await db.insert(actionLogs).values({
+      // Log action après fermeture du stream (fire-and-forget)
+      if (orgId) {
+        db.insert(actionLogs).values({
           orgId,
           agentInstanceId: instanceId,
           type: "conversation",
           status: streamError ? "error" : "success",
           payload: { agentSlug: slug },
+        }).catch((logErr: unknown) => {
+          logger.warn("[chat] action_log insert failed", { slug, err: String(logErr) })
         })
-      } catch (logErr) {
-        logger.warn("[chat] action_log insert failed", { slug, err: String(logErr) })
       }
     },
   })

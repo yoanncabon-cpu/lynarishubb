@@ -569,30 +569,32 @@ export function Topbar({ onMenuClick, onSearchClick }: TopbarProps) {
           </button>
 
           {userMenuOpen && (
-            <GlassPanel
-              level={1}
-              strong
-              radius={16}
+            <div
               aria-label="Menu utilisateur"
               style={{
                 position: "absolute",
                 right: 0,
                 top: "calc(100% + 8px)",
-                width: 220,
+                width: 230,
                 zIndex: 50,
                 overflow: "hidden",
+                borderRadius: 14,
+                background: "rgba(12, 10, 20, 0.96)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
               }}
-              contentStyle={{ padding: 0 }}
             >
-              <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--glass-border)" }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#FAFAFA", margin: 0, letterSpacing: "-0.01em" }}>
+              <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#F5EFE6", margin: 0, letterSpacing: "-0.01em" }}>
                   {userName || initials}
                 </p>
-                <p style={{ fontSize: 11, color: "rgba(250,250,250,0.5)", margin: "2px 0 0", wordBreak: "break-all" }}>
+                <p style={{ fontSize: 11, color: "rgba(245,239,230,0.5)", margin: "3px 0 0", wordBreak: "break-all" }}>
                   {userEmail || "—"}
                 </p>
               </div>
-              <div style={{ padding: "4px 0" }}>
+              <div style={{ padding: "6px 0" }}>
                 {[
                   { label: "Paramètres", href: "/dashboard/settings", Icon: Settings },
                   { label: "Facturation", href: "/dashboard/billing", Icon: CreditCard },
@@ -605,27 +607,27 @@ export function Topbar({ onMenuClick, onSearchClick }: TopbarProps) {
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
-                      padding: "9px 14px",
+                      padding: "9px 16px",
                       fontSize: 13,
-                      color: "rgba(250,250,250,0.7)",
+                      color: "rgba(245,239,230,0.8)",
                       textDecoration: "none",
-                      transition: "background 220ms var(--ease-apple), color 220ms var(--ease-apple)",
+                      transition: "background 160ms ease, color 160ms ease",
                     }}
                     onMouseEnter={(e) => {
-                      ;(e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.06)"
-                      ;(e.currentTarget as HTMLAnchorElement).style.color = "#FAFAFA"
+                      ;(e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.07)"
+                      ;(e.currentTarget as HTMLAnchorElement).style.color = "#F5EFE6"
                     }}
                     onMouseLeave={(e) => {
                       ;(e.currentTarget as HTMLAnchorElement).style.background = "transparent"
-                      ;(e.currentTarget as HTMLAnchorElement).style.color = "rgba(250,250,250,0.7)"
+                      ;(e.currentTarget as HTMLAnchorElement).style.color = "rgba(245,239,230,0.8)"
                     }}
                   >
-                    <Icon size={14} aria-hidden style={{ flexShrink: 0 }} />
+                    <Icon size={14} aria-hidden style={{ flexShrink: 0, opacity: 0.7 }} />
                     {label}
                   </Link>
                 ))}
               </div>
-              <div style={{ borderTop: "1px solid var(--glass-border)", padding: "4px 0" }}>
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "6px 0" }}>
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -634,18 +636,18 @@ export function Topbar({ onMenuClick, onSearchClick }: TopbarProps) {
                     alignItems: "center",
                     gap: 10,
                     width: "100%",
-                    padding: "9px 14px",
+                    padding: "9px 16px",
                     fontSize: 13,
-                    color: "#EF4444",
+                    color: "#F87171",
                     background: "none",
                     border: "none",
                     cursor: "pointer",
                     textAlign: "left",
                     fontFamily: "inherit",
-                    transition: "background 220ms var(--ease-apple)",
+                    transition: "background 160ms ease",
                   }}
                   onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.10)"
+                    ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)"
                   }}
                   onMouseLeave={(e) => {
                     ;(e.currentTarget as HTMLButtonElement).style.background = "transparent"
@@ -655,7 +657,7 @@ export function Topbar({ onMenuClick, onSearchClick }: TopbarProps) {
                   Se déconnecter
                 </button>
               </div>
-            </GlassPanel>
+            </div>
           )}
         </div>
       </div>

@@ -1,4 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
+import { db } from "@/lib/db"
+import { messages, conversations } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
+import { users } from "@/lib/db/schema"
 import { logger } from "@/lib/logger"
 
 interface MessageBody {
@@ -19,15 +23,37 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return Response.json({ messages: [] })
 
-    const { data, error } = await supabase
-      .from("messages")
-      .select("id, role, content, model, tokens_input, tokens_output, created_at")
-      .eq("conversation_id", id)
-      .order("created_at", { ascending: true })
+    // Vérifie que la conversation appartient à l'org de l'utilisateur
+    const userRow = await db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: { orgId: true },
+    })
+    if (!userRow?.orgId) return Response.json({ messages: [] })
 
-    if (error) return Response.json({ messages: [] })
-    return Response.json({ messages: data ?? [] })
-  } catch {
+    const conv = await db.query.conversations.findFirst({
+      where: eq(conversations.id, id),
+      columns: { id: true, orgId: true },
+    })
+    if (!conv || conv.orgId !== userRow.orgId) return Response.json({ messages: [] })
+
+    // Drizzle bypass RLS — garantit accès même si policies Supabase bloquent
+    const rows = await db
+      .select({
+        id: messages.id,
+        role: messages.role,
+        content: messages.content,
+        model: messages.model,
+        tokensInput: messages.tokensInput,
+        tokensOutput: messages.tokensOutput,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(messages.createdAt)
+
+    return Response.json({ messages: rows })
+  } catch (err) {
+    logger.error("[conversations/messages] GET failed", { err: String(err) })
     return Response.json({ messages: [] })
   }
 }
@@ -44,25 +70,24 @@ export async function POST(
 
     const body = await req.json() as MessageBody
 
-    const { data, error } = await supabase
-      .from("messages")
-      .insert({
-        conversation_id: id,
+    const [row] = await db
+      .insert(messages)
+      .values({
+        conversationId: id,
         role: body.role,
         content: { text: body.content },
         model: body.model,
-        tokens_input: body.tokens_input,
-        tokens_output: body.tokens_output,
+        tokensInput: body.tokens_input,
+        tokensOutput: body.tokens_output,
       })
-      .select()
-      .single()
+      .returning()
 
-    if (error) {
-      logger.error("[conversations/messages] POST insert failed", { err: error.message })
+    if (!row) {
       return Response.json({ error: "Erreur serveur" }, { status: 500 })
     }
-    return Response.json({ message: data })
-  } catch {
+    return Response.json({ message: row })
+  } catch (err) {
+    logger.error("[conversations/messages] POST failed", { err: String(err) })
     return Response.json({ error: "Erreur serveur" }, { status: 500 })
   }
 }
