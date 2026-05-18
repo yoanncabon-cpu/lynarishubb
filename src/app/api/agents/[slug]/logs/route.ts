@@ -43,6 +43,7 @@ export async function GET(
       id:          r.id,
       type:        r.type,
       status:      r.status ?? "success",
+      detail:      "",  // colonne supprimée du schema — conservé pour compat composant
       duration_ms: r.duration_ms ?? undefined,
       cost_usd:    r.cost_usd ? Number(r.cost_usd) : undefined,
       created_at:  r.created_at.toISOString(),

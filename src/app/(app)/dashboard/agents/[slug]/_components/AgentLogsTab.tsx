@@ -100,7 +100,7 @@ function exportCSV(logs: ActionLog[], agentSlug: string) {
       l.id,
       l.type,
       l.status,
-      `"${l.detail.replace(/"/g, '""')}"`,
+      `"${(l.detail ?? "").replace(/"/g, '""')}"`,
       l.duration_ms ?? "",
       l.cost_usd ?? "",
       l.created_at,
@@ -281,9 +281,9 @@ function LogEntry({ log, isLast }: LogEntryProps) {
             ? Clock
             : MessageSquare
 
-  const preview =
-    log.detail.length > 120 ? log.detail.slice(0, 120) + "…" : log.detail
-  const hasMore = log.detail.length > 120
+  const detail = log.detail ?? ""
+  const preview = detail.length > 120 ? detail.slice(0, 120) + "…" : detail
+  const hasMore = detail.length > 120
 
   return (
     <div

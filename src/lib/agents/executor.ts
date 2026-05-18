@@ -386,8 +386,16 @@ export async function* streamAgent(
   let currentMessages: MessageParam[] = [...messages]
   let iteration = 0
 
+  // Deadline 48s : évite le hard kill Vercel à 60s (Hobby plan)
+  const streamDeadline = Date.now() + 48_000
+
   while (iteration < maxIterations) {
     iteration++
+
+    if (Date.now() > streamDeadline) {
+      yield "\n\n*(Délai dépassé. Réessaie ou simplifie ta demande.)*"
+      return
+    }
 
     let hasToolUse = false
     const toolUseInputs: Array<{

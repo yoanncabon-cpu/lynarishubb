@@ -216,10 +216,10 @@ export function Navbar() {
           {/* CTAs desktop */}
           <div className="hidden md:flex items-center gap-2">
             <Link
-              href="/login"
+              href="/dashboard"
               className="inline-flex h-9 items-center rounded-lg px-4 text-[13px] font-medium text-[#71717A] hover:text-[#F5F5F7] hover:bg-white/5 transition-all"
             >
-              Se connecter
+              Tableau de bord
             </Link>
             <Link
               href="/tarifs"
@@ -253,10 +253,10 @@ export function Navbar() {
           {/* CTA mobile — directement visible, pas de hamburger */}
           <div className="md:hidden flex items-center gap-2">
             <Link
-              href="/login"
+              href="/dashboard"
               className="inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-medium text-[#71717A] hover:text-[#F5F5F7] hover:bg-white/5 transition-all"
             >
-              Connexion
+              Dashboard
             </Link>
             <Link
               href="/tarifs"
