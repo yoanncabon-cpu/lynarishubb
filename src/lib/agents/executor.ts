@@ -32,6 +32,37 @@ function trimHistory(messages: MessageParam[]): MessageParam[] {
   return trimmed
 }
 
+/**
+ * Sanitise les messages avant envoi à Anthropic.
+ * - Retire les messages user avec content vide (string vide ou tableau vide)
+ * - Remplace les tool_result avec content vide par "{}" (jamais filtré, sinon orphelin)
+ * - Filtre les null/undefined qui peuvent apparaître via .map(...) dans runAgent
+ */
+function sanitizeMessages(messages: MessageParam[]): MessageParam[] {
+  return messages
+    .filter((m): m is MessageParam => m != null)
+    .map(m => {
+      if (m.role !== "user") return m
+      // Message user avec contenu array (tool_results) : s'assurer que chaque item a un content valide
+      if (Array.isArray(m.content)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fixed = (m.content as any[]).map((block: any) => {
+          if (block?.type === "tool_result" && !block?.content) {
+            return { ...block, content: "{}" }
+          }
+          return block
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { ...m, content: fixed } as any as MessageParam
+      }
+      // Message user texte vide → placeholder invisible pour Anthropic
+      if (typeof m.content === "string" && m.content.trim() === "") {
+        return { ...m, content: "…" } as MessageParam
+      }
+      return m
+    })
+}
+
 // System prompt mis en cache côté Anthropic (économie ~90% des input tokens système)
 function cachedSystem(text: string) {
   return [{ type: "text" as const, text, cache_control: { type: "ephemeral" as const } }]
@@ -222,7 +253,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
       model: resolvedModel,
       max_tokens: agentDef.maxTokens,
       system: cachedSystem(systemPrompt),
-      messages: trimHistory(currentMessages),
+      messages: sanitizeMessages(trimHistory(currentMessages)),
       tools: agentDef.tools.length > 0 ? agentDef.tools : undefined,
     })
 
@@ -281,12 +312,13 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
           emailStyle,
         })
 
+        const rc = toolResult.error
+          ? JSON.stringify({ error: toolResult.error })
+          : (JSON.stringify(toolResult.result ?? { status: "ok" }) ?? "{}")
         return {
           type: "tool_result" as const,
           tool_use_id: toolUse.id,
-          content: JSON.stringify(
-            toolResult.error ? { error: toolResult.error } : toolResult.result
-          ),
+          content: rc || "{}",
         }
       })
     )
@@ -371,7 +403,7 @@ export async function* streamAgent(
       model: effectiveModel,
       max_tokens: agentDef.maxTokens,
       system: cachedSystem(systemPrompt),
-      messages: trimHistory(currentMessages),
+      messages: sanitizeMessages(trimHistory(currentMessages)),
       tools: agentDef.tools.length > 0 ? agentDef.tools : undefined,
     })
 
