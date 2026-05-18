@@ -39,28 +39,63 @@ function trimHistory(messages: MessageParam[]): MessageParam[] {
  * - Filtre les null/undefined qui peuvent apparaître via .map(...) dans runAgent
  */
 function sanitizeMessages(messages: MessageParam[]): MessageParam[] {
-  return messages
+  // Étape 1 — corriger chaque message individuellement
+  const fixed = messages
     .filter((m): m is MessageParam => m != null)
     .map(m => {
       if (m.role !== "user") return m
-      // Message user avec contenu array (tool_results) : s'assurer que chaque item a un content valide
+
+      // content null/undefined → placeholder
+      if (m.content == null) {
+        return { ...m, content: "…" } as MessageParam
+      }
+
+      // content array (tool_results) — s'assurer que chaque item a un content valide
       if (Array.isArray(m.content)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const fixed = (m.content as any[]).map((block: any) => {
-          if (block?.type === "tool_result" && !block?.content) {
-            return { ...block, content: "{}" }
+        const arr = m.content as any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+        // Tableau vide → placeholder
+        if (arr.length === 0) {
+          return { ...m, content: "…" } as MessageParam
+        }
+        const fixedArr = arr.map((block: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          if (block?.type === "tool_result") {
+            const c = block.content
+            const isEmpty = !c || (Array.isArray(c) && c.length === 0) || (typeof c === "string" && c.trim() === "")
+            if (isEmpty) return { ...block, content: "{}" }
           }
           return block
         })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return { ...m, content: fixed } as any as MessageParam
+        return { ...m, content: fixedArr } as any as MessageParam // eslint-disable-line @typescript-eslint/no-explicit-any
       }
-      // Message user texte vide → placeholder invisible pour Anthropic
+
+      // content string vide → placeholder
       if (typeof m.content === "string" && m.content.trim() === "") {
         return { ...m, content: "…" } as MessageParam
       }
+
       return m
     })
+
+  // Étape 2 — garantir l'alternance user/assistant (Anthropic l'exige)
+  // Si un assistant vide a été exclu côté client, deux user messages se retrouvent consécutifs.
+  // On insère un placeholder assistant pour rétablir l'alternance.
+  const alternating: MessageParam[] = []
+  for (const msg of fixed) {
+    const last = alternating[alternating.length - 1]
+    if (last && last.role === msg.role) {
+      if (msg.role === "user") {
+        // Deux user consécutifs : insérer un assistant placeholder entre eux
+        alternating.push({ role: "assistant", content: "…" })
+      } else {
+        // Deux assistant consécutifs : remplacer par le dernier (le plus récent)
+        alternating[alternating.length - 1] = msg
+        continue
+      }
+    }
+    alternating.push(msg)
+  }
+
+  return alternating
 }
 
 // System prompt mis en cache côté Anthropic (économie ~90% des input tokens système)
