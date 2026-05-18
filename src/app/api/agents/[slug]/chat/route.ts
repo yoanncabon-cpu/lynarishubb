@@ -139,7 +139,7 @@ export async function POST(
         }
 
         try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: clientError })}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: clientError, debug: errStr.slice(0, 500) })}\n\n`))
           controller.close()
         } catch { /* stream déjà fermé */ }
       }
