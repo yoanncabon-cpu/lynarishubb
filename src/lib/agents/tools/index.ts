@@ -42,6 +42,46 @@ async function getGoogleCreds(orgId: string): Promise<{ access_token: string } |
   return { access_token: creds["access_token"] }
 }
 
+// ─── API key helpers — Pipedream first, env var fallback ─────────────────────
+/**
+ * Récupère la clé API d'un provider IA depuis :
+ * 1. L'intégration Pipedream connectée par l'utilisateur (prioritaire)
+ * 2. La variable d'environnement globale (fallback)
+ */
+async function getAiApiKey(
+  orgId: string,
+  provider: string,
+  envVarNames: string[],
+): Promise<string | null> {
+  // Essaie l'intégration Pipedream de l'org
+  try {
+    const integration = await getIntegration(orgId, provider).catch(() => null)
+    if (integration?.credentials) {
+      const creds = integration.credentials as Record<string, unknown>
+      if (creds["connected_via"] === "pipedream" && creds["pipedream_account_id"]) {
+        const { getPipedreamConnection } = await import("@/lib/integrations/pipedream")
+        const account = await getPipedreamConnection(String(creds["pipedream_account_id"])) as {
+          credentials?: Record<string, unknown>
+        }
+        const c = account.credentials ?? {}
+        // Pipedream stocke les clés API sous des noms variés selon l'app
+        const pdKey = c["api_key"] ?? c["apiKey"] ?? c["oauth_access_token"] ?? c["access_token"] ?? c["token"]
+        if (typeof pdKey === "string" && pdKey) return pdKey
+      }
+      // Clé stockée directement en DB (sauvegardée via ConfigModal)
+      const directKey = creds["api_key"] ?? creds["apiKey"] ?? creds["token"]
+      if (typeof directKey === "string" && directKey) return directKey
+    }
+  } catch { /* Pipedream non configuré ou erreur réseau → fallback env */ }
+
+  // Fallback : variable d'environnement globale
+  for (const name of envVarNames) {
+    const val = process.env[name]
+    if (val) return val
+  }
+  return null
+}
+
 // ─── Gmail RFC 822 builder ────────────────────────────────────────────────────
 // Encode subject en RFC 2047 base64 si non-ASCII (sinon Gmail/intermédiaires
 // peuvent l'interpréter en Latin-1 → mojibake "Ã©" au lieu de "é").
@@ -1694,9 +1734,12 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     const aspectRatio = (input["aspect_ratio"] as string) ?? "1:1"
     const provider    = (input["provider"] as string) ?? "auto"
 
-    const replicateKey = process.env["REPLICATE_API_TOKEN"]
-    const openaiKey    = process.env["OPENAI_API_KEY"]
-    const geminiKey    = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_AI_API_KEY"]
+    // Clés récupérées depuis l'intégration Pipedream de l'org en priorité, env var en fallback
+    const [replicateKey, openaiKey, geminiKey] = await Promise.all([
+      getAiApiKey(ctx.orgId, "replicate", ["REPLICATE_API_TOKEN"]),
+      getAiApiKey(ctx.orgId, "openai",    ["OPENAI_API_KEY"]),
+      getAiApiKey(ctx.orgId, "gemini",    ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY"]),
+    ])
 
     const errors: string[] = []
 
@@ -1704,16 +1747,20 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     const tryDallE = async (): Promise<{ url: string; provider: string } | null> => {
       if (!openaiKey) return null
 
-      // Essaie dall-e-3 puis gpt-image-1 si le premier échoue
-      for (const model of ["dall-e-3", "gpt-image-1"]) {
+      // Essaie dall-e-3 → dall-e-2 → gpt-image-1
+      for (const model of ["dall-e-3", "dall-e-2", "gpt-image-1"]) {
         try {
-          const size = aspectRatio === "16:9" ? "1792x1024" : aspectRatio === "9:16" ? "1024x1792" : "1024x1024"
-          // gpt-image-1 retourne b64_json, dall-e-3 supporte url
-          const responseFormat = model === "dall-e-3" ? "url" : "b64_json"
+          // dall-e-2 : taille fixe 1024x1024, pas de quality ni de response_format avancé
+          const size = model === "dall-e-2"
+            ? "1024x1024"
+            : (aspectRatio === "16:9" ? "1792x1024" : aspectRatio === "9:16" ? "1024x1792" : "1024x1024")
+          const bodyObj: Record<string, unknown> = { model, prompt: `${prompt}, ${style}`, n: 1, size }
+          if (model === "dall-e-3") { bodyObj["quality"] = "hd"; bodyObj["response_format"] = "url" }
+          if (model === "gpt-image-1") { bodyObj["response_format"] = "b64_json" }
           const res = await fetch("https://api.openai.com/v1/images/generations", {
             method: "POST",
             headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model, prompt: `${prompt}, ${style}`, n: 1, size, quality: "high", response_format: responseFormat }),
+            body: JSON.stringify(bodyObj),
           })
           if (!res.ok) {
             const errText = await res.text().catch(() => `HTTP ${res.status}`)
@@ -1733,42 +1780,51 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
       return null
     }
 
-    // ── Replicate / Flux 1.1 Pro ─── polling 8 × 1.5s = 12s max ─────────────
+    // ── Replicate ─── Flux Schnell (gratuit) puis Flux 1.1 Pro ──────────────
     const tryReplicate = async (): Promise<{ url: string; provider: string } | null> => {
       if (!replicateKey) return null
-      try {
-        const res = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${replicateKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ input: { prompt: `${prompt}, ${style}, professional quality`, aspect_ratio: aspectRatio, output_quality: 90 } }),
-        })
-        if (!res.ok) {
-          const errText = await res.text().catch(() => `HTTP ${res.status}`)
-          errors.push(`Replicate ${res.status}: ${errText.slice(0, 150)}`)
-          logger.error("[generate_image] Replicate failed", { status: res.status, body: errText.slice(0, 200) })
-          return null
-        }
-        const prediction = await res.json() as { id: string; urls: { get: string } }
-        for (let i = 0; i < 8; i++) {
-          await new Promise(r => setTimeout(r, 1500))
-          const poll = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
-          const result = await poll.json() as { status: string; output?: string[]; error?: string }
-          if (result.status === "succeeded") {
-            const url = result.output?.[0]
-            if (!url) { errors.push("Replicate: empty output"); return null }
-            return { url, provider: "replicate" }
+
+      // Essaie Flux Schnell (free) puis Flux 1.1 Pro
+      const models = [
+        { url: "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions",    name: "flux-schnell"   },
+        { url: "https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions",   name: "flux-1.1-pro"   },
+      ]
+
+      for (const model of models) {
+        try {
+          const res = await fetch(model.url, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${replicateKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ input: { prompt: `${prompt}, ${style}, professional quality`, aspect_ratio: aspectRatio } }),
+          })
+          if (!res.ok) {
+            const errText = await res.text().catch(() => `HTTP ${res.status}`)
+            errors.push(`${model.name} ${res.status}: ${errText.slice(0, 100)}`)
+            logger.error("[generate_image] Replicate failed", { model: model.name, status: res.status, body: errText.slice(0, 200) })
+            continue
           }
-          if (result.status === "failed") {
-            errors.push(`Replicate: prediction failed — ${result.error ?? "unknown"}`)
-            return null
+          const prediction = await res.json() as { id: string; urls: { get: string } }
+          for (let i = 0; i < 8; i++) {
+            await new Promise(r => setTimeout(r, 1500))
+            const poll = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
+            const result = await poll.json() as { status: string; output?: string[] | string; error?: string }
+            if (result.status === "succeeded") {
+              const rawOut = result.output
+              const url = Array.isArray(rawOut) ? rawOut[0] : (typeof rawOut === "string" ? rawOut : null)
+              if (url) return { url, provider: model.name }
+              errors.push(`${model.name}: empty output`)
+              break
+            }
+            if (result.status === "failed") {
+              errors.push(`${model.name}: failed — ${result.error ?? "unknown"}`)
+              break
+            }
           }
+        } catch (e) {
+          errors.push(`${model.name} exception: ${String(e).slice(0, 80)}`)
         }
-        errors.push("Replicate: timeout after 12s")
-        return null
-      } catch (e) {
-        errors.push(`Replicate exception: ${String(e).slice(0, 100)}`)
-        return null
       }
+      return null
     }
 
     // ── Gemini / Flash image gen via AI Studio ────────────────────────────────
