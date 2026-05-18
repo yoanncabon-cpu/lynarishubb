@@ -1734,12 +1734,9 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     const aspectRatio = (input["aspect_ratio"] as string) ?? "1:1"
     const provider    = (input["provider"] as string) ?? "auto"
 
-    // Clés récupérées depuis l'intégration Pipedream de l'org en priorité, env var en fallback
-    const [replicateKey, openaiKey, geminiKey] = await Promise.all([
-      getAiApiKey(ctx.orgId, "replicate", ["REPLICATE_API_TOKEN"]),
-      getAiApiKey(ctx.orgId, "openai",    ["OPENAI_API_KEY"]),
-      getAiApiKey(ctx.orgId, "gemini",    ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY"]),
-    ])
+    const replicateKey = process.env["REPLICATE_API_TOKEN"]
+    const openaiKey    = process.env["OPENAI_API_KEY"]
+    const geminiKey    = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_AI_API_KEY"]
 
     const errors: string[] = []
 
