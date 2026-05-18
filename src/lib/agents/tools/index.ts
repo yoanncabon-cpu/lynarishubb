@@ -460,14 +460,17 @@ ${htmlContent}
 </body>
 </html>`
 
-    // Sauvegarde dans Supabase Storage — fire-and-forget avec timeout 4s
-    // Si Supabase est lent ou non configuré, on ne bloque pas l'agent.
+    // Sauvegarde dans Supabase Storage — fire-and-forget avec timeout 5s
     let storageUrl: string | null = null
     try {
       const { createSupabaseAdminClient } = await import("@/lib/auth/supabase-server")
       const supabase = createSupabaseAdminClient()
+
+      // Auto-création du bucket si manquant (nouveau projet Supabase)
+      await supabase.storage.createBucket("contents", { public: true }).catch(() => {})
+
       const filename = `${ctx.orgId}/${Date.now()}-${title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}.html`
-      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
       const upload = supabase.storage
         .from("contents")
         .upload(filename, Buffer.from(html, "utf8"), { contentType: "text/html; charset=utf-8", upsert: false })
@@ -481,7 +484,7 @@ ${htmlContent}
         .catch(() => null)
       await Promise.race([upload, timeout])
     } catch {
-      // Storage non configuré
+      logger.error("[create_document] Supabase storage failed")
     }
 
     // Enregistrement dans la base de contenus — fire-and-forget, ne bloque pas
@@ -1686,16 +1689,51 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
 
   // ─── Max tools ────────────────────────────────────────────────────────
   generate_image: async (input, ctx) => {
-    const prompt = input["prompt"] as string
-    const style = (input["style"] as string) ?? "photorealistic"
+    const prompt      = input["prompt"] as string
+    const style       = (input["style"] as string) ?? "photorealistic"
     const aspectRatio = (input["aspect_ratio"] as string) ?? "1:1"
-    const provider = (input["provider"] as string) ?? "auto"
+    const provider    = (input["provider"] as string) ?? "auto"
 
     const replicateKey = process.env["REPLICATE_API_TOKEN"]
     const openaiKey    = process.env["OPENAI_API_KEY"]
     const geminiKey    = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_AI_API_KEY"]
 
-    // ── Replicate / Flux 1.1 Pro ──────────────────────────────────────────────
+    const errors: string[] = []
+
+    // ── OpenAI Image (dall-e-3 → gpt-image-1 en fallback) ── ~3-5s ───────────
+    const tryDallE = async (): Promise<{ url: string; provider: string } | null> => {
+      if (!openaiKey) return null
+
+      // Essaie dall-e-3 puis gpt-image-1 si le premier échoue
+      for (const model of ["dall-e-3", "gpt-image-1"]) {
+        try {
+          const size = aspectRatio === "16:9" ? "1792x1024" : aspectRatio === "9:16" ? "1024x1792" : "1024x1024"
+          // gpt-image-1 retourne b64_json, dall-e-3 supporte url
+          const responseFormat = model === "dall-e-3" ? "url" : "b64_json"
+          const res = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model, prompt: `${prompt}, ${style}`, n: 1, size, quality: "high", response_format: responseFormat }),
+          })
+          if (!res.ok) {
+            const errText = await res.text().catch(() => `HTTP ${res.status}`)
+            errors.push(`${model} ${res.status}: ${errText.slice(0, 100)}`)
+            logger.error("[generate_image] OpenAI failed", { model, status: res.status, body: errText.slice(0, 200) })
+            continue
+          }
+          const body = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> }
+          const item = body.data?.[0]
+          if (!item) continue
+          if (item.url) return { url: item.url, provider: model }
+          if (item.b64_json) return { url: `data:image/png;base64,${item.b64_json}`, provider: model }
+        } catch (e) {
+          errors.push(`${model} exception: ${String(e).slice(0, 80)}`)
+        }
+      }
+      return null
+    }
+
+    // ── Replicate / Flux 1.1 Pro ─── polling 8 × 1.5s = 12s max ─────────────
     const tryReplicate = async (): Promise<{ url: string; provider: string } | null> => {
       if (!replicateKey) return null
       try {
@@ -1704,65 +1742,68 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
           headers: { "Authorization": `Bearer ${replicateKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({ input: { prompt: `${prompt}, ${style}, professional quality`, aspect_ratio: aspectRatio, output_quality: 90 } }),
         })
-        if (!res.ok) return null
+        if (!res.ok) {
+          const errText = await res.text().catch(() => `HTTP ${res.status}`)
+          errors.push(`Replicate ${res.status}: ${errText.slice(0, 150)}`)
+          logger.error("[generate_image] Replicate failed", { status: res.status, body: errText.slice(0, 200) })
+          return null
+        }
         const prediction = await res.json() as { id: string; urls: { get: string } }
-        // Poll 8 × 1.5s = 12s max
         for (let i = 0; i < 8; i++) {
           await new Promise(r => setTimeout(r, 1500))
           const poll = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
-          const result = await poll.json() as { status: string; output?: string[] }
+          const result = await poll.json() as { status: string; output?: string[]; error?: string }
           if (result.status === "succeeded") {
             const url = result.output?.[0]
-            return url ? { url, provider: "replicate" } : null
+            if (!url) { errors.push("Replicate: empty output"); return null }
+            return { url, provider: "replicate" }
           }
-          if (result.status === "failed") return null
+          if (result.status === "failed") {
+            errors.push(`Replicate: prediction failed — ${result.error ?? "unknown"}`)
+            return null
+          }
         }
+        errors.push("Replicate: timeout after 12s")
         return null
-      } catch { return null }
+      } catch (e) {
+        errors.push(`Replicate exception: ${String(e).slice(0, 100)}`)
+        return null
+      }
     }
 
-    // ── DALL-E 3 / OpenAI ────────────────────────────────────────────────────
-    const tryDallE = async (): Promise<{ url: string; provider: string } | null> => {
-      if (!openaiKey) return null
-      try {
-        const size = aspectRatio === "16:9" ? "1792x1024" : aspectRatio === "9:16" ? "1024x1792" : "1024x1024"
-        const res = await fetch("https://api.openai.com/v1/images/generations", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "dall-e-3", prompt: `${prompt}, ${style}`, n: 1, size, quality: "hd", response_format: "url" }),
-        })
-        if (!res.ok) return null
-        const body = await res.json() as { data?: Array<{ url?: string }> }
-        const url = body.data?.[0]?.url
-        return url ? { url, provider: "dall-e" } : null
-      } catch { return null }
-    }
-
-    // ── Gemini / imagen-3 via AI Studio ─────────────────────────────────────
+    // ── Gemini / Flash image gen via AI Studio ────────────────────────────────
     const tryGemini = async (): Promise<{ url: string; provider: string } | null> => {
       if (!geminiKey) return null
       try {
-        // Gemini 2.0 Flash image generation (disponible via AI Studio)
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: `Create a ${style} image: ${prompt}` }] }],
-              generationConfig: { responseModalities: ["IMAGE"] },
+              contents: [{ parts: [{ text: `Generate a high quality ${style} image: ${prompt}. Return only the image.` }] }],
+              generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
             }),
           }
         )
-        if (!res.ok) return null
-        const body = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> } }> }
-        const b64 = body.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
-        if (!b64) return null
-        return { url: `data:image/png;base64,${b64}`, provider: "gemini" }
-      } catch { return null }
+        if (!res.ok) {
+          const errText = await res.text().catch(() => `HTTP ${res.status}`)
+          errors.push(`Gemini ${res.status}: ${errText.slice(0, 150)}`)
+          logger.error("[generate_image] Gemini failed", { status: res.status, body: errText.slice(0, 200) })
+          return null
+        }
+        const body = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string }; text?: string }> } }> }
+        const inlineData = body.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData
+        if (!inlineData?.data) { errors.push("Gemini: no image in response"); return null }
+        const mime = inlineData.mimeType ?? "image/png"
+        return { url: `data:${mime};base64,${inlineData.data}`, provider: "gemini" }
+      } catch (e) {
+        errors.push(`Gemini exception: ${String(e).slice(0, 100)}`)
+        return null
+      }
     }
 
-    // ── Résolution du provider ───────────────────────────────────────────────
+    // ── Résolution : parallèle si auto, sinon ciblé ──────────────────────────
     let result: { url: string; provider: string } | null = null
 
     if (provider === "dall-e") {
@@ -1772,30 +1813,32 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     } else if (provider === "replicate") {
       result = await tryReplicate()
     } else {
-      // auto — lance tous en parallèle, prend le premier qui réussit
+      // auto : DALL-E + Replicate en parallèle (Gemini en fallback si les 2 échouent)
       result = await new Promise<{ url: string; provider: string } | null>((resolve) => {
-        const tasks = [tryReplicate(), tryDallE(), tryGemini()]
+        const primary = [tryDallE(), tryReplicate()]
         let settled = 0
-        tasks.forEach(p => {
+        primary.forEach(p => {
           p.then(r => {
             if (r) resolve(r)
-            else if (++settled === tasks.length) resolve(null)
-          }).catch(() => { if (++settled === tasks.length) resolve(null) })
+            else if (++settled === primary.length) resolve(null)
+          }).catch(() => { if (++settled === primary.length) resolve(null) })
         })
       })
+      // Fallback Gemini si DALL-E + Replicate ont tous les deux échoué
+      if (!result) result = await tryGemini()
     }
 
     if (!result) {
       const configured = [replicateKey && "Replicate", openaiKey && "DALL-E", geminiKey && "Gemini"].filter(Boolean)
-      const missing = [!replicateKey && "REPLICATE_API_TOKEN", !openaiKey && "OPENAI_API_KEY", !geminiKey && "GEMINI_API_KEY"].filter(Boolean)
+      logger.error("[generate_image] All providers failed", { errors, configured })
       return {
         error: configured.length
-          ? `Génération échouée (${configured.join(", ")} testés). Les APIs sont peut-être surchargées — réessaie dans 1 min.`
-          : `Aucun provider configuré. Clés manquantes : ${missing.join(", ")}.`,
+          ? `Génération échouée. Détails : ${errors.join(" | ") || "aucun détail disponible"}. Réessaie dans 1 min.`
+          : `Aucun provider image configuré. Variables requises : REPLICATE_API_TOKEN, OPENAI_API_KEY ou GEMINI_API_KEY.`,
       }
     }
 
-    // Stocker dans Mes contenus (sauf data URLs base64 trop volumineuses)
+    // Sauvegarder dans Mes contenus (pas les data URLs base64 Gemini)
     if (!result.url.startsWith("data:")) {
       void logContent({
         orgId: ctx.orgId,
