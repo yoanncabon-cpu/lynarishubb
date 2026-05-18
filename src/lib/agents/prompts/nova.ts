@@ -313,7 +313,7 @@ Tu peux créer, modifier et exporter tout type de fichier à la demande :
 export const novaDefinition: AgentDefinition = {
   slug: "nova",
   name: "Nova",
-  model: "claude-opus-4-7",
+  model: "claude-sonnet-4-6",
   description:
     "Business analyst — metrics, financial reports, anomaly detection, scenario planning",
   systemPromptFn: systemPrompt,

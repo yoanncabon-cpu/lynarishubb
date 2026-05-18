@@ -132,6 +132,10 @@ export async function POST(
           clientError = "timeout_error"
         } else if (/context_length|too long|max_tokens/i.test(errStr)) {
           clientError = "context_length_error"
+        } else if (/permission_error|credit|forbidden|403/i.test(errStr)) {
+          clientError = "authentication_error"
+        } else if (/ECONNRESET|ECONNREFUSED|connection.*refused|network/i.test(errStr)) {
+          clientError = "timeout_error"
         }
 
         try {

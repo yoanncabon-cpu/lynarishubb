@@ -402,7 +402,7 @@ Tu peux créer, modifier et exporter tout type de fichier à la demande :
 export const louDefinition: AgentDefinition = {
   slug: "lou",
   name: "Lou",
-  model: "claude-opus-4-7",
+  model: "claude-sonnet-4-6",
   description:
     "Content strategist — SEO articles, LinkedIn posts, newsletters, editorial calendar",
   systemPromptFn: systemPrompt,

@@ -1,9 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
-import { messages, conversations } from "@/lib/db/schema"
+import { messages, conversations, users } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
-import { users } from "@/lib/db/schema"
-import { logger } from "@/lib/logger"
 
 interface MessageBody {
   role: "user" | "assistant" | "tool" | "system"
@@ -23,20 +21,22 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return Response.json({ messages: [] })
 
-    // Vérifie que la conversation appartient à l'org de l'utilisateur
     const userRow = await db.query.users.findFirst({
       where: eq(users.id, user.id),
       columns: { orgId: true },
     })
     if (!userRow?.orgId) return Response.json({ messages: [] })
 
-    const conv = await db.query.conversations.findFirst({
-      where: eq(conversations.id, id),
-      columns: { id: true, orgId: true },
-    })
+    // Vérifie que la conversation appartient à l'org
+    const conv = await db
+      .select({ id: conversations.id, orgId: conversations.orgId })
+      .from(conversations)
+      .where(eq(conversations.id, id))
+      .limit(1)
+      .then(rows => rows[0] ?? null)
+
     if (!conv || conv.orgId !== userRow.orgId) return Response.json({ messages: [] })
 
-    // Drizzle bypass RLS — garantit accès même si policies Supabase bloquent
     const rows = await db
       .select({
         id: messages.id,
@@ -52,8 +52,7 @@ export async function GET(
       .orderBy(messages.createdAt)
 
     return Response.json({ messages: rows })
-  } catch (err) {
-    logger.error("[conversations/messages] GET failed", { err: String(err) })
+  } catch {
     return Response.json({ messages: [] })
   }
 }
@@ -82,12 +81,9 @@ export async function POST(
       })
       .returning()
 
-    if (!row) {
-      return Response.json({ error: "Erreur serveur" }, { status: 500 })
-    }
+    if (!row) return Response.json({ error: "Erreur serveur" }, { status: 500 })
     return Response.json({ message: row })
-  } catch (err) {
-    logger.error("[conversations/messages] POST failed", { err: String(err) })
+  } catch {
     return Response.json({ error: "Erreur serveur" }, { status: 500 })
   }
 }

@@ -566,7 +566,7 @@ Tu peux créer, modifier et exporter tout type de fichier à la demande :
 export const charlesDefinition: AgentDefinition = {
   slug: "charles",
   name: "Charles",
-  model: "claude-opus-4-7",
+  model: "claude-sonnet-4-6",
   description:
     "Personal AI chief of staff — orchestrates all agents, accessible via WhatsApp",
   systemPromptFn: systemPrompt,
