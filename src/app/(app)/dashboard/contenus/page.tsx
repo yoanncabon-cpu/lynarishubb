@@ -137,11 +137,17 @@ function ContentCard({
   onOpen,
   onDuplicate,
   onDelete,
+  selectionMode = false,
+  selected = false,
+  onToggle,
 }: {
   item: ContentItem
   onOpen: (item: ContentItem) => void
   onDuplicate: (id: string) => void
   onDelete: (id: string) => void
+  selectionMode?: boolean
+  selected?: boolean
+  onToggle?: (id: string) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -163,11 +169,19 @@ function ContentCard({
 
   return (
     <GlassCard
-      tint={`rgba(${hexToRgb(agentColor)},0.12)`}
+      tint={selected ? `rgba(232,111,77,0.18)` : `rgba(${hexToRgb(agentColor)},0.12)`}
       radius={18}
       padding={0}
-      onClick={() => onOpen(item)}
-      style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}
+      onClick={() => selectionMode ? onToggle?.(item.id) : onOpen(item)}
+      style={{
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        outline: selected ? "2px solid var(--accent)" : "none",
+        outlineOffset: -2,
+        cursor: selectionMode ? "pointer" : undefined,
+        transition: "outline 100ms",
+      }}
     >
       {/* Thumbnail */}
       <div
@@ -186,6 +200,29 @@ function ContentCard({
           borderTopRightRadius: 18,
         }}
       >
+        {/* Checkbox sélection */}
+        {selectionMode && (
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              zIndex: 10,
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              background: selected ? "var(--accent)" : "rgba(0,0,0,0.65)",
+              border: `2px solid ${selected ? "var(--accent)" : "rgba(255,255,255,0.5)"}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backdropFilter: "blur(6px)",
+              transition: "all 120ms",
+            }}
+          >
+            {selected && <Check size={13} color="white" strokeWidth={3} />}
+          </div>
+        )}
         {item.thumbnail ? (
           <Image
             src={item.thumbnail.storageUrl}
@@ -238,8 +275,8 @@ function ContentCard({
           )}
         </div>
 
-        {/* Menu "..." */}
-        <div
+        {/* Menu "..." — masqué en mode sélection */}
+        {!selectionMode && <div
           ref={menuRef}
           style={{ position: "absolute", top: 8, right: 8, zIndex: 3 }}
           onClick={(e) => e.stopPropagation()}
@@ -350,7 +387,7 @@ function ContentCard({
               </button>
             </GlassPanel>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Body */}
@@ -485,7 +522,15 @@ function ContentDetailModal({
 
   const typeConf = detail ? (TYPE_CONFIG[detail.contentType] ?? { label: detail.contentType, Icon: FileText, color: "#64748B" }) : null
   const platformConf = detail?.platform ? PLATFORM_CONFIG[detail.platform] : null
-  const images = detail?.attachments.filter((a) => a.attachmentType === "image" || a.attachmentType === "thumbnail") ?? []
+  // Attachments → images. Fallback : si le contenu est de type image/video et a un externalUrl,
+  // on l'utilise comme preview (generate_image stocke l'URL Replicate dans externalUrl, pas en attachment).
+  const attachmentImages = detail?.attachments.filter((a) => a.attachmentType === "image" || a.attachmentType === "thumbnail") ?? []
+  const images: Array<{ storageUrl: string }> =
+    attachmentImages.length > 0
+      ? attachmentImages
+      : detail && (detail.contentType === "image" || detail.contentType === "video") && detail.externalUrl
+        ? [{ storageUrl: detail.externalUrl }]
+        : []
 
   return (
     <div
@@ -1141,6 +1186,8 @@ export default function ContenuPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [agentMenuOpen, setAgentMenuOpen] = useState(false)
   const agentMenuRef = useRef<HTMLDivElement>(null)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
 
   const fetchItems = useCallback(() => {
     setLoading(true)
@@ -1185,6 +1232,23 @@ export default function ContenuPage() {
     }
   }
 
+  function toggleItem(id: string) {
+    setSelectedItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedItems)
+    await Promise.all(ids.map((id) => fetch(`/api/contents/${id}`, { method: "DELETE" })))
+    setItems((prev) => prev.filter((i) => !selectedItems.has(i.id)))
+    setSelectedItems(new Set())
+    setSelectionMode(false)
+  }
+
   const activeAgentData = activeAgent !== "all" ? agents.find((a) => a.slug === activeAgent) : null
 
   return (
@@ -1208,6 +1272,24 @@ export default function ContenuPage() {
               Calendrier — bientôt
             </span>
           </GlassChip>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectionMode((m) => !m)
+              setSelectedItems(new Set())
+            }}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px",
+              borderRadius: 10,
+              border: selectionMode ? "1px solid var(--accent)" : "1px solid rgba(255,255,255,0.12)",
+              background: selectionMode ? "rgba(232,111,77,0.12)" : "rgba(255,255,255,0.04)",
+              color: selectionMode ? "var(--accent)" : "rgba(250,250,250,0.65)",
+              fontSize: 13, fontWeight: 500, cursor: "pointer",
+            }}
+          >
+            {selectionMode ? <X size={13} aria-hidden /> : <Check size={13} aria-hidden />}
+            {selectionMode ? "Annuler" : "Sélectionner"}
+          </button>
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
@@ -1472,6 +1554,9 @@ export default function ContenuPage() {
               onOpen={setSelectedId.bind(null, item.id)}
               onDuplicate={handleDuplicate}
               onDelete={handleDelete}
+              selectionMode={selectionMode}
+              selected={selectedItems.has(item.id)}
+              onToggle={toggleItem}
             />
           ))}
         </div>
@@ -1493,6 +1578,67 @@ export default function ContenuPage() {
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
         />
+      )}
+
+      {/* Barre de sélection flottante */}
+      {selectionMode && selectedItems.size > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 28,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 300,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 16px",
+            borderRadius: 16,
+            background: "rgba(12,10,20,0.95)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            boxShadow: "0 16px 40px rgba(0,0,0,0.5)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#FAFAFA" }}>
+            {selectedItems.size} sélectionné{selectedItems.size > 1 ? "s" : ""}
+          </span>
+          <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)" }} />
+          <button
+            type="button"
+            onClick={() => setSelectedItems(new Set(items.map((i) => i.id)))}
+            style={{ fontSize: 12, color: "rgba(250,250,250,0.6)", background: "transparent", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 8 }}
+            onMouseEnter={(e) => { (e.currentTarget).style.background = "rgba(255,255,255,0.06)" }}
+            onMouseLeave={(e) => { (e.currentTarget).style.background = "transparent" }}
+          >
+            Tout sélectionner
+          </button>
+          <button
+            type="button"
+            onClick={() => { setSelectedItems(new Set()); setSelectionMode(false) }}
+            style={{ fontSize: 12, color: "rgba(250,250,250,0.6)", background: "transparent", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 8 }}
+            onMouseEnter={(e) => { (e.currentTarget).style.background = "rgba(255,255,255,0.06)" }}
+            onMouseLeave={(e) => { (e.currentTarget).style.background = "transparent" }}
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleBulkDelete()}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              fontSize: 13, fontWeight: 600, color: "#fff",
+              background: "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)",
+              border: "none", borderRadius: 10, padding: "8px 16px", cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(239,68,68,0.4)",
+            }}
+          >
+            <Trash2 size={13} aria-hidden />
+            Supprimer ({selectedItems.size})
+          </button>
+        </div>
       )}
 
       <style>{`

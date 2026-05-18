@@ -51,7 +51,6 @@ const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
     items: [
       { href: "/dashboard", label: "Accueil", icon: LayoutDashboard, exact: true, tour: "sidebar-home" },
       { href: "/dashboard/agents", label: "Mes agents", icon: Bot, tour: "sidebar-assistants" },
-      { href: "/dashboard/conversations", label: "Conversations", icon: MessageSquare },
     ],
   },
   {
@@ -74,6 +73,7 @@ const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
   {
     label: "Plateforme",
     items: [
+      { href: "/dashboard/conversations", label: "Conversations", icon: MessageSquare },
       { href: "/dashboard/skills", label: "Compétences", icon: Sparkles },
       { href: "/dashboard/integrations", label: "Intégrations", icon: Plug, tour: "sidebar-integrations" },
       { href: "/dashboard/team", label: "Équipe", icon: Briefcase },
