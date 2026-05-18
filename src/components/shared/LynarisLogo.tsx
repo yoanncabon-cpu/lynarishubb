@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useId } from "react"
 
 interface LynarisLogoProps {
   size?: number
@@ -7,7 +7,8 @@ interface LynarisLogoProps {
 }
 
 export function LynarisLogo({ size = 32, showWordmark = true, className }: LynarisLogoProps) {
-  const gradId = `logo-grad-${size}`
+  const uid = useId()
+  const gradId = `logo-grad-${uid.replace(/:/g, "")}`
   return (
     <div className={className} style={{ display: "flex", alignItems: "center", gap: Math.round(size * 0.28) }}>
       <svg
