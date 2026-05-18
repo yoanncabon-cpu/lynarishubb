@@ -4,8 +4,8 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { getAgent, type AgentConfig } from "./registry"
 import { executeTool } from "./tools/index"
 import type { EmailStyleConfig } from "@/lib/db/schema"
-import { detectProvider, streamOpenAI, streamGemini, type ProviderMessage } from "./providers"
-import { routeRequest } from "./llm-router"
+// routeRequest et providers non-Anthropic désactivés — tous les agents utilisent
+// directement leur agentDef.model (Anthropic) pour éviter les appels LLM supplémentaires.
 import { db } from "@/lib/db"
 import { organizations } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
@@ -339,63 +339,13 @@ export async function* streamAgent(
 
   const systemPrompt = augmentSystemPrompt(agentDef.systemPromptFn(effectiveConfig), effectiveConfig)
 
-  // Routeur LLM : sélection automatique du modèle optimal pour cette requête
-  const lastUserMsg = messages.filter((m) => m.role === "user").at(-1)
-  const lastUserText = typeof lastUserMsg?.content === "string"
-    ? lastUserMsg.content
-    : (Array.isArray(lastUserMsg?.content)
-        ? (lastUserMsg.content as Array<{ type: string; text?: string }>)
-            .filter((b) => b.type === "text")
-            .map((b) => b.text ?? "")
-            .join(" ")
-        : "")
-
-  const routing = await routeRequest({
-    userMessage: lastUserText,
-    agentSlug,
-    isVoiceRealTime: agentSlug === "marine",
-    hasAttachment: (effectiveConfig["hasAttachment"] as boolean | undefined) ?? false,
-    estimatedTokens: messages.reduce((acc, m) => acc + (typeof m.content === "string" ? m.content.length / 4 : 200), 0),
-    sector: (effectiveConfig["sector"] as string | undefined),
-    budgetTier: (effectiveConfig["budgetTier"] as "économique" | "standard" | "premium" | undefined) ?? "standard",
-  })
-
-  const routedProvider = detectProvider(routing.modelId)
-
-  // Valide que le provider routé est bien configuré (clé API présente)
-  const providerAvailable =
-    routedProvider === "anthropic"
-      ? !!process.env["ANTHROPIC_API_KEY"]
-      : routedProvider === "openai"
-        ? !!process.env["OPENAI_API_KEY"]
-        : routedProvider === "gemini"
-          ? !!process.env["GOOGLE_AI_API_KEY"]
-          : false
-
-  // Si le provider n'est pas configuré → fallback sur le modèle défini par l'agent
-  // Normalise les modèles dépréciés vers leur successeur valide
+  // Modèle : utilise directement agentDef.model (Anthropic uniquement, tool use complet).
+  // Le LLM router dynamique est désactivé — il ajoutait un appel Haiku supplémentaire
+  // avant chaque turn et pouvait router vers GPT-4O / Mistral non configurés sur Vercel.
   const DEPRECATED_MODEL_MAP: Record<string, string> = {
     "claude-opus-4-6": "claude-opus-4-7",
   }
-  const rawModel = providerAvailable ? routing.modelId : agentDef.model
-  const effectiveModel = DEPRECATED_MODEL_MAP[rawModel] ?? rawModel
-  const provider = detectProvider(effectiveModel)
-
-  // ── Providers non-Anthropic : pas de tool use, yield texte uniquement ────────
-  if (provider === "openai" || provider === "gemini") {
-    const providerMessages: ProviderMessage[] = messages
-      .filter(m => typeof m.content === "string")
-      .map(m => ({ role: m.role as "user" | "assistant", content: m.content as string }))
-
-    const stream = provider === "openai"
-      ? streamOpenAI(effectiveModel, systemPrompt, providerMessages)
-      : streamGemini(effectiveModel, systemPrompt, providerMessages)
-
-    for await (const chunk of stream) {
-      yield chunk
-    }
-    return
-  }
+  const effectiveModel = DEPRECATED_MODEL_MAP[agentDef.model] ?? agentDef.model
 
   // ── Anthropic : flow complet avec tool use ────────────────────────────────────
   // Plan résolu une fois pour le run (utilisé par instrumentTurnComplete)
