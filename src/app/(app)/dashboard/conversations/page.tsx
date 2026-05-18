@@ -187,6 +187,11 @@ export default function ConversationsPage() {
   const [chatInput, setChatInput] = useState("")
   const [chatStreaming, setChatStreaming] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null)
+
+  function showConfirm(message: string, onConfirm: () => void) {
+    setConfirmModal({ message, onConfirm })
+  }
   const chatAbortRef = useRef<AbortController | null>(null)
 
   async function sendChatMessage() {
@@ -260,7 +265,6 @@ export default function ConversationsPage() {
   }
 
   async function deleteConversation(id: string) {
-    if (!confirm("Supprimer cette conversation ?")) return
     setDeletingId(id)
     try {
       await fetch(`/api/conversations/${id}`, { method: "DELETE" })
@@ -272,7 +276,6 @@ export default function ConversationsPage() {
   }
 
   async function resetConversation(id: string) {
-    if (!confirm("Réinitialiser cette conversation ? Les messages seront supprimés.")) return
     setDeletingId(id)
     try {
       await fetch(`/api/conversations/${id}`, { method: "PATCH" })
@@ -635,7 +638,7 @@ export default function ConversationsPage() {
                       type="button"
                       title="Réinitialiser"
                       disabled={deletingId === conv.id}
-                      onClick={() => void resetConversation(conv.id)}
+                      onClick={() => showConfirm("Réinitialiser cette conversation ? Les messages seront supprimés.", () => void resetConversation(conv.id))}
                       className="lg-focus"
                       style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, border: "1px solid var(--glass-border)", background: "rgba(255,255,255,0.06)", color: "#A1A1AA", cursor: "pointer", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
                     >
@@ -645,7 +648,7 @@ export default function ConversationsPage() {
                       type="button"
                       title="Supprimer"
                       disabled={deletingId === conv.id}
-                      onClick={() => void deleteConversation(conv.id)}
+                      onClick={() => showConfirm("Supprimer cette conversation ?", () => void deleteConversation(conv.id))}
                       className="lg-focus"
                       style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(239,68,68,0.28)", background: "rgba(239,68,68,0.10)", color: "#EF4444", cursor: "pointer", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
                     >
@@ -742,7 +745,7 @@ export default function ConversationsPage() {
                 <button
                   type="button"
                   title="Réinitialiser la conversation"
-                  onClick={() => void resetConversation(selected.id)}
+                  onClick={() => showConfirm("Réinitialiser cette conversation ? Les messages seront supprimés.", () => void resetConversation(selected.id))}
                   className="lg-chip lg-focus"
                   style={{ display: "flex", alignItems: "center", gap: 5, height: 32, padding: "0 10px", color: "rgba(250,250,250,0.78)", fontSize: 12, cursor: "pointer" }}
                 >
@@ -751,7 +754,7 @@ export default function ConversationsPage() {
                 <button
                   type="button"
                   title="Supprimer la conversation"
-                  onClick={() => void deleteConversation(selected.id)}
+                  onClick={() => showConfirm("Supprimer cette conversation ?", () => void deleteConversation(selected.id))}
                   className="lg-focus"
                   style={{ display: "flex", alignItems: "center", gap: 5, height: 32, padding: "0 10px", borderRadius: 9999, background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)", color: "#EF4444", fontSize: 12, cursor: "pointer", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
                 >
@@ -938,6 +941,70 @@ export default function ConversationsPage() {
           </div>
         )}
       </GlassPanel>
+
+      {/* ── Modale de confirmation ──────────────────────────────────────── */}
+      {confirmModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirmation"
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+          }}
+          onClick={() => setConfirmModal(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "rgba(12,10,20,0.97)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 16,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.7)",
+              padding: "24px 24px 20px",
+              width: 340,
+              maxWidth: "90vw",
+            }}
+          >
+            <p style={{ fontSize: 14, color: "#F5EFE6", margin: "0 0 20px", lineHeight: 1.55, fontWeight: 500 }}>
+              {confirmModal.message}
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                style={{
+                  padding: "8px 16px", borderRadius: 9, fontSize: 13, fontWeight: 500,
+                  background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
+                  color: "rgba(245,239,230,0.7)", cursor: "pointer", fontFamily: "inherit",
+                  transition: "background 160ms ease",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)" }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => { confirmModal.onConfirm(); setConfirmModal(null) }}
+                style={{
+                  padding: "8px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600,
+                  background: "#E86F4D", border: "none",
+                  color: "#fff", cursor: "pointer", fontFamily: "inherit",
+                  transition: "opacity 160ms ease",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.88" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1" }}
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
