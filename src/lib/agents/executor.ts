@@ -508,12 +508,17 @@ export async function* streamAgent(
           emailStyle,
         })
 
+        // JSON.stringify(undefined) === undefined (pas une string).
+        // Anthropic rejette content null/vide → fallback sur "{}" si le résultat est indéfini.
+        const toolContent =
+          result.error
+            ? JSON.stringify({ error: result.error })
+            : (JSON.stringify(result.result ?? { status: "ok" }) ?? "{}")
+
         return {
           type: "tool_result" as const,
           tool_use_id: tu.id,
-          content: JSON.stringify(
-            result.error ? { error: result.error } : result.result
-          ),
+          content: toolContent || "{}",
         }
       })
     )
