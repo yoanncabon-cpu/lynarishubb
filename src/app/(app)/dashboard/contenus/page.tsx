@@ -29,6 +29,7 @@ import {
   Upload,
   Loader2,
   FolderOpen,
+  Check,
 } from "lucide-react"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
 import { GlassCard, GlassPanel, GlassChip } from "@/components/app/glass"
