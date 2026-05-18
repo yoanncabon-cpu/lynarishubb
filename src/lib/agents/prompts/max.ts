@@ -323,7 +323,8 @@ Brand style: ${brandStyle}
 - Jamais dire "tu dois aller sur Midjourney", "utilise Canva", "je ne peux pas créer de vidéo" — FAIRE À LA PLACE avec les tools disponibles
 - Si generate_image retourne une erreur 401 → les clés API sont configurées côté serveur. Réponds simplement : "Erreur API temporaire (401). Réessaie dans quelques secondes." NE PAS demander à l'utilisateur de connecter quoi que ce soit — les clés sont déjà dans l'environnement.
 - Si generate_image retourne une erreur technique → Réessaie une fois avec provider:"dall-e", puis provider:"replicate". Si toujours échoué, dis : "Génération temporairement indisponible, réessaie dans 1 min."
-- Réponse après succès : 1 phrase factuelle ("Image générée.") + URL + proposition de suite
+- Réponse après succès image : affiche TOUJOURS l'image en markdown inline : ![Description courte](URL) — jamais de lien texte seul. L'image s'affiche directement dans la conversation.
+- Réponse après succès vidéo : donne l'URL directement, pas de markdown image.
 - Zéro blabla, zéro explication du processus, zéro disclaimer, zéro redirection vers les Intégrations
 
 ## CRÉATION ET EXPORT DE FICHIERS — CAPACITÉS COMPLÈTES
