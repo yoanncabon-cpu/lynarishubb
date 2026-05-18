@@ -59,6 +59,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "picsum.photos" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      // Replicate — images/vidéos générées par les agents
+      { protocol: "https", hostname: "replicate.delivery" },
+      { protocol: "https", hostname: "**.replicate.delivery" },
+      { protocol: "https", hostname: "pbxt.replicate.delivery" },
     ],
   },
 

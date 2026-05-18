@@ -560,7 +560,8 @@ export async function* streamAgent(
       }
     }
 
-    const toolResults = await Promise.all(
+    // Exécuter les outils et conserver les résultats bruts pour émettre les SSE
+    const rawResults = await Promise.all(
       toolUseInputs.map(async (tu) => {
         let parsedInput: Record<string, unknown> = {}
         try {
@@ -583,20 +584,44 @@ export async function* streamAgent(
           emailStyle,
         })
 
-        // JSON.stringify(undefined) === undefined (pas une string).
-        // Anthropic rejette content null/vide → fallback sur "{}" si le résultat est indéfini.
-        const toolContent =
-          result.error
-            ? JSON.stringify({ error: result.error })
-            : (JSON.stringify(result.result ?? { status: "ok" }) ?? "{}")
-
-        return {
-          type: "tool_result" as const,
-          tool_use_id: tu.id,
-          content: toolContent || "{}",
-        }
+        return { tu, parsedInput, result }
       })
     )
+
+    // Émettre des cartes de contenu pour les outils qui créent des fichiers/images
+    for (const { tu, parsedInput, result } of rawResults) {
+      if (!result.error && result.result) {
+        const r = result.result as Record<string, unknown>
+        const url = r["url"] ? String(r["url"]) : null
+        if (url && (tu.name === "create_document" || tu.name === "generate_image")) {
+          const ev = {
+            type: "content_created",
+            contentType: tu.name === "create_document" ? "document" : "image",
+            url,
+            title: tu.name === "create_document"
+              ? String(parsedInput["title"] ?? r["title"] ?? "Document")
+              : String(parsedInput["prompt"] ?? "Image IA").slice(0, 80),
+          }
+          yield `\x01${JSON.stringify(ev)}\x01`
+        }
+      }
+    }
+
+    // Convertir en tool_results pour Anthropic
+    const toolResults = rawResults.map(({ tu, result }) => {
+      // JSON.stringify(undefined) === undefined (pas une string).
+      // Anthropic rejette content null/vide → fallback sur "{}" si le résultat est indéfini.
+      const toolContent =
+        result.error
+          ? JSON.stringify({ error: result.error })
+          : (JSON.stringify(result.result ?? { status: "ok" }) ?? "{}")
+
+      return {
+        type: "tool_result" as const,
+        tool_use_id: tu.id,
+        content: toolContent || "{}",
+      }
+    })
 
     currentMessages = [
       ...currentMessages,
