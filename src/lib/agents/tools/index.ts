@@ -500,52 +500,35 @@ ${htmlContent}
 </body>
 </html>`
 
-    // Sauvegarde dans Supabase Storage — fire-and-forget avec timeout 5s
-    let storageUrl: string | null = null
+    // Enregistrement en DB — retourne l'ID pour construire l'URL de vue
+    let contentId: string | null = null
     try {
-      const { createSupabaseAdminClient } = await import("@/lib/auth/supabase-server")
-      const supabase = createSupabaseAdminClient()
-
-      // Auto-création du bucket si manquant (nouveau projet Supabase)
-      await supabase.storage.createBucket("contents", { public: true }).catch(() => {})
-
-      const filename = `${ctx.orgId}/${Date.now()}-${title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}.html`
-      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
-      const upload = supabase.storage
-        .from("contents")
-        .upload(filename, Buffer.from(html, "utf8"), { contentType: "text/html; charset=utf-8", upsert: false })
-        .then(({ error }) => {
-          if (!error) {
-            const { data: { publicUrl } } = supabase.storage.from("contents").getPublicUrl(filename)
-            storageUrl = publicUrl
-          }
-          return null
-        })
-        .catch(() => null)
-      await Promise.race([upload, timeout])
+      const saved = await logContent({
+        orgId: ctx.orgId,
+        agentSlug,
+        contentType: "document",
+        title,
+        body: content,  // Markdown sauvegardé → rendu HTML par /api/contents/[id]/view
+      })
+      contentId = saved?.id ?? null
     } catch {
-      logger.error("[create_document] Supabase storage failed")
+      logger.error("[create_document] logContent failed")
     }
 
-    // Enregistrement dans la base de contenus — fire-and-forget, ne bloque pas
-    void logContent({
-      orgId: ctx.orgId,
-      agentSlug,
-      contentType: "document",
-      title,
-      body: content,
-      attachments: storageUrl ? [{ type: "document" as const, url: storageUrl, mimeType: "text/html" }] : [],
-    }).catch(() => {})
-
     const appUrl = getAppUrl()
+    // URL servie directement par notre API — pas de dépendance Supabase Storage
+    const docUrl = contentId
+      ? `${appUrl}/api/contents/${contentId}/view`
+      : `${appUrl}/dashboard/contenus`
+
     return {
       success: true,
       title,
       type: docType,
-      url: storageUrl ?? `${appUrl}/dashboard/contenus`,
-      message: storageUrl
-        ? `Document "${title}" créé et accessible à : ${storageUrl} — L'utilisateur peut cliquer sur le lien pour l'ouvrir et l'imprimer en PDF via Ctrl+P → "Enregistrer en PDF".`
-        : `Document "${title}" généré et sauvegardé dans la bibliothèque de contenus.`,
+      url: docUrl,
+      message: contentId
+        ? `Document "${title}" créé. Accessible à : ${docUrl} — Ouvre le lien, puis Ctrl+P → "Enregistrer en PDF".`
+        : `Document "${title}" sauvegardé dans la bibliothèque de contenus.`,
     }
   },
 
