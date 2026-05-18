@@ -441,10 +441,13 @@ export async function* streamAgent(
     const allContent: Anthropic.Messages.ContentBlockParam[] = []
     let stopReason: string | null = null
 
-    // Stream the response
+    // Stream the response — cap max_tokens à 2048 pour les documents (évite le 504 Vercel)
+    // Un document de 1500 mots ≈ 2000 tokens; au-delà on dépasse le timeout 60s.
+    const iterMaxTokens = Math.min(agentDef.maxTokens, 2048)
+
     const stream = anthropic.messages.stream({
       model: effectiveModel,
-      max_tokens: agentDef.maxTokens,
+      max_tokens: iterMaxTokens,
       system: cachedSystem(systemPrompt),
       messages: sanitizeMessages(trimHistory(currentMessages)),
       tools: agentDef.tools.length > 0 ? agentDef.tools : undefined,

@@ -386,7 +386,7 @@ const tools: Tool[] = [
       type: "object" as const,
       properties: {
         title: { type: "string", description: "Titre principal du document" },
-        content: { type: "string", description: "Contenu complet en Markdown (titres ##, listes -, texte). Doit être exhaustif et directement utilisable." },
+        content: { type: "string", description: "Contenu en Markdown (titres ##, listes -, texte). LIMITE ABSOLUE : 1500 mots maximum. Structure claire avec ## sections. Si le sujet est vaste, couvre les points essentiels de façon concise plutôt qu'exhaustive." },
         type: { type: "string", enum: ["document", "report", "guide", "course", "ebook"], description: "Type de document" },
       },
       required: ["title", "content"],

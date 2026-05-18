@@ -276,7 +276,7 @@ export const CORE_TOOLS: Tool[] = [
       type: "object" as const,
       properties: {
         title: { type: "string", description: "Titre du document" },
-        content: { type: "string", description: "Contenu complet en Markdown" },
+        content: { type: "string", description: "Contenu en Markdown. LIMITE : 1500 mots max. Concis et structuré avec ## sections." },
         type: {
           type: "string",
           enum: ["document", "guide", "report"],
