@@ -1717,9 +1717,9 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
 
       const prediction = await res.json() as { id: string; status: string; urls: { get: string } }
 
-      // Poll for result (max 30s)
+      // Poll max 20s (10 × 2s) — compatible avec le timeout Vercel (60s total)
       let attempts = 0
-      while (attempts < 15) {
+      while (attempts < 10) {
         await new Promise(r => setTimeout(r, 2000))
         const pollRes = await fetch(prediction.urls.get, {
           headers: { "Authorization": `Bearer ${replicateKey}` }
@@ -1746,7 +1746,7 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
         attempts++
       }
 
-      return { error: "Timeout — essaie à nouveau", prediction_id: prediction.id }
+      return { error: "Timeout — génération trop lente, essaie avec un prompt plus simple", prediction_id: prediction.id }
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Replicate error" }
     }

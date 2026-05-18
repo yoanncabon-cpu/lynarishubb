@@ -309,18 +309,9 @@ const tools: Tool[] = [
       required: ["url"],
     },
   },
-  {
-    name: "generate_image",
-    description: "Generate an image via Replicate (Flux). Use when user asks to create/generate a visual.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        prompt: { type: "string", description: "Image description" },
-        style: { type: "string", description: "Visual style (optional)" },
-      },
-      required: ["prompt"],
-    },
-  },
+  // generate_image retiré de Charles — il délègue à Max via delegate_to_agent.
+  // Garder generate_image ici déclenchait des appels Replicate directs (~30s) qui
+  // dépassaient le timeout Vercel avant que create_document puisse finir.
   // ── Prospection ───────────────────────────────────────────────────────────
   {
     name: "search_prospects",

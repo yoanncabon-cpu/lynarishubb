@@ -288,6 +288,8 @@ export const CORE_TOOLS: Tool[] = [
   },
   // generate_image : Max et Charles ont leur propre version plus riche ;
   // les autres agents (marine, lou, elio, mae, nova, alba, aria) reçoivent celle-ci.
+  // NOTE : generate_video est intentionnellement absent des CORE_TOOLS (polling 90s → timeout Vercel).
+  // Les agents qui ont besoin de vidéo doivent déléguer à Max.
   {
     name: "generate_image",
     description:
@@ -313,29 +315,6 @@ export const CORE_TOOLS: Tool[] = [
       required: ["prompt"],
     },
   },
-  // generate_video : aucun agent n'a encore ce tool — tous le reçoivent ici,
-  // sauf Max qui a sa propre version plus riche dans prompts/max.ts.
-  {
-    name: "generate_video",
-    description:
-      "Génère une vidéo IA courte via Replicate. Utilise cet outil dès que l'utilisateur demande une vidéo, une animation, un clip ou un reel. Supporte texte → vidéo et image → vidéo.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        prompt: {
-          type: "string",
-          description: "Description de la vidéo à générer",
-        },
-        image_url: {
-          type: "string",
-          description: "URL d'une image source à animer (optionnel — active le mode image-to-video)",
-        },
-        duration: {
-          type: "number",
-          description: "Durée souhaitée en secondes (défaut: 5, max: 10)",
-        },
-      },
-      required: ["prompt"],
-    },
-  },
+  // generate_video absent des CORE_TOOLS — polling 90s dépasse le timeout Vercel (60s).
+  // Seul Max (prompts/max.ts) a generate_video. Les autres agents délèguent à Max.
 ]
