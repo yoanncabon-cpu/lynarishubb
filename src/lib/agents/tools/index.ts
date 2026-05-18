@@ -1764,18 +1764,57 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
   },
 
   remove_background: async (input) => {
-    return {
-      image_url: input["image_url"],
-      success: false,
-      message: "Background removal via Replicate pending",
+    const imageUrl = input["image_url"] as string
+    const replicateKey = process.env["REPLICATE_API_TOKEN"]
+    if (!replicateKey) return { success: false, error: "Intégration Replicate non configurée. Ajoute REPLICATE_API_TOKEN dans les paramètres." }
+    try {
+      const res = await fetch("https://api.replicate.com/v1/models/851-labs/background-remover/predictions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${replicateKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ input: { image: imageUrl } }),
+      })
+      if (!res.ok) return { success: false, error: `Replicate HTTP ${res.status}` }
+      const prediction = await res.json() as { id: string; urls: { get: string } }
+      let attempts = 0
+      while (attempts < 15) {
+        await new Promise(r => setTimeout(r, 2000))
+        const pollRes = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
+        const result = await pollRes.json() as { status: string; output?: string }
+        if (result.status === "succeeded" && result.output) return { success: true, url: result.output, original_url: imageUrl }
+        if (result.status === "failed") return { success: false, error: "Suppression arrière-plan échouée" }
+        attempts++
+      }
+      return { success: false, error: "Timeout" }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Erreur Replicate" }
     }
   },
 
   upscale_image: async (input) => {
-    return {
-      image_url: input["image_url"],
-      factor: input["factor"] ?? 2,
-      success: false,
+    const imageUrl = input["image_url"] as string
+    const factor = Math.min((input["factor"] as number | undefined) ?? 4, 4)
+    const replicateKey = process.env["REPLICATE_API_TOKEN"]
+    if (!replicateKey) return { success: false, error: "Intégration Replicate non configurée. Ajoute REPLICATE_API_TOKEN dans les paramètres." }
+    try {
+      const res = await fetch("https://api.replicate.com/v1/models/nightmareai/real-esrgan/predictions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${replicateKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ input: { image: imageUrl, scale: factor, face_enhance: false } }),
+      })
+      if (!res.ok) return { success: false, error: `Replicate HTTP ${res.status}` }
+      const prediction = await res.json() as { id: string; urls: { get: string } }
+      let attempts = 0
+      while (attempts < 15) {
+        await new Promise(r => setTimeout(r, 2000))
+        const pollRes = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
+        const result = await pollRes.json() as { status: string; output?: string }
+        if (result.status === "succeeded" && result.output) return { success: true, url: result.output, original_url: imageUrl, factor }
+        if (result.status === "failed") return { success: false, error: "Upscaling échoué" }
+        attempts++
+      }
+      return { success: false, error: "Timeout" }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Erreur Replicate" }
     }
   },
 
@@ -1824,6 +1863,57 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     }
 
     return { prompt, count: variations.length, variations, requested: count }
+  },
+
+  generate_video: async (input, ctx) => {
+    const prompt = (input["prompt"] as string | undefined) ?? ""
+    const imageUrl = input["image_url"] as string | undefined
+    const replicateKey = process.env["REPLICATE_API_TOKEN"]
+    if (!replicateKey) return { success: false, error: "Intégration Replicate non configurée. Ajoute REPLICATE_API_TOKEN dans les paramètres." }
+    try {
+      const isImg2Vid = !!imageUrl
+      const modelPath = isImg2Vid
+        ? "stability-ai/stable-video-diffusion"
+        : "minimax/video-01"
+      const modelInput = isImg2Vid
+        ? { input_image: imageUrl, cond_aug: 0.02, decode_chunk_size: 8, motion_bucket_id: 127, fps_id: 6 }
+        : { prompt, prompt_optimizer: true }
+
+      const res = await fetch(`https://api.replicate.com/v1/models/${modelPath}/predictions`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${replicateKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ input: modelInput }),
+      })
+      if (!res.ok) return { success: false, error: `Replicate HTTP ${res.status}` }
+      const prediction = await res.json() as { id: string; urls: { get: string } }
+
+      // Vidéos prennent plus de temps — poll max 90s
+      let attempts = 0
+      while (attempts < 30) {
+        await new Promise(r => setTimeout(r, 3000))
+        const pollRes = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
+        const result = await pollRes.json() as { status: string; output?: string | string[] }
+        if (result.status === "succeeded") {
+          const videoUrl = Array.isArray(result.output) ? result.output[0] : result.output
+          if (videoUrl) {
+            void logContent({
+              orgId: ctx.orgId,
+              agentSlug: ctx.agentSlug,
+              contentType: "video",
+              title: `Vidéo — ${prompt.slice(0, 100)}`,
+              externalUrl: videoUrl as string,
+              metadata: { prompt, prediction_id: prediction.id, model: modelPath },
+            }).catch(() => {})
+          }
+          return { success: true, url: videoUrl, prompt, model: modelPath }
+        }
+        if (result.status === "failed") return { success: false, error: "Génération vidéo échouée" }
+        attempts++
+      }
+      return { success: false, error: "Timeout — génération trop longue, essaie à nouveau", prediction_id: prediction.id }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Erreur Replicate" }
+    }
   },
 
   // ─── Nova tools ───────────────────────────────────────────────────────

@@ -264,4 +264,78 @@ export const CORE_TOOLS: Tool[] = [
       required: ["deal_id"],
     },
   },
+
+  // ─── Création de fichiers & médias — partagés entre TOUS les agents ──────────
+  // create_document : la plupart des agents ont leur propre version plus riche ;
+  // celle-ci est le fallback (ex. aria) via la déduplication de withCoreTools.
+  {
+    name: "create_document",
+    description:
+      "Crée un document structuré (rapport, guide, synthèse, brief) en format HTML téléchargeable en PDF. Utilise cet outil pour tout document demandé — rapport, guide, contrat, synthèse.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string", description: "Titre du document" },
+        content: { type: "string", description: "Contenu complet en Markdown" },
+        type: {
+          type: "string",
+          enum: ["document", "guide", "report"],
+          description: "Type de document (défaut: document)",
+        },
+      },
+      required: ["title", "content"],
+    },
+  },
+  // generate_image : Max et Charles ont leur propre version plus riche ;
+  // les autres agents (marine, lou, elio, mae, nova, alba, aria) reçoivent celle-ci.
+  {
+    name: "generate_image",
+    description:
+      "Génère une image IA via Replicate (Flux 1.1 Pro). Utilise cet outil dès que l'utilisateur demande une image, une photo IA, une illustration, un visuel pour ses réseaux, son site ou ses documents.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Description détaillée de l'image à générer (en anglais de préférence)",
+        },
+        style: {
+          type: "string",
+          enum: ["photorealistic", "illustration", "3d_render", "flat_design", "watercolor", "minimalist", "corporate"],
+          description: "Style visuel (défaut: photorealistic)",
+        },
+        aspect_ratio: {
+          type: "string",
+          enum: ["1:1", "16:9", "9:16", "4:3"],
+          description: "Format de l'image — 1:1 réseaux, 16:9 blog/hero, 9:16 story (défaut: 1:1)",
+        },
+      },
+      required: ["prompt"],
+    },
+  },
+  // generate_video : aucun agent n'a encore ce tool — tous le reçoivent ici,
+  // sauf Max qui a sa propre version plus riche dans prompts/max.ts.
+  {
+    name: "generate_video",
+    description:
+      "Génère une vidéo IA courte via Replicate. Utilise cet outil dès que l'utilisateur demande une vidéo, une animation, un clip ou un reel. Supporte texte → vidéo et image → vidéo.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Description de la vidéo à générer",
+        },
+        image_url: {
+          type: "string",
+          description: "URL d'une image source à animer (optionnel — active le mode image-to-video)",
+        },
+        duration: {
+          type: "number",
+          description: "Durée souhaitée en secondes (défaut: 5, max: 10)",
+        },
+      },
+      required: ["prompt"],
+    },
+  },
 ]

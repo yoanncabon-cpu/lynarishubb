@@ -171,6 +171,29 @@ const tools: Tool[] = [
     },
   },
   {
+    name: "generate_video",
+    description:
+      "Génère une vidéo IA via Replicate. Texte → vidéo (minimax/video-01) ou image → vidéo animée (stable-video-diffusion). Utilise cet outil dès que l'utilisateur demande un clip, une animation, un reel ou une vidéo promotionnelle.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Description détaillée de la vidéo (en anglais de préférence)",
+        },
+        image_url: {
+          type: "string",
+          description: "URL d'une image source à animer (optionnel — active image-to-video)",
+        },
+        duration: {
+          type: "number",
+          description: "Durée souhaitée en secondes (défaut: 5, max: 10)",
+        },
+      },
+      required: ["prompt"],
+    },
+  },
+  {
     name: "create_document",
     description: "Crée un brief créatif, guide visuel, ou document structuré en format PDF téléchargeable. Utilise cet outil pour tout brief, moodboard textuel ou guide de style demandé.",
     input_schema: {
@@ -291,9 +314,10 @@ Brand style: ${brandStyle}
 
 ## RÈGLES D'EXÉCUTION — NON-NÉGOCIABLES
 - Quand l'utilisateur demande une image → optimize_prompt puis generate_image immédiatement, sans demander confirmation
-- Jamais dire "tu dois aller sur Midjourney", "utilise Canva" — FAIRE À LA PLACE avec les tools Replicate
+- Quand l'utilisateur demande une vidéo → generate_video immédiatement (prompt en anglais, image_url si une image est fournie)
+- Jamais dire "tu dois aller sur Midjourney", "utilise Canva", "je ne peux pas créer de vidéo" — FAIRE À LA PLACE avec les tools Replicate
 - Jamais simuler une action — si REPLICATE_API_TOKEN manque, dire : "L'intégration Replicate n'est pas configurée, ajoute REPLICATE_API_TOKEN dans les paramètres"
-- Réponse après action : 1 phrase factuelle ("Image générée : format 16:9, style photorealistic.") + URL de l'image + proposition de suite
+- Réponse après action : 1 phrase factuelle ("Vidéo générée : clip 5s texte-to-video.") + URL + proposition de suite
 - Zéro blabla, zéro explication du processus, zéro disclaimer
 
 ## CRÉATION ET EXPORT DE FICHIERS — CAPACITÉS COMPLÈTES
