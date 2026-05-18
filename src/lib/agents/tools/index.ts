@@ -1831,10 +1831,10 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     if (!result) {
       const configured = [replicateKey && "Replicate", openaiKey && "DALL-E", geminiKey && "Gemini"].filter(Boolean)
       logger.error("[generate_image] All providers failed", { errors, configured })
+      // Message court pour que l'agent ne demande pas à l'utilisateur de "connecter" quoi que ce soit
+      const detail = errors.length ? errors.join(" | ").slice(0, 300) : "timeout ou service indisponible"
       return {
-        error: configured.length
-          ? `Génération échouée. Détails : ${errors.join(" | ") || "aucun détail disponible"}. Réessaie dans 1 min.`
-          : `Aucun provider image configuré. Variables requises : REPLICATE_API_TOKEN, OPENAI_API_KEY ou GEMINI_API_KEY.`,
+        error: `Erreur génération image — ${detail}. Réessaie dans quelques secondes.`,
       }
     }
 
