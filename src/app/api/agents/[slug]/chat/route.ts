@@ -71,7 +71,7 @@ export async function POST(
       let instanceId: string | null = null
 
       try {
-        // Config + upsert agent instance en parallèle (Drizzle — pas de cookie context requis)
+        // Config + upsert agent instance + plan — tout en parallèle pour minimiser la latence DB
         const [configRow, instanceRows] = await Promise.all([
           db.query.agentInstances.findFirst({
             where: and(

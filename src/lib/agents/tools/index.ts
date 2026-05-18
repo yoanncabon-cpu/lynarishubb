@@ -460,36 +460,39 @@ ${htmlContent}
 </body>
 </html>`
 
-    // Sauvegarde dans Supabase Storage
+    // Sauvegarde dans Supabase Storage — fire-and-forget avec timeout 4s
+    // Si Supabase est lent ou non configuré, on ne bloque pas l'agent.
     let storageUrl: string | null = null
     try {
       const { createSupabaseAdminClient } = await import("@/lib/auth/supabase-server")
       const supabase = createSupabaseAdminClient()
       const filename = `${ctx.orgId}/${Date.now()}-${title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}.html`
-      const { error } = await supabase.storage
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))
+      const upload = supabase.storage
         .from("contents")
         .upload(filename, Buffer.from(html, "utf8"), { contentType: "text/html; charset=utf-8", upsert: false })
-      if (!error) {
-        const { data: { publicUrl } } = supabase.storage.from("contents").getPublicUrl(filename)
-        storageUrl = publicUrl
-      }
+        .then(({ error }) => {
+          if (!error) {
+            const { data: { publicUrl } } = supabase.storage.from("contents").getPublicUrl(filename)
+            storageUrl = publicUrl
+          }
+          return null
+        })
+        .catch(() => null)
+      await Promise.race([upload, timeout])
     } catch {
-      // Storage non configuré — on continue sans URL de stockage
+      // Storage non configuré
     }
 
-    // Enregistrement dans la base de contenus
-    try {
-      await logContent({
-        orgId: ctx.orgId,
-        agentSlug,
-        contentType: "document",
-        title,
-        body: content,
-        attachments: storageUrl ? [{ type: "document" as const, url: storageUrl, mimeType: "text/html" }] : [],
-      })
-    } catch {
-      // Non bloquant si content-logger échoue
-    }
+    // Enregistrement dans la base de contenus — fire-and-forget, ne bloque pas
+    void logContent({
+      orgId: ctx.orgId,
+      agentSlug,
+      contentType: "document",
+      title,
+      body: content,
+      attachments: storageUrl ? [{ type: "document" as const, url: storageUrl, mimeType: "text/html" }] : [],
+    }).catch(() => {})
 
     const appUrl = getAppUrl()
     return {
