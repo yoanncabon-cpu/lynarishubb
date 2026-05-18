@@ -5,7 +5,7 @@ const tools: Tool[] = [
   {
     name: "generate_image",
     description:
-      "Generate an image using Flux/SDXL via Replicate API from a detailed prompt.",
+      "Generate an image using multiple AI providers: Replicate (Flux 1.1 Pro), DALL-E 3 (OpenAI/ChatGPT), or Gemini Imagen (Google). Auto mode tries them in order of availability. Choose provider based on user request or quality needs.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -45,6 +45,11 @@ const tools: Tool[] = [
           ],
           description:
             "Aspect ratio (default: 1:1 for social, 16:9 for blog)",
+        },
+        provider: {
+          type: "string",
+          enum: ["auto", "replicate", "dall-e", "gemini"],
+          description: "AI provider — auto tries Replicate → DALL-E → Gemini in order. Use 'dall-e' for ChatGPT/OpenAI quality, 'gemini' for Google Imagen, 'replicate' for Flux.",
         },
         resolution: {
           type: "string",

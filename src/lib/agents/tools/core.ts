@@ -293,7 +293,7 @@ export const CORE_TOOLS: Tool[] = [
   {
     name: "generate_image",
     description:
-      "Génère une image IA via Replicate (Flux 1.1 Pro). Utilise cet outil dès que l'utilisateur demande une image, une photo IA, une illustration, un visuel pour ses réseaux, son site ou ses documents.",
+      "Génère une image IA. Supporte plusieurs providers : Replicate (Flux 1.1 Pro), DALL-E 3 (OpenAI), Gemini Imagen (Google). Par défaut essaie dans l'ordre Replicate → DALL-E → Gemini. Utilise cet outil dès que l'utilisateur demande une image, une photo IA, une illustration ou un visuel.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -310,6 +310,11 @@ export const CORE_TOOLS: Tool[] = [
           type: "string",
           enum: ["1:1", "16:9", "9:16", "4:3"],
           description: "Format de l'image — 1:1 réseaux, 16:9 blog/hero, 9:16 story (défaut: 1:1)",
+        },
+        provider: {
+          type: "string",
+          enum: ["auto", "replicate", "dall-e", "gemini"],
+          description: "Provider IA à utiliser — auto essaie dans l'ordre disponible (défaut: auto)",
         },
       },
       required: ["prompt"],

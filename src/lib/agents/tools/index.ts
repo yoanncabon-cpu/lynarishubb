@@ -1689,70 +1689,108 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     const prompt = input["prompt"] as string
     const style = (input["style"] as string) ?? "photorealistic"
     const aspectRatio = (input["aspect_ratio"] as string) ?? "1:1"
+    // provider: "replicate" | "dall-e" | "gemini" | "auto" (essaie dans l'ordre)
+    const provider = (input["provider"] as string) ?? "auto"
 
     const replicateKey = process.env["REPLICATE_API_TOKEN"]
+    const openaiKey   = process.env["OPENAI_API_KEY"]
+    const geminiKey   = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_AI_API_KEY"]
 
-    if (!replicateKey) {
-      return {
-        success: false,
-        error: "Intégration Replicate non configurée. Ajoute REPLICATE_API_TOKEN dans les paramètres.",
-      }
-    }
-
-    try {
-      // Flux 1.1 Pro via Replicate
-      const res = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${replicateKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          input: {
-            prompt: `${prompt}, ${style}, professional quality`,
-            aspect_ratio: aspectRatio,
-            output_quality: 90,
-          }
-        }),
-      })
-
-      if (!res.ok) return { error: `Replicate HTTP ${res.status}` }
-
-      const prediction = await res.json() as { id: string; status: string; urls: { get: string } }
-
-      // Poll max 20s (10 × 2s) — compatible avec le timeout Vercel (60s total)
-      let attempts = 0
-      while (attempts < 10) {
-        await new Promise(r => setTimeout(r, 2000))
-        const pollRes = await fetch(prediction.urls.get, {
-          headers: { "Authorization": `Bearer ${replicateKey}` }
+    async function tryReplicate(): Promise<string | null> {
+      if (!replicateKey) return null
+      try {
+        const res = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${replicateKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ input: { prompt: `${prompt}, ${style}, professional quality`, aspect_ratio: aspectRatio, output_quality: 90 } }),
         })
-        const result = await pollRes.json() as { status: string; output?: string[] }
-
-        if (result.status === "succeeded") {
-          const imageUrl = result.output?.[0]
-          if (imageUrl) {
-            void logContent({
-              orgId: ctx.orgId,
-              agentSlug: ctx.agentSlug,
-              contentType: "image",
-              title: `Image — ${prompt.slice(0, 100)}`,
-              externalUrl: imageUrl,
-              metadata: { prompt, style, aspect_ratio: aspectRatio, prediction_id: prediction.id },
-            }).catch(() => {})
-          }
-          return { url: imageUrl, prompt, style }
+        if (!res.ok) return null
+        const prediction = await res.json() as { id: string; urls: { get: string } }
+        for (let i = 0; i < 10; i++) {
+          await new Promise(r => setTimeout(r, 2000))
+          const poll = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
+          const result = await poll.json() as { status: string; output?: string[] }
+          if (result.status === "succeeded") return result.output?.[0] ?? null
+          if (result.status === "failed") return null
         }
-        if (result.status === "failed") {
-          return { error: "Génération échouée" }
-        }
-        attempts++
-      }
-
-      return { error: "Timeout — génération trop lente, essaie avec un prompt plus simple", prediction_id: prediction.id }
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : "Replicate error" }
+        return null
+      } catch { return null }
     }
+
+    async function tryDallE(): Promise<string | null> {
+      if (!openaiKey) return null
+      try {
+        // Taille selon aspect_ratio
+        const size = aspectRatio === "16:9" ? "1792x1024" : aspectRatio === "9:16" ? "1024x1792" : "1024x1024"
+        const res = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "dall-e-3", prompt: `${prompt}, ${style}`, n: 1, size, quality: "hd", response_format: "url" }),
+        })
+        if (!res.ok) return null
+        const data = await res.json() as { data?: Array<{ url?: string }> }
+        return data.data?.[0]?.url ?? null
+      } catch { return null }
+    }
+
+    async function tryGemini(): Promise<string | null> {
+      if (!geminiKey) return null
+      try {
+        // Imagen 3 via Google AI Studio
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${geminiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              instances: [{ prompt: `${prompt}, ${style}` }],
+              parameters: { sampleCount: 1, aspectRatio: aspectRatio === "16:9" ? "16:9" : aspectRatio === "9:16" ? "9:16" : "1:1" },
+            }),
+          }
+        )
+        if (!res.ok) return null
+        const data = await res.json() as { predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }> }
+        const b64 = data.predictions?.[0]?.bytesBase64Encoded
+        if (!b64) return null
+        // Retourner comme data URL (pas besoin de stocker, le client affiche directement)
+        return `data:image/png;base64,${b64}`
+      } catch { return null }
+    }
+
+    let imageUrl: string | null = null
+    let usedProvider = ""
+
+    if (provider === "dall-e") {
+      imageUrl = await tryDallE(); usedProvider = "dall-e"
+    } else if (provider === "gemini") {
+      imageUrl = await tryGemini(); usedProvider = "gemini"
+    } else if (provider === "replicate") {
+      imageUrl = await tryReplicate(); usedProvider = "replicate"
+    } else {
+      // auto : essaie Replicate → DALL-E → Gemini
+      imageUrl = await tryReplicate(); usedProvider = "replicate"
+      if (!imageUrl) { imageUrl = await tryDallE(); usedProvider = "dall-e" }
+      if (!imageUrl) { imageUrl = await tryGemini(); usedProvider = "gemini" }
+    }
+
+    if (!imageUrl) {
+      const missing = [!replicateKey && "REPLICATE_API_TOKEN", !openaiKey && "OPENAI_API_KEY", !geminiKey && "GEMINI_API_KEY"].filter(Boolean)
+      return { error: `Génération échouée sur tous les providers disponibles. ${missing.length ? `Clés manquantes : ${missing.join(", ")}` : "Réessaie dans quelques instants."}` }
+    }
+
+    // Ne pas stocker les data URLs Gemini (base64 trop volumineuses pour Supabase)
+    if (!imageUrl.startsWith("data:")) {
+      void logContent({
+        orgId: ctx.orgId,
+        agentSlug: ctx.agentSlug,
+        contentType: "image",
+        title: `Image — ${prompt.slice(0, 100)}`,
+        externalUrl: imageUrl,
+        metadata: { prompt, style, aspect_ratio: aspectRatio, provider: usedProvider },
+      }).catch(() => {})
+    }
+
+    return { url: imageUrl, prompt, style, provider: usedProvider }
   },
 
   optimize_prompt: async (input) => {
