@@ -1689,14 +1689,14 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
     const prompt = input["prompt"] as string
     const style = (input["style"] as string) ?? "photorealistic"
     const aspectRatio = (input["aspect_ratio"] as string) ?? "1:1"
-    // provider: "replicate" | "dall-e" | "gemini" | "auto" (essaie dans l'ordre)
     const provider = (input["provider"] as string) ?? "auto"
 
     const replicateKey = process.env["REPLICATE_API_TOKEN"]
-    const openaiKey   = process.env["OPENAI_API_KEY"]
-    const geminiKey   = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_AI_API_KEY"]
+    const openaiKey    = process.env["OPENAI_API_KEY"]
+    const geminiKey    = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_AI_API_KEY"]
 
-    async function tryReplicate(): Promise<string | null> {
+    // ── Replicate / Flux 1.1 Pro ──────────────────────────────────────────────
+    const tryReplicate = async (): Promise<{ url: string; provider: string } | null> => {
       if (!replicateKey) return null
       try {
         const res = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions", {
@@ -1706,21 +1706,25 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
         })
         if (!res.ok) return null
         const prediction = await res.json() as { id: string; urls: { get: string } }
-        for (let i = 0; i < 10; i++) {
-          await new Promise(r => setTimeout(r, 2000))
+        // Poll 8 × 1.5s = 12s max
+        for (let i = 0; i < 8; i++) {
+          await new Promise(r => setTimeout(r, 1500))
           const poll = await fetch(prediction.urls.get, { headers: { "Authorization": `Bearer ${replicateKey}` } })
           const result = await poll.json() as { status: string; output?: string[] }
-          if (result.status === "succeeded") return result.output?.[0] ?? null
+          if (result.status === "succeeded") {
+            const url = result.output?.[0]
+            return url ? { url, provider: "replicate" } : null
+          }
           if (result.status === "failed") return null
         }
         return null
       } catch { return null }
     }
 
-    async function tryDallE(): Promise<string | null> {
+    // ── DALL-E 3 / OpenAI ────────────────────────────────────────────────────
+    const tryDallE = async (): Promise<{ url: string; provider: string } | null> => {
       if (!openaiKey) return null
       try {
-        // Taille selon aspect_ratio
         const size = aspectRatio === "16:9" ? "1792x1024" : aspectRatio === "9:16" ? "1024x1792" : "1024x1024"
         const res = await fetch("https://api.openai.com/v1/images/generations", {
           method: "POST",
@@ -1728,69 +1732,82 @@ Rédige UNIQUEMENT le corps de l'email, prêt à envoyer.`
           body: JSON.stringify({ model: "dall-e-3", prompt: `${prompt}, ${style}`, n: 1, size, quality: "hd", response_format: "url" }),
         })
         if (!res.ok) return null
-        const data = await res.json() as { data?: Array<{ url?: string }> }
-        return data.data?.[0]?.url ?? null
+        const body = await res.json() as { data?: Array<{ url?: string }> }
+        const url = body.data?.[0]?.url
+        return url ? { url, provider: "dall-e" } : null
       } catch { return null }
     }
 
-    async function tryGemini(): Promise<string | null> {
+    // ── Gemini / imagen-3 via AI Studio ─────────────────────────────────────
+    const tryGemini = async (): Promise<{ url: string; provider: string } | null> => {
       if (!geminiKey) return null
       try {
-        // Imagen 3 via Google AI Studio
+        // Gemini 2.0 Flash image generation (disponible via AI Studio)
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${geminiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              instances: [{ prompt: `${prompt}, ${style}` }],
-              parameters: { sampleCount: 1, aspectRatio: aspectRatio === "16:9" ? "16:9" : aspectRatio === "9:16" ? "9:16" : "1:1" },
+              contents: [{ parts: [{ text: `Create a ${style} image: ${prompt}` }] }],
+              generationConfig: { responseModalities: ["IMAGE"] },
             }),
           }
         )
         if (!res.ok) return null
-        const data = await res.json() as { predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }> }
-        const b64 = data.predictions?.[0]?.bytesBase64Encoded
+        const body = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> } }> }
+        const b64 = body.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
         if (!b64) return null
-        // Retourner comme data URL (pas besoin de stocker, le client affiche directement)
-        return `data:image/png;base64,${b64}`
+        return { url: `data:image/png;base64,${b64}`, provider: "gemini" }
       } catch { return null }
     }
 
-    let imageUrl: string | null = null
-    let usedProvider = ""
+    // ── Résolution du provider ───────────────────────────────────────────────
+    let result: { url: string; provider: string } | null = null
 
     if (provider === "dall-e") {
-      imageUrl = await tryDallE(); usedProvider = "dall-e"
+      result = await tryDallE()
     } else if (provider === "gemini") {
-      imageUrl = await tryGemini(); usedProvider = "gemini"
+      result = await tryGemini()
     } else if (provider === "replicate") {
-      imageUrl = await tryReplicate(); usedProvider = "replicate"
+      result = await tryReplicate()
     } else {
-      // auto : essaie Replicate → DALL-E → Gemini
-      imageUrl = await tryReplicate(); usedProvider = "replicate"
-      if (!imageUrl) { imageUrl = await tryDallE(); usedProvider = "dall-e" }
-      if (!imageUrl) { imageUrl = await tryGemini(); usedProvider = "gemini" }
+      // auto — lance tous en parallèle, prend le premier qui réussit
+      result = await new Promise<{ url: string; provider: string } | null>((resolve) => {
+        const tasks = [tryReplicate(), tryDallE(), tryGemini()]
+        let settled = 0
+        tasks.forEach(p => {
+          p.then(r => {
+            if (r) resolve(r)
+            else if (++settled === tasks.length) resolve(null)
+          }).catch(() => { if (++settled === tasks.length) resolve(null) })
+        })
+      })
     }
 
-    if (!imageUrl) {
+    if (!result) {
+      const configured = [replicateKey && "Replicate", openaiKey && "DALL-E", geminiKey && "Gemini"].filter(Boolean)
       const missing = [!replicateKey && "REPLICATE_API_TOKEN", !openaiKey && "OPENAI_API_KEY", !geminiKey && "GEMINI_API_KEY"].filter(Boolean)
-      return { error: `Génération échouée sur tous les providers disponibles. ${missing.length ? `Clés manquantes : ${missing.join(", ")}` : "Réessaie dans quelques instants."}` }
+      return {
+        error: configured.length
+          ? `Génération échouée (${configured.join(", ")} testés). Les APIs sont peut-être surchargées — réessaie dans 1 min.`
+          : `Aucun provider configuré. Clés manquantes : ${missing.join(", ")}.`,
+      }
     }
 
-    // Ne pas stocker les data URLs Gemini (base64 trop volumineuses pour Supabase)
-    if (!imageUrl.startsWith("data:")) {
+    // Stocker dans Mes contenus (sauf data URLs base64 trop volumineuses)
+    if (!result.url.startsWith("data:")) {
       void logContent({
         orgId: ctx.orgId,
         agentSlug: ctx.agentSlug,
         contentType: "image",
         title: `Image — ${prompt.slice(0, 100)}`,
-        externalUrl: imageUrl,
-        metadata: { prompt, style, aspect_ratio: aspectRatio, provider: usedProvider },
+        externalUrl: result.url,
+        metadata: { prompt, style, aspect_ratio: aspectRatio, provider: result.provider },
       }).catch(() => {})
     }
 
-    return { url: imageUrl, prompt, style, provider: usedProvider }
+    return { url: result.url, prompt, style, provider: result.provider }
   },
 
   optimize_prompt: async (input) => {
