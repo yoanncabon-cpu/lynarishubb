@@ -4,22 +4,7 @@ import { agents } from "@/lib/agents/data"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
-export async function generateImageMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
-  const agent = agents.find((a) => a.slug === slug)
-  return [
-    {
-      id: slug,
-      alt: agent
-        ? `${agent.name} — ${agent.role} | Lynaris`
-        : "Agent IA Lynaris",
-    },
-  ]
-}
+export const alt = "Agent IA Lynaris"
 
 export default async function Image({
   params,
