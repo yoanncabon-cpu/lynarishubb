@@ -1,97 +1,85 @@
 "use client"
 
-import { useRef, useEffect } from "react"
-// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
+import { useRef } from "react"
+import { motion, useInView } from "framer-motion"
+import { NumberTicker } from "@/components/shared/NumberTicker"
 
-const stats = [
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
+interface Stat {
+  type: "ticker" | "static"
+  value?: number
+  suffix?: string
+  prefix?: string
+  display: string
+  label: string
+  highlight: boolean
+  description: string
+  delay: number
+}
+
+const stats: Stat[] = [
   {
-    value: "< 2s",
+    type: "static",
+    display: "< 2s",
     label: "Appel décroché",
     highlight: true,
     description: "en moins de 2 secondes — chaque appel entrant",
+    delay: 0,
   },
   {
-    value: "48h",
+    type: "ticker",
+    value: 48,
+    suffix: "h",
+    display: "48h",
     label: "Délai d'activation",
     highlight: false,
     description: "de la signature à l'opérationnel",
+    delay: 150,
   },
   {
-    value: "9",
+    type: "ticker",
+    value: 9,
+    display: "9",
     label: "Agents spécialisés",
     highlight: true,
     description: "1 en production, 8 en développement actif",
+    delay: 300,
   },
   {
-    value: "24/7",
+    type: "static",
+    display: "24/7",
     label: "Disponibilité",
     highlight: false,
     description: "vos agents travaillent sans pause ni congé",
+    delay: 450,
   },
 ]
 
 export function StatsSection() {
-  const sectionRef = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (prefersReducedMotion) return
-
-    let cleanup: (() => void) | null = null
-    let cancelled = false
-
-    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
-      if (cancelled) return
-      const gsap = gsapMod.default
-      gsap.registerPlugin(stMod.ScrollTrigger)
-      const ctx = gsap.context(() => {
-        const cards = sectionRef.current?.querySelectorAll(".stat-card")
-        if (cards) {
-          gsap.fromTo(
-            cards,
-            { opacity: 0, y: 30 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.6,
-              stagger: 0.1,
-              ease: "power3.out",
-              scrollTrigger: {
-                trigger: sectionRef.current,
-                start: "top 85%",
-                once: true,
-              },
-            }
-          )
-        }
-      }, sectionRef)
-      cleanup = () => ctx.revert()
-    })
-
-    return () => {
-      cancelled = true
-      cleanup?.()
-    }
-  }, [])
+  const ref = useRef<HTMLElement>(null)
+  const inView = useInView(ref, { once: true, margin: "-60px" })
 
   return (
     <section
-      ref={sectionRef}
+      ref={ref}
       className="py-20 lg:py-24 relative"
       aria-label="Chiffres clés Lynaris"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
-            <div
+            <motion.div
               key={stat.label}
-              className={`stat-card group relative rounded-2xl border border-[--ly-border] p-6 lg:p-8 transition-all duration-500 overflow-hidden ${
+              initial={{ opacity: 0, y: 30 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, ease: EASE, delay: stat.delay / 1000 }}
+              className={`group relative rounded-2xl border border-[--ly-border] p-6 lg:p-8 transition-all duration-500 overflow-hidden ${
                 stat.highlight
                   ? "bg-[--ly-surface] hover:border-[--ly-primary]/30"
                   : "bg-transparent hover:bg-[--ly-surface]/50 hover:border-[--ly-border]"
               }`}
             >
-              {/* Border glow on hover */}
               {stat.highlight && (
                 <div
                   className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
@@ -107,7 +95,23 @@ export function StatsSection() {
                   className="font-bold text-[--ly-text] tracking-[-0.04em] leading-none"
                   style={{ fontSize: "clamp(32px, 5vw, 56px)" }}
                 >
-                  {stat.value}
+                  {stat.type === "ticker" && stat.value !== undefined ? (
+                    <NumberTicker
+                      value={stat.value}
+                      suffix={stat.suffix}
+                      prefix={stat.prefix}
+                      duration={1200}
+                      delay={stat.delay}
+                    />
+                  ) : (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={inView ? { opacity: 1, scale: 1 } : {}}
+                      transition={{ duration: 0.5, ease: EASE, delay: stat.delay / 1000 + 0.1 }}
+                    >
+                      {stat.display}
+                    </motion.span>
+                  )}
                 </dt>
                 <dd className="mt-3 text-sm font-semibold text-[--ly-text-muted] leading-snug">
                   {stat.label}
@@ -116,7 +120,7 @@ export function StatsSection() {
                   {stat.description}
                 </dd>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

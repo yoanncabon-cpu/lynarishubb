@@ -1,55 +1,57 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { useInView } from "framer-motion"
+import { motion, useInView } from "framer-motion"
 import { useRef } from "react"
-import { Star } from "lucide-react"
-import { AgentAvatar } from "@/components/shared/AgentAvatar"
-
-interface Testimonial {
-  name: string
-  role: string
-  initials: string
-  quote: string
-  rating: number
-  agentSlug: string
-  agentName: string
-  agentRole: string
-}
-
-// Section témoignages désactivée tant qu'aucun client SaaS Lynaris Hub n'a signé un droit de citation
-// Mention Cabinet Ménigoz retirée — pas d'accord de citation
-const testimonials: Testimonial[] = []
-
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.12 } },
-}
+import Link from "next/link"
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: EASE },
+const benefits = [
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </svg>
+    ),
+    color: "#E86F4D",
+    bg: "rgba(232,111,77,0.08)",
+    border: "rgba(232,111,77,0.2)",
+    title: "Tarif early adopter",
+    description:
+      "Accède à l'ensemble des agents au tarif fondateur, verrouillé à vie. Tu ne paieras jamais le prix catalogue.",
   },
-}
-
-function Stars({ count }: { count: number }) {
-  return (
-    <div className="flex gap-0.5" aria-label={`${count} étoiles sur 5`}>
-      {Array.from({ length: count }).map((_, i) => (
-        <Star
-          key={i}
-          className="h-4 w-4 fill-[--ly-warning] text-[--ly-warning]"
-          aria-hidden
-        />
-      ))}
-    </div>
-  )
-}
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+    color: "#A78BFA",
+    bg: "rgba(124,58,237,0.08)",
+    border: "rgba(124,58,237,0.2)",
+    title: "Accompagnement direct",
+    description:
+      "Yoann configure tes agents avec toi. Onboarding en visio, réponses en moins de 24h, suivi personnalisé pendant les 3 premiers mois.",
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    ),
+    color: "#22D3EE",
+    bg: "rgba(34,211,238,0.08)",
+    border: "rgba(34,211,238,0.2)",
+    title: "Influence sur la roadmap",
+    description:
+      "Tes retours façonnent directement les prochaines fonctionnalités. Les bêta-testeurs votent en priorité sur chaque nouvelle release.",
+  },
+] as const
 
 export function TestimonialsSection() {
   const ref = useRef<HTMLElement>(null)
@@ -58,194 +60,112 @@ export function TestimonialsSection() {
   return (
     <section
       ref={ref}
-      className="py-20 lg:py-28 bg-[--ly-surface]/30"
-      aria-labelledby="testimonials-heading"
+      className="py-20 lg:py-28"
+      style={{ background: "rgba(255,255,255,0.01)" }}
+      aria-labelledby="beta-heading"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {/* En-tête */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mb-16 space-y-4"
+          transition={{ duration: 0.6, ease: EASE }}
+          className="text-center mb-14 space-y-4"
         >
-          <p className="text-sm font-semibold uppercase tracking-widest text-[--ly-primary-soft]">
-            Témoignages clients
+          <p className="text-sm font-semibold uppercase tracking-widest text-[#A78BFA]">
+            Programme bêta
           </p>
           <h2
-            id="testimonials-heading"
-            className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[--ly-text] tracking-tight"
+            id="beta-heading"
+            className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#F5F5F7] tracking-tight"
           >
-            Ils utilisent Lynaris
+            Sois parmi les premiers
           </h2>
-          <p className="text-base text-[--ly-text-dim] max-w-xl mx-auto">
-            1 client en production. 3 places pilote ouvertes pour les early adopters.
+          <p className="text-base text-[#A1A1AA] max-w-lg mx-auto leading-relaxed">
+            3 places pilote ouvertes. Une fenêtre courte pour intégrer Lynaris avant le lancement officiel — avec des avantages réservés aux fondateurs.
           </p>
         </motion.div>
 
-        {/* Cards */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          {/* Témoignage réel */}
-          {testimonials.map((t) => (
+        {/* Cartes avantages */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {benefits.map((benefit, i) => (
             <motion.div
-              key={t.name}
-              variants={itemVariants}
-              className="rounded-2xl border border-[--ly-border] bg-[--ly-surface] p-6 hover:border-[--ly-border-hover] transition-colors flex flex-col"
-              style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)" }}
+              key={benefit.title}
+              initial={{ opacity: 0, y: 28 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.55, ease: EASE, delay: i * 0.1 }}
+              className="rounded-2xl p-6 flex flex-col gap-4"
+              style={{
+                background: benefit.bg,
+                border: `1px solid ${benefit.border}`,
+                backdropFilter: "blur(20px)",
+              }}
             >
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "6px 10px 6px 6px", borderRadius: 999,
-                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-                marginBottom: 16, alignSelf: "flex-start",
-              }}>
-                <AgentAvatar slug={t.agentSlug} size={22} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(245,245,247,0.7)" }}>{t.agentName}</span>
-                <span style={{ fontSize: 11, color: "rgba(245,245,247,0.35)" }}>— {t.agentRole}</span>
+              {/* Icône */}
+              <div
+                className="flex h-11 w-11 items-center justify-center rounded-xl shrink-0"
+                style={{
+                  background: benefit.bg,
+                  border: `1px solid ${benefit.border}`,
+                  color: benefit.color,
+                }}
+              >
+                {benefit.icon}
               </div>
-              <Stars count={t.rating} />
-              <blockquote className="mt-4 flex-1 text-[--ly-text-muted] italic leading-relaxed text-sm">
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
-              <div className="mt-6 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(124,58,237,0.3), rgba(232,111,77,0.3))",
-                    border: "1px solid rgba(255,255,255,0.12)", color: "#F5F5F7",
-                  }}>
-                  {t.initials}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[--ly-text]">{t.name}</p>
-                  <p className="text-xs text-[--ly-text-dim]">{t.role}</p>
-                </div>
+
+              {/* Texte */}
+              <div className="space-y-2">
+                <h3
+                  className="text-[15px] font-bold leading-tight"
+                  style={{ color: benefit.color }}
+                >
+                  {benefit.title}
+                </h3>
+                <p className="text-[13px] leading-relaxed text-[#A1A1AA]">
+                  {benefit.description}
+                </p>
               </div>
             </motion.div>
           ))}
+        </div>
 
-          {/* Slot bêta 1 */}
-          <motion.div
-            variants={itemVariants}
-            className="rounded-2xl border border-dashed flex flex-col items-center justify-center p-8 text-center"
+        {/* CTA central */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, ease: EASE, delay: 0.35 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <Link
+            href="/contact"
+            className="group relative inline-flex h-12 items-center gap-2.5 overflow-hidden rounded-xl px-8 text-[15px] font-semibold text-white"
             style={{
-              borderColor: "rgba(232,111,77,0.3)",
-              background: "rgba(232,111,77,0.03)",
-              backdropFilter: "blur(20px)",
-              minHeight: 280,
+              background: "linear-gradient(135deg, #E86F4D 0%, #C8522F 100%)",
+              boxShadow: "0 0 28px rgba(232,111,77,0.4)",
             }}
           >
-            <div style={{
-              width: 44, height: 44, borderRadius: "50%",
-              background: "rgba(232,111,77,0.12)", border: "1px solid rgba(232,111,77,0.25)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 20, marginBottom: 16,
-            }}>
-              🚀
-            </div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#E86F4D", marginBottom: 8 }}>
-              Place pilote disponible
-            </p>
-            <p style={{ fontSize: 13, color: "rgba(245,245,247,0.45)", lineHeight: 1.6, marginBottom: 20 }}>
-              Active tes agents en 48h et deviens l&apos;un des premiers clients Lynaris.
-            </p>
-            <a
-              href="/contact"
-              style={{
-                display: "inline-block",
-                background: "linear-gradient(135deg, #E86F4D, #C8522F)",
-                color: "#fff", borderRadius: 10, padding: "10px 20px",
-                fontSize: 13, fontWeight: 600, textDecoration: "none",
-                transition: "opacity 150ms",
-              }}
+            <span className="relative z-10">Rejoindre le programme bêta</span>
+            <svg
+              className="relative z-10 h-4 w-4 transition-transform group-hover:translate-x-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              aria-hidden
             >
-              Rejoindre le programme →
-            </a>
-          </motion.div>
-
-          {/* Slot bêta 2 */}
-          <motion.div
-            variants={itemVariants}
-            className="rounded-2xl border border-dashed flex flex-col items-center justify-center p-8 text-center"
-            style={{
-              borderColor: "rgba(124,58,237,0.3)",
-              background: "rgba(124,58,237,0.03)",
-              backdropFilter: "blur(20px)",
-              minHeight: 280,
-            }}
-          >
-            <div style={{
-              width: 44, height: 44, borderRadius: "50%",
-              background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 20, marginBottom: 16,
-            }}>
-              ✨
-            </div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#A78BFA", marginBottom: 8 }}>
-              Place pilote disponible
-            </p>
-            <p style={{ fontSize: 13, color: "rgba(245,245,247,0.45)", lineHeight: 1.6, marginBottom: 20 }}>
-              Tarif early adopter — accès complet à tous les agents + accompagnement direct.
-            </p>
-            <a
-              href="/contact"
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            <span
+              className="absolute inset-0 -translate-x-full transition-transform duration-700 group-hover:translate-x-full"
               style={{
-                display: "inline-block",
-                background: "rgba(124,58,237,0.15)",
-                color: "#A78BFA",
-                border: "1px solid rgba(124,58,237,0.4)",
-                borderRadius: 10, padding: "10px 20px",
-                fontSize: 13, fontWeight: 600, textDecoration: "none",
+                background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
               }}
-            >
-              Prendre contact →
-            </a>
-          </motion.div>
-
-          {/* Slot bêta 3 */}
-          <motion.div
-            variants={itemVariants}
-            className="rounded-2xl border border-dashed flex flex-col items-center justify-center p-8 text-center"
-            style={{
-              borderColor: "rgba(34,211,238,0.3)",
-              background: "rgba(34,211,238,0.03)",
-              backdropFilter: "blur(20px)",
-              minHeight: 280,
-            }}
-          >
-            <div style={{
-              width: 44, height: 44, borderRadius: "50%",
-              background: "rgba(34,211,238,0.12)", border: "1px solid rgba(34,211,238,0.25)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 20, marginBottom: 16,
-            }}>
-              💬
-            </div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#22D3EE", marginBottom: 8 }}>
-              Ton témoignage ici
-            </p>
-            <p style={{ fontSize: 13, color: "rgba(245,245,247,0.45)", lineHeight: 1.6, marginBottom: 20 }}>
-              Rejoins le programme bêta et ton retour façonne le produit avec nous.
-            </p>
-            <a
-              href="/contact"
-              style={{
-                display: "inline-block",
-                background: "rgba(34,211,238,0.15)",
-                color: "#22D3EE",
-                border: "1px solid rgba(34,211,238,0.4)",
-                borderRadius: 10, padding: "10px 20px",
-                fontSize: 13, fontWeight: 600, textDecoration: "none",
-              }}
-            >
-              Postuler →
-            </a>
-          </motion.div>
+              aria-hidden
+            />
+          </Link>
+          <p className="text-[12px] text-[#52525B]">
+            Sans engagement · Réponse sous 24h
+          </p>
         </motion.div>
       </div>
     </section>

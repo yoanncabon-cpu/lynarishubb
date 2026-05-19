@@ -4,6 +4,7 @@ import { CookieBanner } from "@/components/shared/CookieBanner"
 import { SmoothScrollProvider } from "@/components/shared/SmoothScrollProvider"
 import { SiteLogoWatermark } from "@/components/marketing/SiteLogoWatermark"
 import { GsapPreloader } from "@/components/marketing/GsapPreloader"
+import { PageTransition } from "@/components/shared/PageTransition"
 import {
   OrganizationSchema,
   FAQSchema,
@@ -21,7 +22,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       {/* Logo Lynaris ghost watermark — fixed derrière tout le site */}
       <SiteLogoWatermark />
       <Navbar />
-      <main className="flex-1 relative z-10" style={{ backgroundColor: "var(--ly-bg)", width: "100%", maxWidth: "100%" }}>{children}</main>
+      <main className="flex-1 relative z-10" style={{ backgroundColor: "var(--ly-bg)", width: "100%", maxWidth: "100%" }}>
+        <PageTransition>{children}</PageTransition>
+      </main>
       <Footer />
       <CookieBanner />
     </div>

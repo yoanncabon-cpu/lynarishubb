@@ -12,6 +12,16 @@ interface FaqItem {
 
 const faqs: FaqItem[] = [
   {
+    question: "Faut-il des compétences techniques pour utiliser Lynaris ?",
+    answer:
+      "Non, aucune. La configuration est guidée pas à pas : tu connectes tes outils via OAuth (2 clics), tu remplis un formulaire sur ton activité, et tes agents sont opérationnels en moins de 48 h. Pas de code, pas d'intégration à écrire.",
+  },
+  {
+    question: "Puis-je tester avant de payer ?",
+    answer:
+      "Oui. L'essai dure 14 jours avec accès complet à tous les agents. Aucune carte bancaire requise pour commencer. À la fin de l'essai, tu choisis ton plan — ou pas. Pas de prélèvement automatique.",
+  },
+  {
     question: "Les agents fonctionnent-ils vraiment de façon autonome ?",
     answer:
       "Oui. Contrairement à d’autres outils IA qui nécessitent une supervision constante, les agents Lynaris s’exécutent de manière autonome. Ton agent vocal décroche vraiment tes appels, Lou publie vraiment sur ton WordPress. Tu peux activer ou désactiver l’autonomie complète depuis le dashboard.",

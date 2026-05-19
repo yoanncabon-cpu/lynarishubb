@@ -183,9 +183,22 @@ export async function generateMetadata({
   const { slug } = await params
   const agent = agents.find((a) => a.slug === slug)
   if (!agent) return { title: "Agent introuvable" }
+  const title = `${agent.name} — ${agent.role} | Lynaris`
+  const description = `${agent.tagline} — Découvrez comment ${agent.name} automatise votre activité. ${agent.description}`
   return {
-    title: `${agent.name} — ${agent.role}`,
-    description: agent.description,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: `/og/agents/${slug}.png`, width: 1200, height: 630 }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   }
 }
 

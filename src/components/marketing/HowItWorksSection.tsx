@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react"
 import { Plug, Cpu, BarChart3 } from "lucide-react"
-// gsap (~250kb) + ScrollTrigger chargés en async dans useEffect → exclus du bundle initial
+// gsap (~250kb) + ScrollTrigger + MotionPath chargés en async dans useEffect → exclus du bundle initial
 
 const steps = [
   {
@@ -15,7 +15,7 @@ const steps = [
   {
     number: "02",
     title: "Active tes agents",
-    description: "Tu choisis les agents qui correspondent à ton activité. Un agent vocal pour les appels, Lou pour le contenu, Elio pour la prospection.",
+    description: "En 5 minutes, tu configures les agents selon ton secteur. Un agent vocal pour les appels, Lou pour le contenu, Elio pour la prospection — chacun prêt à l'emploi.",
     icon: Cpu,
     color: "#7C3AED",
   },
@@ -95,6 +95,49 @@ export function HowItWorksSection() {
               duration: 0.7,
               stagger: 0.2,
               ease: "power3.out",
+              scrollTrigger: {
+                trigger: timelineRef.current,
+                start: "top 75%",
+                once: true,
+              },
+            }
+          )
+        }
+
+        // Icônes : scale + rotate à l'entrée
+        const iconEls = timelineRef.current?.querySelectorAll(".step-icon")
+        if (iconEls) {
+          gsap.fromTo(
+            iconEls,
+            { scale: 0.8, rotation: -10 },
+            {
+              scale: 1,
+              rotation: 0,
+              duration: 0.6,
+              stagger: 0.2,
+              ease: "back.out(1.4)",
+              scrollTrigger: {
+                trigger: timelineRef.current,
+                start: "top 75%",
+                once: true,
+              },
+            }
+          )
+        }
+
+        // Numéros d'étape : pulse glow 1 fois à l'entrée
+        const numberEls = timelineRef.current?.querySelectorAll(".step-number-glow")
+        if (numberEls) {
+          gsap.fromTo(
+            numberEls,
+            { opacity: 0.03 },
+            {
+              opacity: 0.12,
+              duration: 0.4,
+              stagger: 0.2,
+              ease: "power2.out",
+              yoyo: true,
+              repeat: 1,
               scrollTrigger: {
                 trigger: timelineRef.current,
                 start: "top 75%",
@@ -184,8 +227,8 @@ export function HowItWorksSection() {
                 >
                   {/* Large translucent number */}
                   <span
-                    className="absolute -top-4 lg:-top-8 right-0 lg:right-auto lg:left-[100px] text-[6rem] lg:text-[8rem] font-black leading-none select-none pointer-events-none"
-                    style={{ color: `${step.color}08` }}
+                    className="step-number-glow absolute -top-4 lg:-top-8 right-0 lg:right-auto lg:left-[100px] text-[6rem] lg:text-[8rem] font-black leading-none select-none pointer-events-none"
+                    style={{ color: step.color, opacity: 0.08 }}
                     aria-hidden
                   >
                     {step.number}
@@ -193,7 +236,7 @@ export function HowItWorksSection() {
 
                   {/* Icon circle avec couleur d'étape */}
                   <div
-                    className="relative z-10 shrink-0 h-[72px] w-[72px] lg:h-[120px] lg:w-[120px] rounded-2xl flex items-center justify-center transition-all duration-500"
+                    className="step-icon relative z-10 shrink-0 h-[72px] w-[72px] lg:h-[120px] lg:w-[120px] rounded-2xl flex items-center justify-center transition-all duration-500"
                     style={{
                       background: `${step.color}10`,
                       border: `1px solid ${step.color}25`,

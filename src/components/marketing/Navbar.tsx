@@ -3,8 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ChevronDown } from "lucide-react"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
+import { ChevronDown, Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LynarisLogo } from "@/components/shared/LynarisLogo"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
@@ -32,8 +32,10 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [agentsOpen, setAgentsOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const headerRef = useRef<HTMLElement>(null)
   const agentsRef = useRef<HTMLLIElement>(null)
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     function onScroll() {
@@ -47,7 +49,23 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
-  // Close agents dropdown on outside click
+  // Fermer le menu mobile au changement de route
+  useEffect(() => {
+    setIsMenuOpen(false)
+    setAgentsOpen(false)
+  }, [pathname])
+
+  // Bloquer le scroll body quand le menu mobile est ouvert
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => { document.body.style.overflow = "" }
+  }, [isMenuOpen])
+
+  // Fermer le dropdown agents sur clic extérieur
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (agentsRef.current && !agentsRef.current.contains(e.target as Node)) {
@@ -58,9 +76,16 @@ export function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
+  const drawerMotion = {
+    initial: { opacity: 0, x: prefersReducedMotion ? 0 : "100%" },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: prefersReducedMotion ? 0 : "100%" },
+    transition: { duration: prefersReducedMotion ? 0.15 : 0.32, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  }
+
   return (
     <>
-      {/* Scroll progress bar */}
+      {/* Barre de progression du scroll */}
       <div
         className="fixed top-0 left-0 z-[60] h-[2px]"
         style={{
@@ -96,7 +121,7 @@ export function Navbar() {
             <LynarisLogo size={36} showWordmark={true} />
           </Link>
 
-          {/* Links desktop */}
+          {/* Liens desktop */}
           <ul className="hidden md:flex items-center gap-0.5" role="list">
             {navLinks.map((link) => {
               const isActive = pathname === link.href || pathname.startsWith(link.href + "/")
@@ -135,7 +160,7 @@ export function Navbar() {
                       )}
                     </button>
 
-                    {/* Agents dropdown */}
+                    {/* Dropdown agents */}
                     <AnimatePresence>
                       {agentsOpen && (
                         <motion.div
@@ -239,38 +264,208 @@ export function Navbar() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
               </svg>
-              {/* Shimmer */}
               <span
-                className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-600"
+                className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
                 style={{
-                  background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)",
+                  background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
                 }}
                 aria-hidden
               />
             </Link>
           </div>
 
-          {/* CTA mobile — directement visible, pas de hamburger */}
+          {/* Mobile : CTA + hamburger */}
           <div className="md:hidden flex items-center gap-2">
             <Link
-              href="/dashboard"
-              className="inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-medium text-[#71717A] hover:text-[#F5F5F7] hover:bg-white/5 transition-all"
-            >
-              Dashboard
-            </Link>
-            <Link
               href="/tarifs"
-              className="inline-flex h-8 items-center rounded-lg px-3 text-[12px] font-semibold text-white"
+              className="group relative inline-flex h-8 items-center rounded-xl px-4 text-[12px] font-semibold text-white overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, #E86F4D 0%, #C8522F 100%)",
                 boxShadow: "0 0 16px rgba(232,111,77,0.35)",
               }}
             >
-              Essai gratuit
+              <span className="relative z-10">Essai gratuit</span>
+              <span
+                className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+                style={{
+                  background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
+                }}
+                aria-hidden
+              />
             </Link>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5"
+              aria-label={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-menu"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                {isMenuOpen ? (
+                  <motion.span
+                    key="close"
+                    initial={{ rotate: -45, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 45, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <X className="h-5 w-5 text-[#F5F5F7]" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="open"
+                    initial={{ rotate: 45, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -45, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <Menu className="h-5 w-5 text-[#A1A1AA]" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
           </div>
         </nav>
       </header>
+
+      {/* Menu mobile — drawer latéral */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            {/* Overlay semi-transparent */}
+            <motion.div
+              key="mobile-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              onClick={() => setIsMenuOpen(false)}
+              aria-hidden
+            />
+
+            {/* Drawer */}
+            <motion.div
+              key="mobile-menu"
+              id="mobile-menu"
+              {...drawerMotion}
+              className="fixed top-0 right-0 bottom-0 z-50 flex w-[min(360px,100vw)] flex-col overflow-y-auto md:hidden"
+              style={{
+                background: "rgba(10,10,15,0.97)",
+                backdropFilter: "blur(48px)",
+                WebkitBackdropFilter: "blur(48px)",
+                borderLeft: "1px solid rgba(124,58,237,0.18)",
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menu de navigation"
+            >
+              {/* En-tête du drawer */}
+              <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/5 px-5">
+                <Link href="/" onClick={() => setIsMenuOpen(false)} aria-label="Lynaris — accueil">
+                  <LynarisLogo size={32} showWordmark />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5"
+                  aria-label="Fermer le menu"
+                >
+                  <X className="h-5 w-5 text-[#A1A1AA]" />
+                </button>
+              </div>
+
+              {/* Liens de navigation */}
+              <div className="flex-1 px-4 py-5 space-y-1">
+                {navLinks
+                  .filter((l) => !l.hasDropdown)
+                  .map((link) => {
+                    const isActive = pathname === link.href || pathname.startsWith(link.href + "/")
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className={cn(
+                          "flex h-12 items-center rounded-xl px-4 text-[15px] font-medium transition-colors",
+                          isActive
+                            ? "bg-white/5 text-[#F5F5F7]"
+                            : "text-[#71717A] hover:bg-white/5 hover:text-[#F5F5F7]"
+                        )}
+                      >
+                        {link.label}
+                        {isActive && (
+                          <span
+                            className="ml-auto h-1.5 w-1.5 rounded-full"
+                            style={{ background: "linear-gradient(90deg, #7C3AED, #22D3EE)" }}
+                          />
+                        )}
+                      </Link>
+                    )
+                  })}
+
+                {/* Section agents */}
+                <div className="pt-5">
+                  <p className="mb-3 px-4 text-[11px] font-semibold uppercase tracking-widest text-[#52525B]">
+                    Les agents
+                  </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {AGENTS_DROPDOWN.map(({ slug, name, role }) => (
+                      <Link
+                        key={slug}
+                        href={`/agents/${slug}`}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex flex-col items-center gap-1.5 rounded-xl p-2 transition-colors hover:bg-white/5"
+                      >
+                        <AgentAvatar slug={slug} size={44} glow />
+                        <span className="text-[11px] font-semibold leading-tight text-[#F5F5F7]">{name}</span>
+                        <span className="text-center text-[9px] leading-tight text-[#52525B]">{role}</span>
+                      </Link>
+                    ))}
+                  </div>
+                  <Link
+                    href="/agents"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="mt-3 flex h-10 items-center justify-center text-[13px] font-medium text-[#A78BFA] transition-colors hover:text-[#C4B5FD]"
+                  >
+                    Voir tous les agents →
+                  </Link>
+                </div>
+              </div>
+
+              {/* CTAs en bas */}
+              <div className="shrink-0 space-y-3 border-t border-white/5 px-4 py-5">
+                <Link
+                  href="/dashboard"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex h-11 items-center justify-center rounded-xl border border-white/8 text-[14px] font-medium text-[#A1A1AA] transition-all hover:border-white/12 hover:bg-white/5 hover:text-[#F5F5F7]"
+                >
+                  Tableau de bord
+                </Link>
+                <Link
+                  href="/tarifs"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="group relative flex h-11 items-center justify-center gap-2 overflow-hidden rounded-xl text-[14px] font-semibold text-white"
+                  style={{
+                    background: "linear-gradient(135deg, #E86F4D 0%, #C8522F 100%)",
+                    boxShadow: "0 0 24px rgba(232,111,77,0.4)",
+                  }}
+                >
+                  <span className="relative z-10">Essai gratuit — 14 jours</span>
+                  <span
+                    className="absolute inset-0 -translate-x-full transition-transform duration-700 group-hover:translate-x-full"
+                    style={{
+                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
+                    }}
+                    aria-hidden
+                  />
+                </Link>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   )
 }

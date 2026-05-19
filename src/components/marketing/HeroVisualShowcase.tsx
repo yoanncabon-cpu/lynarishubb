@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion"
 import Image from "next/image"
 import { useEffect, useState } from "react"
+import { HeroVideoLoop } from "@/components/marketing/HeroVideoLoop"
 
 /**
  * HeroVisualShowcase — mise en scène immersive du hero landing.
@@ -85,6 +86,12 @@ export function HeroVisualShowcase() {
           }}
         />
       </motion.div>
+
+      {/* Vidéo loop cinématique — desktop only, lazy loaded */}
+      <HeroVideoLoop
+        src="/marketing/videos/hero-loop.mp4"
+        poster="/marketing/scenes/hero-universal.webp"
+      />
 
       {/* Floating golden particles */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>

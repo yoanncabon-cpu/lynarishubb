@@ -126,10 +126,10 @@ export function HeroSection() {
                 }}
               >
                 <span className="text-[#F5F5F7] text-[13px]">
-                  Bêta privée — accès anticipé sur demande.
+                  Accès anticipé — 3 places pilote ouvertes.
                 </span>
                 <a href="/contact" style={{ color: "#E86F4D", textDecoration: "underline", fontSize: 13, whiteSpace: "nowrap" }}>
-                  Rejoindre la bêta.
+                  Postuler →
                 </a>
               </div>
             </div>
@@ -191,9 +191,8 @@ export function HeroSection() {
                 lineHeight: 1.55,
               }}
             >
-              Tes agents décrochent tes appels. Lou publie ton contenu. Elio prospecte pour toi.{" "}
-              {/* Reformulation marketing : éviter le chiffre brut "9 agents" jugé prématuré */}
-              <span style={{ color: "#71717A" }}>Une équipe IA spécialisée, active 24h/24.</span>
+              Pendant que tu travailles, Marine répond au téléphone. Lou publie. Elio prospecte.{" "}
+              <span style={{ color: "#71717A" }}>Charles coordonne tout. Ton business avance, 24h/24.</span>
             </p>
 
             {/* CTAs */}
@@ -261,11 +260,31 @@ export function HeroSection() {
 
             {/* Social proof — agent avatars */}
             <div ref={socialRef} className="flex items-center gap-4 pt-2 opacity-0">
-              <div style={{ fontSize: 13, color: "#A1A1AA" }}>
-                {/* Bloc social proof remplacé : pas de chiffre client tant que SaaS Lynaris Hub n'a pas de client SaaS payant */}
-                <span style={{ color: "#F5F5F7", fontWeight: 600 }}>Lancement officiel</span>
-                {" "}— T3 2026
+              <div style={{ fontSize: 13, color: "#A1A1AA", display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#E86F4D",
+                    boxShadow: "0 0 0 3px rgba(232,111,77,0.2)",
+                    animation: "pulse-dot 2s ease-in-out infinite",
+                    flexShrink: 0,
+                  }}
+                  aria-hidden
+                />
+                <span>
+                  <span style={{ color: "#F5F5F7", fontWeight: 600 }}>Accès bêta limité</span>
+                  {" · Lancement T3 2026"}
+                </span>
               </div>
+              <style>{`
+                @keyframes pulse-dot {
+                  0%, 100% { box-shadow: 0 0 0 3px rgba(232,111,77,0.2); }
+                  50% { box-shadow: 0 0 0 6px rgba(232,111,77,0.08); }
+                }
+              `}</style>
             </div>
           </div>
 

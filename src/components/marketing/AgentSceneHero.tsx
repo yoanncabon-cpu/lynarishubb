@@ -62,6 +62,7 @@ export function AgentSceneHero({ src, alt, color, name, role, tagline, videoSrc 
             src={src}
             alt=""
             fill
+            priority
             sizes="100vw"
             className="object-cover"
             style={{

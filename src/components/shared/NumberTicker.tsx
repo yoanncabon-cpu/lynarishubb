@@ -9,6 +9,7 @@ interface NumberTickerProps {
   suffix?: string
   prefix?: string
   duration?: number
+  delay?: number
   className?: string
   decimals?: number
 }
@@ -18,6 +19,7 @@ export function NumberTicker({
   suffix = "",
   prefix = "",
   duration = 1400,
+  delay = 0,
   className,
   decimals = 0,
 }: NumberTickerProps) {
@@ -37,27 +39,34 @@ export function NumberTicker({
   useEffect(() => {
     if (!inView) return
 
-    // Affiche directement la valeur finale sans compter depuis 0
     if (reducedMotion) {
       setCurrent(value)
       return
     }
 
-    const startTime = performance.now()
-    const startValue = 0
+    let rafId: number
+    const timeoutId = setTimeout(() => {
+      const startTime = performance.now()
+      const startValue = 0
 
-    function update(now: number) {
-      const elapsed = now - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3)
-      setCurrent(Math.round((startValue + (value - startValue) * eased) * Math.pow(10, decimals)) / Math.pow(10, decimals))
+      function update(now: number) {
+        const elapsed = now - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        const eased = 1 - Math.pow(1 - progress, 3)
+        setCurrent(Math.round((startValue + (value - startValue) * eased) * Math.pow(10, decimals)) / Math.pow(10, decimals))
+        if (progress < 1) {
+          rafId = requestAnimationFrame(update)
+        }
+      }
 
-      if (progress < 1) requestAnimationFrame(update)
+      rafId = requestAnimationFrame(update)
+    }, delay)
+
+    return () => {
+      clearTimeout(timeoutId)
+      cancelAnimationFrame(rafId)
     }
-
-    requestAnimationFrame(update)
-  }, [inView, value, duration, decimals, reducedMotion])
+  }, [inView, value, duration, delay, decimals, reducedMotion])
 
   const formatted = new Intl.NumberFormat("fr-FR", {
     minimumFractionDigits: decimals,
