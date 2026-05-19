@@ -74,13 +74,9 @@ export default function LoginPage() {
 
   async function handleGoogle() {
     const supabase = getSupabaseBrowserClient()
-    // Toujours rediriger vers l'URL canonique du dashboard (pas window.location.origin
-    // qui pointe vers lynaris.pro quand on est sur la vitrine).
-    // NEXT_PUBLIC_APP_URL doit être défini dans Vercel : https://lynarishubb.vercel.app
-    const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? window.location.origin
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${appUrl}/api/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     })
   }
 
