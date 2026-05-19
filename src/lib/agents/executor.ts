@@ -532,6 +532,14 @@ export async function* streamAgent(
       })
     }
 
+    // Si max_tokens atteint avec un tool call en cours → JSON tronqué, on ne peut pas exécuter
+    if (stopReason === "max_tokens") {
+      if (hasToolUse) {
+        yield "\n\n*(Le contenu était trop volumineux. Reformule en demandant un document plus court ou divisé en parties.)*"
+      }
+      return
+    }
+
     if (!hasToolUse || stopReason === "end_turn") {
       return
     }
