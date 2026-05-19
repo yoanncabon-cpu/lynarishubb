@@ -28,16 +28,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const orgId = await getOrProvisionOrgId()
 
-  if (orgId === ANON_ORG_ID) {
-    return new NextResponse("Non authentifié", { status: 401 })
-  }
+  // L'UUID est la protection — accessible sans session (document partageable).
+  // On cherche par ID uniquement (pas d'orgId requis pour la vue).
+  const orgId = await getOrProvisionOrgId().catch(() => ANON_ORG_ID)
 
   const [row] = await db
     .select({ title: contents.title, body: contents.body, createdAt: contents.createdAt })
     .from(contents)
-    .where(and(eq(contents.id, id), eq(contents.orgId, orgId)))
+    .where(
+      orgId !== ANON_ORG_ID
+        ? and(eq(contents.id, id), eq(contents.orgId, orgId))
+        : eq(contents.id, id)  // Si pas auth → cherche par UUID seul
+    )
     .limit(1)
     .catch(() => [])
 

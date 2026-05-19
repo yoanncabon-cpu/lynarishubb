@@ -51,7 +51,10 @@ function isStaticPublicPath(pathname: string): boolean {
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_API_EXACT.has(pathname)) return true
-  return PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))
+  if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) return true
+  // Document view — UUID dans l'URL = sécurité par opacité, auth vérifiée dans la route
+  if (/^\/api\/contents\/[^/]+\/view$/.test(pathname)) return true
+  return false
 }
 
 export async function middleware(request: NextRequest) {
