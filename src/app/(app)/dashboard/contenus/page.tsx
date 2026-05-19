@@ -662,7 +662,7 @@ function ContentDetailModal({
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "20px 24px" }}>
           {loading ? (
             <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
               <span style={{ fontSize: 13, color: "rgba(250,250,250,0.35)" }}>Chargement…</span>
