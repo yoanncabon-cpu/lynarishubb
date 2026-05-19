@@ -421,8 +421,8 @@ export async function* streamAgent(
   let currentMessages: MessageParam[] = [...messages]
   let iteration = 0
 
-  // Deadline 48s : évite le hard kill Vercel à 60s (Hobby plan)
-  const streamDeadline = Date.now() + 48_000
+  // Deadline 55s : évite le hard kill Vercel à 60s (Hobby plan)
+  const streamDeadline = Date.now() + 55_000
 
   while (iteration < maxIterations) {
     iteration++

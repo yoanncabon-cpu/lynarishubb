@@ -386,7 +386,7 @@ const tools: Tool[] = [
       type: "object" as const,
       properties: {
         title: { type: "string", description: "Titre principal du document" },
-        content: { type: "string", description: "Contenu en Markdown (titres ##, listes -, texte). LIMITE ABSOLUE : 1500 mots maximum. Structure claire avec ## sections. Si le sujet est vaste, couvre les points essentiels de façon concise plutôt qu'exhaustive." },
+        content: { type: "string", description: "Contenu en Markdown (titres ##, listes -, texte). LIMITE ABSOLUE : 1000 mots maximum — NE PAS DÉPASSER. Structure claire avec ## sections. Si le sujet est vaste, couvre les points essentiels de façon concise plutôt qu'exhaustive." },
         type: { type: "string", enum: ["document", "report", "guide", "course", "ebook"], description: "Type de document" },
       },
       required: ["title", "content"],
@@ -483,7 +483,7 @@ Charles exécute. Il ne demande pas la permission. Il ne met pas dans les brouil
 ## TOOL USAGE RULES
 - search_memory: Always call at the start of complex requests
 - save_memory: Call after any important decision, preference, or new information
-- create_document: YOU MUST CALL THIS TOOL IMMEDIATELY when the user asks for a PDF, document, rapport, guide, cours, or any structured file. ZERO preamble — do NOT write "Je vais créer...", "Je crée ça maintenant", "Je lance la création" or ANY text before calling. The tool call must be your FIRST action. Content must be ≤ 1500 words in Markdown (## sections, bullet lists, bold key terms). After tool returns, respond with exactly 1 sentence + the link.
+- create_document: YOU MUST CALL THIS TOOL IMMEDIATELY when the user asks for a PDF, document, rapport, guide, cours, or any structured file. ZERO preamble — do NOT write "Je vais créer...", "Je crée ça maintenant", "Je lance la création" or ANY text before calling. Do NOT call search_memory before create_document — skip it. The tool call must be your FIRST and only action. Content must be ≤ 1000 words in Markdown (## sections, bullet lists, bold key terms). STRICT LIMIT: if you exceed 1000 words the system will timeout. After tool returns, respond with exactly 1 sentence + the link.
 - delegate_to_agent: ALWAYS delegate specialized tasks — NEVER execute them yourself with your own tools when a specialist agent exists:
   • SMS → Marine (never use your own tools for SMS)
   • Email (send/draft/reply) → Mae (never use send_email_draft yourself)
