@@ -16,9 +16,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Toujours rediriger vers le domaine canonique (lynaris.pro), pas le domaine Vercel
+    const appBase = (process.env["NEXT_PUBLIC_APP_URL"] ?? origin).replace(/\/$/, "")
+
     // ── Build a temporary redirect (destination will be finalized after auth) ─
-    // Start with /dashboard so we have a response object to attach cookies to.
-    const response = NextResponse.redirect(`${origin}/dashboard`)
+    const response = NextResponse.redirect(`${appBase}/dashboard`)
 
     // ── Supabase client whose setAll writes directly onto the response ─────────
     // This is the official SSR OAuth callback pattern:
@@ -73,8 +75,8 @@ export async function GET(request: NextRequest) {
       ? onboardingPath
       : (next.startsWith("/") ? next : "/dashboard")
 
-    // Update the redirect URL on the existing response (keeps the cookies intact)
-    response.headers.set("Location", `${origin}${destination}`)
+    // Update the redirect URL — toujours vers le domaine canonique (NEXT_PUBLIC_APP_URL)
+    response.headers.set("Location", `${appBase}${destination}`)
 
     // Clean up the plan cookie
     if (planFromCookie) {
