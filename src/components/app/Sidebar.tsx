@@ -47,23 +47,23 @@ interface NavItemDef {
 
 const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
   {
-    label: "Pinned",
+    label: "",
     items: [
       { href: "/dashboard", label: "Accueil", icon: LayoutDashboard, exact: true, tour: "sidebar-home" },
       { href: "/dashboard/agents", label: "Mes agents", icon: Bot, tour: "sidebar-assistants" },
+      { href: "/dashboard/conversations", label: "Conversations", icon: MessageSquare },
     ],
   },
   {
-    label: "Travail",
+    label: "Contenu",
     items: [
-      { href: "/dashboard/contenus", label: "Contenus", icon: Library, proOnly: true, tour: "sidebar-contents" },
+      { href: "/dashboard/contenus", label: "Mes contenus", icon: Library, proOnly: true, tour: "sidebar-contents" },
       { href: "/dashboard/documents", label: "Documents", icon: FileText },
-      { href: "/dashboard/workspace", label: "Espace de travail", icon: LayoutGrid },
       { href: "/dashboard/automatisations", label: "Automatisations", icon: Clock },
     ],
   },
   {
-    label: "Croissance",
+    label: "Business",
     items: [
       { href: "/dashboard/crm", label: "CRM", icon: ContactRound, proOnly: true },
       { href: "/dashboard/contacts", label: "Contacts", icon: Users },
@@ -71,12 +71,12 @@ const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
     ],
   },
   {
-    label: "Plateforme",
+    label: "Réglages",
     items: [
-      { href: "/dashboard/conversations", label: "Conversations", icon: MessageSquare },
-      { href: "/dashboard/skills", label: "Compétences", icon: Sparkles },
       { href: "/dashboard/integrations", label: "Intégrations", icon: Plug, tour: "sidebar-integrations" },
       { href: "/dashboard/team", label: "Équipe", icon: Briefcase },
+      { href: "/dashboard/skills", label: "Compétences", icon: Sparkles },
+      { href: "/dashboard/workspace", label: "Espace de travail", icon: LayoutGrid },
     ],
   },
 ]

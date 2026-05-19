@@ -441,13 +441,9 @@ export async function* streamAgent(
     const allContent: Anthropic.Messages.ContentBlockParam[] = []
     let stopReason: string | null = null
 
-    // Stream the response — cap max_tokens à 2048 pour les documents (évite le 504 Vercel)
-    // Un document de 1500 mots ≈ 2000 tokens; au-delà on dépasse le timeout 60s.
-    const iterMaxTokens = Math.min(agentDef.maxTokens, 2048)
-
     const stream = anthropic.messages.stream({
       model: effectiveModel,
-      max_tokens: iterMaxTokens,
+      max_tokens: agentDef.maxTokens,
       system: cachedSystem(systemPrompt),
       messages: sanitizeMessages(trimHistory(currentMessages)),
       tools: agentDef.tools.length > 0 ? agentDef.tools : undefined,
@@ -597,13 +593,18 @@ export async function* streamAgent(
         const r = result.result as Record<string, unknown>
         const url = r["url"] ? String(r["url"]) : null
         if (url && (tu.name === "create_document" || tu.name === "generate_image")) {
-          const ev = {
+          const ev: Record<string, unknown> = {
             type: "content_created",
             contentType: tu.name === "create_document" ? "document" : "image",
             url,
             title: tu.name === "create_document"
               ? String(parsedInput["title"] ?? r["title"] ?? "Document")
               : String(parsedInput["prompt"] ?? "Image IA").slice(0, 80),
+          }
+          // Pour les documents : inclure un aperçu du contenu (premiers 800 chars)
+          if (tu.name === "create_document") {
+            const bodyPreview = String(parsedInput["content"] ?? "").slice(0, 800)
+            if (bodyPreview) ev["preview"] = bodyPreview
           }
           yield `\x01${JSON.stringify(ev)}\x01`
         }

@@ -55,23 +55,48 @@ export async function GET(
   })
   const htmlContent = mdToHtml(body)
 
+  const appUrl = (process.env["NEXT_PUBLIC_APP_URL"] ?? "https://lynaris.pro").replace(/\/$/, "")
+
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title.replace(/</g, "&lt;")}</title>
+<title>${title.replace(/</g, "&lt;")} — Lynaris</title>
+<!-- Favicon Lynaris -->
+<link rel="icon" type="image/svg+xml" href="${appUrl}/favicon.svg">
+<link rel="shortcut icon" href="${appUrl}/favicon.ico">
 <style>
   @media print {
     .no-print { display: none !important; }
-    body { margin: 0; }
+    body { margin: 0; padding: 20px 32px; }
     h1,h2 { page-break-after: avoid; }
     p,li { orphans:3; widows:3; }
+    img { max-width:100%; page-break-inside: avoid; }
   }
   * { box-sizing: border-box; }
-  body { font-family: Georgia,'Times New Roman',serif; max-width:820px; margin:0 auto; padding:40px 32px; color:#1C1C2A; line-height:1.75; font-size:16px; }
-  .no-print { background:#F5F5F7; border-bottom:1px solid #ddd; padding:10px 16px; margin:-40px -32px 40px; display:flex; align-items:center; gap:12px; font-family:-apple-system,sans-serif; font-size:13px; color:#555; }
-  .no-print button { background:#E86F4D; color:#fff; border:none; border-radius:6px; padding:7px 16px; font-size:13px; font-weight:600; cursor:pointer; }
+  body { font-family: Georgia,'Times New Roman',serif; max-width:820px; margin:0 auto; padding:0; color:#1C1C2A; line-height:1.75; font-size:16px; }
+  .no-print {
+    background:#0F0F1A; border-bottom:2px solid rgba(232,111,77,0.3);
+    padding:12px 24px; display:flex; align-items:center; gap:16px;
+    font-family:-apple-system,sans-serif; font-size:13px; color:rgba(250,250,250,0.65);
+    position:sticky; top:0; z-index:100;
+  }
+  .lynaris-logo { display:flex; align-items:center; gap:8px; text-decoration:none; }
+  .lynaris-logo svg { width:24px; height:24px; flex-shrink:0; }
+  .lynaris-logo span { font-size:15px; font-weight:700; color:#FAFAFA; letter-spacing:-0.03em; }
+  .no-print .divider { width:1px; height:18px; background:rgba(255,255,255,0.15); }
+  .btn-pdf {
+    display:inline-flex; align-items:center; gap:6px;
+    background:linear-gradient(135deg,#E86F4D 0%,#C8522F 100%);
+    color:#fff; border:none; border-radius:8px; padding:8px 18px;
+    font-size:13px; font-weight:600; cursor:pointer;
+    box-shadow:0 4px 14px rgba(232,111,77,0.35);
+    transition:opacity 150ms;
+  }
+  .btn-pdf:hover { opacity:0.88; }
+  .print-hint { font-size:11px; color:rgba(250,250,250,0.4); }
+  .doc-body { padding:40px 32px; }
   .doc-header { border-bottom:3px solid #E86F4D; padding-bottom:20px; margin-bottom:36px; }
   .doc-header h1 { font-size:2em; margin:0 0 8px; color:#0F0F1A; letter-spacing:-0.02em; }
   .doc-meta { font-family:-apple-system,sans-serif; font-size:13px; color:#888; }
@@ -83,19 +108,41 @@ export async function GET(
   li { margin:0.4em 0; }
   strong { font-weight:700; }
   em { font-style:italic; }
+  img { max-width:100%; border-radius:8px; margin:12px 0; display:block; }
 </style>
 </head>
 <body>
+<!-- Barre Lynaris -->
 <div class="no-print">
-  <span>Document généré par Lynaris •</span>
-  <button onclick="window.print()">Télécharger en PDF</button>
-  <span style="color:#aaa">Imprimer → Enregistrer en PDF dans la boîte de dialogue système</span>
+  <a class="lynaris-logo" href="${appUrl}" target="_blank" rel="noopener">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#F5922F"/>
+          <stop offset="100%" stop-color="#D4530A"/>
+        </linearGradient>
+      </defs>
+      <polygon points="0,0 24,0 40,18 40,65 100,65 100,100 0,100" fill="url(#lg)"/>
+      <polygon points="58,0 100,0 100,42" fill="url(#lg)"/>
+    </svg>
+    <span>Lynaris</span>
+  </a>
+  <div class="divider"></div>
+  <button class="btn-pdf" onclick="window.print()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Enregistrer en PDF
+  </button>
+  <span class="print-hint">Dans la boîte de dialogue → choisir "Enregistrer en PDF"</span>
 </div>
-<div class="doc-header">
-  <h1>${title.replace(/</g, "&lt;")}</h1>
-  <div class="doc-meta">Généré le ${now} — Lynaris Hub</div>
+
+<!-- Corps du document -->
+<div class="doc-body">
+  <div class="doc-header">
+    <h1>${title.replace(/</g, "&lt;")}</h1>
+    <div class="doc-meta">Généré le ${now} par Lynaris</div>
+  </div>
+  ${htmlContent}
 </div>
-${htmlContent}
 </body>
 </html>`
 

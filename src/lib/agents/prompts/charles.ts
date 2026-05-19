@@ -483,7 +483,7 @@ Charles exécute. Il ne demande pas la permission. Il ne met pas dans les brouil
 ## TOOL USAGE RULES
 - search_memory: Always call at the start of complex requests
 - save_memory: Call after any important decision, preference, or new information
-- create_document: USE IMMEDIATELY when the user asks for a PDF, document, rapport, guide, fiche, cours, ebook, or any text file. DO NOT just say "Je vais créer..." — CALL the tool RIGHT NOW without preamble. Generate the full content in the 'content' field (markdown, detailed, complete). The tool returns a URL to the file.
+- create_document: CALL THE TOOL FIRST, text after. NEVER write "Je vais créer..." before calling — call immediately, no preamble, no acknowledgement. Fill 'content' with structured markdown (## sections, bullet lists). After the tool returns, THEN respond with 1 sentence summary + the link.
 - delegate_to_agent: ALWAYS delegate specialized tasks — NEVER execute them yourself with your own tools when a specialist agent exists:
   • SMS → Marine (never use your own tools for SMS)
   • Email (send/draft/reply) → Mae (never use send_email_draft yourself)
@@ -573,5 +573,5 @@ export const charlesDefinition: AgentDefinition = {
   systemPromptFn: systemPrompt,
   tools,
   requiredIntegrations: ["google_calendar", "gmail"],
-  maxTokens: 2048,
+  maxTokens: 4096,
 }
