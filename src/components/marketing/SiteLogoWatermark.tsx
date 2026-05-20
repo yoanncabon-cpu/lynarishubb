@@ -22,7 +22,7 @@ const FRAG_INIT: Array<{ p: [number, number, number]; r: [number, number, number
 // État animé par GSAP — lu dans useFrame
 const gs = {
   assemblyT:    0,     // 0=dispersé, 1=assemblé
-  fragOpacity:  0,     // opacité des fragments
+  fragOpacity:  0.38,  // fragments visibles dès le chargement (logo brisé)
   globalOpacity: 0,   // opacité du wireframe global
   globalRotY:   0,
   globalRotX:   0,
@@ -332,9 +332,9 @@ export function SiteLogoWatermark() {
         if (cancelled) return
         gsap.registerPlugin(stMod.ScrollTrigger)
 
-        // Reset
+        // Reset — logo brisé visible dès le chargement
         Object.assign(gs, {
-          assemblyT: 0, fragOpacity: 0, globalOpacity: 0,
+          assemblyT: 0, fragOpacity: 0.38, globalOpacity: 0,
           globalRotY: 0, globalRotX: 0, globalScale: 1.12, globalPosY: 0,
         })
 
@@ -347,21 +347,14 @@ export function SiteLogoWatermark() {
           },
         })
 
-        // Phase 1 — Fragments apparaissent dispersés (0→8%)
-        tl.to(gs, {
-          fragOpacity: 0.38,
-          ease: "power2.out",
-          duration: 0.08,
-        }, 0)
-
-        // Phase 2 — Convergence : morceaux → logo (8→65%)
+        // Phase 1 — Convergence : fragments brisés → logo assemblé (0→65%)
         tl.to(gs, {
           assemblyT: 1.0,
           ease: "power3.out",
-          duration: 0.57,
-        }, 0.08)
+          duration: 0.65,
+        }, 0)
 
-        // Phase 3 — Crossfade fragments → wireframe global (62→72%)
+        // Phase 2 — Crossfade fragments → wireframe global (62→72%)
         tl.to(gs, {
           fragOpacity: 0,
           ease: "power1.in",
@@ -373,7 +366,7 @@ export function SiteLogoWatermark() {
           duration: 0.10,
         }, 0.62)
 
-        // Phase 4 — Logo assemblé : rotation 3D élégante (72→87%)
+        // Phase 3 — Logo assemblé : rotation 3D élégante (72→87%)
         tl.to(gs, {
           globalRotY: Math.PI * 1.25,
           globalRotX: -0.10,
@@ -382,7 +375,7 @@ export function SiteLogoWatermark() {
           duration: 0.15,
         }, 0.72)
 
-        // Phase 5 — Sortie (87→100%)
+        // Phase 4 — Sortie (87→100%)
         tl.to(gs, {
           globalOpacity: 0.04,
           globalScale: 0.40,
