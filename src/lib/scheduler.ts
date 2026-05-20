@@ -1,4 +1,4 @@
-export type Frequency = "daily" | "weekly" | "monthly"
+export type Frequency = "daily" | "weekly" | "monthly" | "hourly" | "every_minute"
 
 export interface Schedule {
   frequency: Frequency
@@ -63,6 +63,23 @@ export function computeNextRunAt(schedule: Schedule, from: Date = new Date()): D
   let m = now.month
   let d = now.day
 
+  if (frequency === "every_minute") {
+    // Prochaine minute pleine (ignore hour/minute de la config)
+    return new Date(from.getTime() + (60 - now.second) * 1000)
+  }
+
+  if (frequency === "hourly") {
+    // Prochaine occurrence de la minute X dans l'heure courante ou suivante
+    if (now.minute < minute) {
+      return localToUtc(y, m, d, now.hour, minute, tz)
+    } else {
+      // Heure suivante
+      const nextHour = now.hour + 1
+      if (nextHour < 24) return localToUtc(y, m, d, nextHour, minute, tz)
+      return localToUtc(y, m, d + 1, 0, minute, tz)
+    }
+  }
+
   if (frequency === "daily") {
     if (!todayStillPossible) d += 1
   } else if (frequency === "weekly") {
@@ -84,9 +101,11 @@ export function computeNextRunAt(schedule: Schedule, from: Date = new Date()): D
 }
 
 export const FREQUENCY_LABELS: Record<Frequency, string> = {
-  daily:   "Tous les jours",
-  weekly:  "Toutes les semaines",
-  monthly: "Tous les mois",
+  every_minute: "Chaque minute",
+  hourly:       "Chaque heure",
+  daily:        "Tous les jours",
+  weekly:       "Toutes les semaines",
+  monthly:      "Tous les mois",
 }
 
 export const DAY_LABELS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
@@ -94,8 +113,11 @@ export const DAY_LABELS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
 export function describeSchedule(schedule: Schedule): string {
   const { frequency, hour, minute, dayOfWeek, dayOfMonth } = schedule
   const time = `${String(hour).padStart(2, "0")}h${String(minute).padStart(2, "0")}`
-  if (frequency === "daily")   return `Tous les jours à ${time}`
-  if (frequency === "weekly")  return `Chaque ${DAY_LABELS[dayOfWeek ?? 1]} à ${time}`
-  if (frequency === "monthly") return `Le ${dayOfMonth ?? 1} de chaque mois à ${time}`
+  const mm   = String(minute).padStart(2, "0")
+  if (frequency === "every_minute") return `Chaque minute`
+  if (frequency === "hourly")       return `Chaque heure à :${mm}`
+  if (frequency === "daily")        return `Tous les jours à ${time}`
+  if (frequency === "weekly")       return `Chaque ${DAY_LABELS[dayOfWeek ?? 1]} à ${time}`
+  if (frequency === "monthly")      return `Le ${dayOfMonth ?? 1} de chaque mois à ${time}`
   return time
 }

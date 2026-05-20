@@ -40,7 +40,7 @@ const createSchema = z.object({
   agentSlug:   z.string().min(1),
   name:        z.string().min(1).max(100),
   instruction: z.string().min(1).max(2000),
-  frequency:   z.enum(["daily", "weekly", "monthly"]),
+  frequency:   z.enum(["every_minute", "hourly", "daily", "weekly", "monthly"]),
   hour:        z.number().int().min(0).max(23),
   minute:      z.number().int().min(0).max(59).default(0),
   dayOfWeek:   nullableNumber(0, 6),

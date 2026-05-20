@@ -42,7 +42,7 @@ const patchSchema = z.object({
   instruction: z.string().min(1).max(2000).optional(),
   hour: z.number().int().min(0).max(23).optional(),
   minute: z.number().int().min(0).max(59).optional(),
-  frequency: z.enum(["daily", "weekly", "monthly"]).optional(),
+  frequency: z.enum(["every_minute", "hourly", "daily", "weekly", "monthly"]).optional(),
   dayOfWeek: nullableNumber(0, 6),
   dayOfMonth: nullableNumber(1, 31),
   category: z.enum(["communication", "reporting", "productivity", "growth"]).nullable().optional(),

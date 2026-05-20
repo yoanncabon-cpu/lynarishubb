@@ -495,21 +495,21 @@ function JobModal({ job, onClose, onSaved }: { job?: ScheduledJob; onClose: () =
           {/* Fréquence */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(250,250,250,0.55)", letterSpacing: "0.04em", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Fréquence</label>
-            <div style={{ display: "flex", gap: 6 }}>
-              {(["daily", "weekly", "monthly"] as Frequency[]).map((f) => (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {([
+                ["every_minute", "/ min"],
+                ["hourly",       "/ heure"],
+                ["daily",        "/ jour"],
+                ["weekly",       "/ sem."],
+                ["monthly",      "/ mois"],
+              ] as [Frequency, string][]).map(([f, label]) => (
                 <GlassChip
                   key={f}
                   active={frequency === f}
                   onClick={() => setFrequency(f)}
-                  style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    padding: "8px 0",
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
+                  style={{ justifyContent: "center", padding: "8px 14px", fontSize: 12, fontWeight: 600 }}
                 >
-                  {f === "daily" ? "Quotidien" : f === "weekly" ? "Hebdo" : "Mensuel"}
+                  {label}
                 </GlassChip>
               ))}
             </div>
@@ -550,20 +550,30 @@ function JobModal({ job, onClose, onSaved }: { job?: ScheduledJob; onClose: () =
             </div>
           )}
 
-          {/* Heure */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(250,250,250,0.55)", letterSpacing: "0.04em", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Heure (Europe/Paris)</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input type="number" min={0} max={23} value={hour} onChange={(e) => { const v = parseInt(e.target.value); setHour(isNaN(v) ? 0 : v); }}
-                className="ly-input"
-                style={{ width: 70, padding: "8px 12px", fontSize: 13, textAlign: "center" }} />
-              <span style={{ color: "rgba(250,250,250,0.4)", fontSize: 18, fontWeight: 700 }}>:</span>
-              <input type="number" min={0} max={59} step={1} value={minute} onChange={(e) => { const v = parseInt(e.target.value); setMinute(isNaN(v) ? 0 : v); }}
-                className="ly-input"
-                style={{ width: 70, padding: "8px 12px", fontSize: 13, textAlign: "center" }} />
-              <span style={{ fontSize: 12, color: "rgba(250,250,250,0.35)" }}>heure de Paris</span>
+          {/* Heure / Minute — masqués selon la fréquence */}
+          {frequency !== "every_minute" && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(250,250,250,0.55)", letterSpacing: "0.04em", textTransform: "uppercase", display: "block", marginBottom: 8 }}>
+                {frequency === "hourly" ? "Minute de l'heure" : "Heure (Europe/Paris)"}
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {frequency !== "hourly" && (
+                  <>
+                    <input type="number" min={0} max={23} value={hour} onChange={(e) => { const v = parseInt(e.target.value); setHour(isNaN(v) ? 0 : v); }}
+                      className="ly-input"
+                      style={{ width: 70, padding: "8px 12px", fontSize: 13, textAlign: "center" }} />
+                    <span style={{ color: "rgba(250,250,250,0.4)", fontSize: 18, fontWeight: 700 }}>:</span>
+                  </>
+                )}
+                <input type="number" min={0} max={59} step={1} value={minute} onChange={(e) => { const v = parseInt(e.target.value); setMinute(isNaN(v) ? 0 : v); }}
+                  className="ly-input"
+                  style={{ width: 70, padding: "8px 12px", fontSize: 13, textAlign: "center" }} />
+                {frequency !== "hourly" && (
+                  <span style={{ fontSize: 12, color: "rgba(250,250,250,0.35)" }}>heure de Paris</span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Catégorie */}
           <div>
