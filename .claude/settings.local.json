@@ -47,7 +47,9 @@
       "Bash(curl -s https://lynarishubb.vercel.app/sitemap.xml)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Yoann\\\\Desktop\\\\lynaris hub\\\\lynaris\\\\lynarishub\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(xargs basename -a)"
+      "Bash(xargs basename -a)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Yoann\\\\Desktop\\\\lynaris hub\\\\lynaris\\\\lynarishub\\\\src\\\\components\\\\app\" -Recurse -File)",
+      "Bash(Sort-Object Name)"
     ]
   }
 }

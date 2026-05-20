@@ -358,6 +358,31 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
       </button>
 
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+        {/* Search — icône seule sur mobile < 640px (la barre ⌘K est hidden sm:hidden) */}
+        <button
+          type="button"
+          onClick={onSearchClick}
+          aria-label="Rechercher"
+          className="flex sm:hidden lg-focus"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 11,
+            border: "1px solid transparent",
+            background: "transparent",
+            color: "rgba(250,250,250,0.65)",
+            cursor: "pointer",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            transition: "background 220ms var(--ease-apple)",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
+        >
+          <Search size={17} />
+        </button>
+
         {/* Badge plan */}
         <Link
           href="/dashboard/billing"

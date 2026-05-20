@@ -228,6 +228,7 @@ h1, h2, h3, h4 {
   color: var(--ly-text);
   font-size: 14px;
   padding: 9px 13px;
+  min-height: 44px;
   transition: border-color 220ms var(--ease-apple), background 220ms var(--ease-apple);
   width: 100%;
   -webkit-backdrop-filter: blur(16px);
@@ -665,12 +666,13 @@ h1, h2, h3, h4 {
 /* Mobile : réduit blurs lourds (économie GPU, gain LCP ~150ms) */
 @media (max-width: 767px) {
   .lg-aurora__blob {
-    filter: blur(60px); /* au lieu de 80 */
-    opacity: 0.65;
+    filter: blur(40px); /* 80 → 40 : économie GPU ~50% */
+    opacity: 0.45;
   }
   .lg-aurora__blob--green,
-  .lg-aurora__blob--rose {
-    display: none; /* ne garde que 3 halos sur mobile */
+  .lg-aurora__blob--rose,
+  .lg-aurora__blob--violet {
+    display: none; /* 5 halos → 2 (orange + blue) */
   }
   .lg-surface-1, .lg-surface-2, .lg-surface-3 {
     -webkit-backdrop-filter: blur(16px) saturate(1.4);
@@ -950,6 +952,21 @@ h1, h2, h3, h4 {
 
 @media (prefers-reduced-motion: reduce) {
   .typing-dot { animation: none; opacity: 0.6; }
+}
+
+/* ─── SubNav — touch targets sur mobile ───────────────────────────────── */
+@media (max-width: 1023px) {
+  .ly-subnav-item {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    min-height: 44px !important;
+  }
+}
+
+/* ─── Drawer mobile — animation slide-in ──────────────────────────────── */
+@keyframes ly-drawer-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ─── Mobile : panels flottants (dropdown notif + toasts) ─────────────── */

@@ -232,12 +232,12 @@ export default function DashboardPage() {
           variants={heroVariants}
           initial="hidden"
           animate="show"
-          style={{ display: "flex", alignItems: "flex-end", gap: 20, flexWrap: "wrap", marginBottom: 32 }}
+          style={{ display: "flex", alignItems: "flex-end", gap: "clamp(12px, 3vw, 20px)", flexWrap: "wrap", marginBottom: "clamp(20px, 4vw, 32px)" }}
         >
           <div
             style={{
-              width: "clamp(48px, 8vw, 60px)",
-              height: "clamp(48px, 8vw, 60px)",
+              width: "clamp(44px, 8vw, 60px)",
+              height: "clamp(44px, 8vw, 60px)",
               borderRadius: "50%",
               flexShrink: 0,
               overflow: "hidden",
@@ -258,7 +258,7 @@ export default function DashboardPage() {
               ? <Image src={avatarUrl} alt="" width={60} height={60} unoptimized style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : initials}
           </div>
-          <div style={{ flex: 1, minWidth: 240 }}>
+          <div style={{ flex: 1, minWidth: "min(240px, calc(100vw - 100px))" }}>
             <h1
               style={{
                 fontSize: "clamp(30px, 4.4vw, 48px)",
@@ -432,6 +432,8 @@ export default function DashboardPage() {
                       onKeyDown={(e) => { if (e.key === "Enter") goCharles() }}
                       placeholder="Rédige un email, planifie ma semaine…"
                       aria-label="Demande à Charles"
+                      inputMode="text"
+                      enterKeyHint="send"
                       className="lg-focus"
                       style={{
                         flex: 1,
@@ -756,6 +758,18 @@ export default function DashboardPage() {
         }
         .lg-bento > div { min-width: 0; min-height: 0; }
         .lg-bento > div > * { height: 100%; }
+
+        /* Mobile : hauteurs minimales par tuile */
+        @media (max-width: 767px) {
+          .lg-bento { gap: 12px; }
+          .lg-bento__charles    { min-height: 340px; }
+          .lg-bento__travail,
+          .lg-bento__croissance,
+          .lg-bento__plateforme { min-height: 160px; }
+          .lg-bento__live       { min-height: 130px; }
+          .lg-bento__voice      { min-height: 130px; }
+          .lg-bento__activity   { min-height: 200px; }
+        }
 
         /* Tablette : 2 colonnes, Charles full width en haut */
         @media (min-width: 768px) and (max-width: 1279px) {

@@ -63,7 +63,7 @@ export function SpotlightSubNav({ isAdmin }: Props) {
               href={target}
               aria-current={isActive ? "page" : undefined}
               title={locked ? "Disponible en Plan Pro" : undefined}
-              className="lg-focus"
+              className="ly-subnav-item lg-focus"
               style={{
                 position: "relative",
                 display: "inline-flex",
