@@ -116,12 +116,16 @@ function LogoFragments({
   fragGeos,
   fragEdges,
   matFill,
-  matEdge,
+  matCore,
+  matGlow1,
+  matGlow2,
 }: {
   fragGeos: THREE.BufferGeometry[]
   fragEdges: THREE.EdgesGeometry[]
-  matFill: THREE.MeshBasicMaterial
-  matEdge: THREE.LineBasicMaterial
+  matFill:  THREE.MeshBasicMaterial
+  matCore:  THREE.LineBasicMaterial
+  matGlow1: THREE.LineBasicMaterial
+  matGlow2: THREE.LineBasicMaterial
 }) {
   const refs = useRef<(THREE.Group | null)[]>(
     Array.from({ length: NUM_FRAGMENTS }, () => null)
@@ -150,7 +154,16 @@ function LogoFragments({
             ref={(el: THREE.Group | null) => { refs.current[i] = el }}
           >
             <mesh geometry={geo} material={matFill} />
-            <lineSegments geometry={edges} material={matEdge} />
+            {/* Core : trait vif */}
+            <lineSegments geometry={edges} material={matCore} />
+            {/* Halo intérieur */}
+            <group scale={[1.018, 1.018, 1]}>
+              <lineSegments geometry={edges} material={matGlow1} />
+            </group>
+            {/* Halo extérieur */}
+            <group scale={[1.055, 1.055, 1]}>
+              <lineSegments geometry={edges} material={matGlow2} />
+            </group>
           </group>
         )
       })}
@@ -164,49 +177,62 @@ function LogoScene() {
   const globalGroupRef = useRef<THREE.Group>(null!)
   const { geoL, geoT, edgesL, edgesT, fragGeos, fragEdges, depth } = useMemo(() => buildGeometries(), [])
 
-  // Matériaux fragments
+  // ── Fragment materials ──
   const matFragFill = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color("#5B1A05"),
-    transparent: true,
-    opacity: 0,
-    side: THREE.DoubleSide,
+    color: new THREE.Color("#5B1A05"), transparent: true, opacity: 0, side: THREE.DoubleSide,
+  }), [])
+  // core blanc-orangé : maximum de luminosité au centre
+  const matFragCore = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#FFCC88"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+  const matFragGlow1 = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#F97316"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+  const matFragGlow2 = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#C2410C"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
   }), [])
 
-  const matFragEdge = useMemo(() => new THREE.LineBasicMaterial({
-    color: new THREE.Color("#F97316"),
-    transparent: true,
-    opacity: 0,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  }), [])
-
-  // Matériaux wireframe global
-  const matOrange = useMemo(() => new THREE.LineBasicMaterial({
-    color: new THREE.Color("#F97316"),
-    transparent: true,
-    opacity: 0,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  }), [])
-
-  const matCyan = useMemo(() => new THREE.LineBasicMaterial({
-    color: new THREE.Color("#22D3EE"),
-    transparent: true,
-    opacity: 0,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  }), [])
-
+  // ── Global wireframe fills ──
   const matFillL = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color("#7C2D0E"),
-    transparent: true,
-    opacity: 0,
+    color: new THREE.Color("#7C2D0E"), transparent: true, opacity: 0,
+  }), [])
+  const matFillT = useMemo(() => new THREE.MeshBasicMaterial({
+    color: new THREE.Color("#0C4A6E"), transparent: true, opacity: 0,
   }), [])
 
-  const matFillT = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color("#0C4A6E"),
-    transparent: true,
-    opacity: 0,
+  // ── Orange L — 4 couches (core + 3 halos de plus en plus larges et sombres) ──
+  const matOrangeCore = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#FFE0A0"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+  const matOrange1 = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#F97316"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+  const matOrange2 = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#EA580C"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+  const matOrange3 = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#9A3412"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+
+  // ── Cyan triangle — 3 couches ──
+  const matCyanCore = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#C0F8FF"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+  const matCyan1 = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#22D3EE"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }), [])
+  const matCyan2 = useMemo(() => new THREE.LineBasicMaterial({
+    color: new THREE.Color("#0891B2"), transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
   }), [])
 
   useFrame(({ clock }) => {
@@ -218,25 +244,35 @@ function LogoScene() {
     fragsGroupRef.current.position.y = gs.globalPosY + idleFloat
     fragsGroupRef.current.scale.setScalar(Math.max(gs.globalScale, 0.01))
 
-    // Rotation scroll uniquement — sans parallax souris
     globalGroupRef.current.rotation.y = gs.globalRotY + idleRotY
     globalGroupRef.current.rotation.x = gs.globalRotX
     globalGroupRef.current.position.y = gs.globalPosY + idleFloat
     globalGroupRef.current.scale.setScalar(Math.max(gs.globalScale, 0.01))
 
-    // Glow progressif : les bords s'allument à mesure que le logo s'assemble
-    // assemblyGlow accélère exponentiellement vers 1 → flash lumineux à l'assemblage complet
+    // Glow progressif : s'intensifie exponentiellement vers l'assemblage complet
     const assemblyGlow   = Math.pow(gs.assemblyT, 2.5)
-    const edgeBrightness = 1 + assemblyGlow * 2.2   // 1× au départ → 3.2× à l'arrivée
+    const edgeBrightness = 1 + assemblyGlow * 2.2
+    const fb = gs.fragOpacity * pulse
 
-    matFragEdge.opacity = Math.min(1.0, gs.fragOpacity * pulse * edgeBrightness)
-    matFragFill.opacity = gs.fragOpacity * assemblyGlow * 0.35
+    matFragCore.opacity  = Math.min(1.0, fb * edgeBrightness)
+    matFragGlow1.opacity = Math.min(0.70, fb * 0.65 * edgeBrightness)
+    matFragGlow2.opacity = Math.min(0.40, fb * 0.30 * edgeBrightness)
+    matFragFill.opacity  = gs.fragOpacity * assemblyGlow * 0.28
 
-    // Wireframe global (après crossfade)
-    matOrange.opacity = Math.min(1.0, gs.globalOpacity * pulse)
-    matCyan.opacity   = Math.min(0.9, gs.globalOpacity * 0.75 * pulse)
-    matFillL.opacity  = gs.globalOpacity * 0.10
-    matFillT.opacity  = gs.globalOpacity * 0.07
+    // Glow global orange — 4 couches superposées
+    const go = gs.globalOpacity * pulse
+    matOrangeCore.opacity = Math.min(1.0,  go * 1.00)
+    matOrange1.opacity    = Math.min(0.80, go * 0.80)
+    matOrange2.opacity    = Math.min(0.50, go * 0.50)
+    matOrange3.opacity    = Math.min(0.22, go * 0.22)
+
+    // Glow global cyan — 3 couches
+    matCyanCore.opacity = Math.min(0.90, go * 0.90)
+    matCyan1.opacity    = Math.min(0.60, go * 0.60)
+    matCyan2.opacity    = Math.min(0.28, go * 0.28)
+
+    matFillL.opacity = gs.globalOpacity * 0.10
+    matFillT.opacity = gs.globalOpacity * 0.07
   })
 
   const zOff = -depth / 2
@@ -249,16 +285,37 @@ function LogoScene() {
           fragGeos={fragGeos}
           fragEdges={fragEdges}
           matFill={matFragFill}
-          matEdge={matFragEdge}
+          matCore={matFragCore}
+          matGlow1={matFragGlow1}
+          matGlow2={matFragGlow2}
         />
       </group>
 
-      {/* Wireframe global — logo complet */}
+      {/* Wireframe global — logo complet avec glow en couches */}
       <group ref={globalGroupRef} position={[0, 0, zOff]}>
         <mesh geometry={geoL} material={matFillL} />
         <mesh geometry={geoT} material={matFillT} />
-        <lineSegments geometry={edgesL} material={matOrange} />
-        <lineSegments geometry={edgesT} material={matCyan} />
+
+        {/* Orange L : core + 3 halos de rayon croissant */}
+        <lineSegments geometry={edgesL} material={matOrangeCore} />
+        <group scale={[1.012, 1.012, 1]}>
+          <lineSegments geometry={edgesL} material={matOrange1} />
+        </group>
+        <group scale={[1.032, 1.032, 1]}>
+          <lineSegments geometry={edgesL} material={matOrange2} />
+        </group>
+        <group scale={[1.070, 1.070, 1]}>
+          <lineSegments geometry={edgesL} material={matOrange3} />
+        </group>
+
+        {/* Cyan triangle : core + 2 halos */}
+        <lineSegments geometry={edgesT} material={matCyanCore} />
+        <group scale={[1.012, 1.012, 1]}>
+          <lineSegments geometry={edgesT} material={matCyan1} />
+        </group>
+        <group scale={[1.032, 1.032, 1]}>
+          <lineSegments geometry={edgesT} material={matCyan2} />
+        </group>
       </group>
     </>
   )
