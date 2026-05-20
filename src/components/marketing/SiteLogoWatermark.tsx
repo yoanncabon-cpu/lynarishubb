@@ -31,8 +31,6 @@ const gs = {
   globalPosY:   0,
 }
 
-const mousePos = { x: 0, y: 0 }
-
 // ─── Coord helper ──────────────────────────────────────────────────────────────
 const S = 1.5 / 50
 const cx = 50, cy = 50
@@ -213,27 +211,30 @@ function LogoScene() {
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
-    const pulse    = 1 + Math.sin(t * 0.9)  * 0.08
-    const idleRotY = Math.sin(t * 0.14) * 0.04
+    const pulse     = 1 + Math.sin(t * 0.9) * 0.08
+    const idleRotY  = Math.sin(t * 0.14) * 0.04
     const idleFloat = Math.sin(t * 0.22) * 0.04
 
-    // Groupe fragments — scale + flottement, pas de rotation (les enfants gèrent ça)
     fragsGroupRef.current.position.y = gs.globalPosY + idleFloat
     fragsGroupRef.current.scale.setScalar(Math.max(gs.globalScale, 0.01))
 
-    // Groupe wireframe global — rotation scroll
-    globalGroupRef.current.rotation.y = gs.globalRotY + idleRotY + mousePos.x * 0.10
-    globalGroupRef.current.rotation.x = gs.globalRotX - mousePos.y * 0.07
+    // Rotation scroll uniquement — sans parallax souris
+    globalGroupRef.current.rotation.y = gs.globalRotY + idleRotY
+    globalGroupRef.current.rotation.x = gs.globalRotX
     globalGroupRef.current.position.y = gs.globalPosY + idleFloat
     globalGroupRef.current.scale.setScalar(Math.max(gs.globalScale, 0.01))
 
-    // Matériaux fragments
-    matFragEdge.opacity = gs.fragOpacity * pulse
-    matFragFill.opacity = gs.fragOpacity * 0.28
+    // Glow progressif : les bords s'allument à mesure que le logo s'assemble
+    // assemblyGlow accélère exponentiellement vers 1 → flash lumineux à l'assemblage complet
+    const assemblyGlow   = Math.pow(gs.assemblyT, 2.5)
+    const edgeBrightness = 1 + assemblyGlow * 2.2   // 1× au départ → 3.2× à l'arrivée
 
-    // Matériaux wireframe global
-    matOrange.opacity = gs.globalOpacity * pulse
-    matCyan.opacity   = gs.globalOpacity * 0.75 * pulse
+    matFragEdge.opacity = Math.min(1.0, gs.fragOpacity * pulse * edgeBrightness)
+    matFragFill.opacity = gs.fragOpacity * assemblyGlow * 0.35
+
+    // Wireframe global (après crossfade)
+    matOrange.opacity = Math.min(1.0, gs.globalOpacity * pulse)
+    matCyan.opacity   = Math.min(0.9, gs.globalOpacity * 0.75 * pulse)
     matFillL.opacity  = gs.globalOpacity * 0.10
     matFillT.opacity  = gs.globalOpacity * 0.07
   })
@@ -396,17 +397,6 @@ export function SiteLogoWatermark() {
 
     return () => { cancelled = true; cleanup?.() }
   }, [mounted, pathname])
-
-  // Mouse parallax
-  useEffect(() => {
-    if (!mounted) return
-    const onMove = (e: MouseEvent) => {
-      mousePos.x = (e.clientX / window.innerWidth) * 2 - 1
-      mousePos.y = -((e.clientY / window.innerHeight) * 2 - 1)
-    }
-    window.addEventListener("mousemove", onMove, { passive: true })
-    return () => window.removeEventListener("mousemove", onMove)
-  }, [mounted])
 
   if (!mounted) return null
 
