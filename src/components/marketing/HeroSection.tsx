@@ -13,10 +13,6 @@ const HeroScene = dynamic(
   { ssr: false }
 )
 
-const HeroLogo3D = dynamic(
-  () => import("./HeroLogo3D").then((m) => ({ default: m.HeroLogo3D })),
-  { ssr: false }
-)
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -82,9 +78,6 @@ export function HeroSection() {
     >
       {/* Three.js particles background — hidden on mobile */}
       {!isMobile && <HeroScene />}
-
-      {/* Logo 3D wireframe — apparaît et flotte en arrière-plan */}
-      {!isMobile && <HeroLogo3D />}
 
       {/* Radial ambient glows */}
       <div
