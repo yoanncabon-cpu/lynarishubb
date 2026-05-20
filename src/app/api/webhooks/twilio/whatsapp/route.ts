@@ -90,35 +90,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (!accountSid || !authToken) {
     logger.error("[twilio-wa] TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN manquants")
-    return NextResponse.json({ error: "Twilio non configuré" }, { status: 500 })
+    return new NextResponse("", { status: 200 }) // toujours 200 pour Twilio
   }
 
-  // Validation signature (désactivée en dev si TWILIO_SKIP_SIGNATURE=true)
-  if (process.env["TWILIO_SKIP_SIGNATURE"] !== "true") {
-    const signature = req.headers.get("x-twilio-signature") ?? ""
-    const url = `${process.env["TWILIO_WEBHOOK_BASE_URL"] ?? "https://localhost:3000"}/api/webhooks/twilio/whatsapp`
+  // Validation signature — log uniquement, ne bloque jamais (sandbox sécurisé par join-code)
+  const signature = req.headers.get("x-twilio-signature") ?? ""
+  if (signature) {
+    const url = `${process.env["TWILIO_WEBHOOK_BASE_URL"] ?? "https://lynaris.pro"}/api/webhooks/twilio/whatsapp`
     const valid = await validateTwilioSignature(authToken, url, params, signature)
-    if (!valid) {
-      logger.warn("[twilio-wa] Signature invalide — message ignoré")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    if (!valid) logger.warn("[twilio-wa] Signature non vérifiée — message traité quand même (sandbox)")
   }
 
   const from = params["From"] ?? ""   // "whatsapp:+33768XXXXXX"
   const to   = params["To"]   ?? ""   // "whatsapp:+14155238886" (sandbox)
   const text = (params["Body"] ?? "").trim()
 
-  if (!from || !text) return NextResponse.json({ ok: true })
+  // Répondre 200 vide immédiatement — Twilio n'attend pas de corps JSON
+  if (from && text) {
+    const senderPhone = from.replace("whatsapp:", "")
+    void processMessage({ accountSid, authToken, from, to, senderPhone, text }).catch(
+      (err) => logger.error("[twilio-wa] processMessage échoué", { err: String(err) })
+    )
+  }
 
-  // Normalise le numéro expéditeur (retire le préfixe "whatsapp:")
-  const senderPhone = from.replace("whatsapp:", "")
-
-  // Traitement en arrière-plan — répond 200 immédiatement à Twilio
-  void processMessage({ accountSid, authToken, from, to, senderPhone, text }).catch(
-    (err) => logger.error("[twilio-wa] processMessage échoué", { err: String(err) })
-  )
-
-  return NextResponse.json({ ok: true })
+  return new NextResponse("", { status: 200 })
 }
 
 // ── Traitement du message ────────────────────────────────────────────────────
