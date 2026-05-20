@@ -23,7 +23,7 @@ const FRAG_INIT: Array<{ p: [number, number, number]; r: [number, number, number
 // État animé par GSAP — lu dans useFrame
 const gs = {
   assemblyT:    0,     // 0=dispersé, 1=assemblé
-  fragOpacity:  0.38,  // fragments visibles dès le chargement (logo brisé)
+  fragOpacity:  0.14,  // fragments visibles dès le chargement (logo brisé)
   globalOpacity: 0,   // opacité du wireframe global
   globalRotY:   0,
   globalRotX:   0,
@@ -396,7 +396,7 @@ export function SiteLogoWatermark() {
 
         // Reset — logo brisé visible dès le chargement
         Object.assign(gs, {
-          assemblyT: 0, fragOpacity: 0.38, globalOpacity: 0,
+          assemblyT: 0, fragOpacity: 0.14, globalOpacity: 0,
           globalRotY: 0, globalRotX: 0, globalScale: 1.12, globalPosY: 0,
         })
 
@@ -423,7 +423,7 @@ export function SiteLogoWatermark() {
           duration: 0.10,
         }, 0.62)
         tl.to(gs, {
-          globalOpacity: 0.90,
+          globalOpacity: 0.30,
           ease: "power1.out",
           duration: 0.10,
         }, 0.62)
