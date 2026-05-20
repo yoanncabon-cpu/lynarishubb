@@ -951,3 +951,23 @@ h1, h2, h3, h4 {
 @media (prefers-reduced-motion: reduce) {
   .typing-dot { animation: none; opacity: 0.6; }
 }
+
+/* ─── Mobile : panels flottants (dropdown notif + toasts) ─────────────── */
+/* Le canvas a overflow:hidden — les dropdowns position:absolute y sont clippés.
+   On les passe en position:fixed sur mobile pour s'en échapper. */
+@media (max-width: 1023px) {
+  .ly-notif-panel {
+    position: fixed !important;
+    right: 16px !important;
+    left: auto !important;
+    top: calc(clamp(52px, 8vw, 60px) + clamp(8px, 1.5vw, 16px) + 8px) !important;
+    width: min(340px, calc(100vw - 32px)) !important;
+  }
+
+  .ly-toast-container {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 16px !important;
+    max-width: none !important;
+  }
+}

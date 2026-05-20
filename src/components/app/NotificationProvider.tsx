@@ -272,6 +272,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       {children}
       {/* Toast container */}
       <div
+        className="ly-toast-container"
         aria-live="polite"
         aria-atomic="false"
         role="region"

@@ -430,6 +430,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
 
           {notifOpen && (
             <GlassPanel
+              className="ly-notif-panel"
               level={1}
               strong
               radius={16}
@@ -438,7 +439,7 @@ export function SpotlightTopBar({ onMenuClick, onSearchClick, isAdmin }: Props) 
                 position: "absolute",
                 right: 0,
                 top: "calc(100% + 8px)",
-                width: "min(340px, calc(100vw - 32px))",
+                width: 340,
                 zIndex: 50,
                 overflow: "hidden",
                 background: "rgba(14,14,20,0.96)",
