@@ -82,17 +82,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const senderPhone = from.replace("whatsapp:", "")
 
-  // `after()` garantit que Vercel n'arrête pas la fonction après la réponse 200
   after(async () => {
+    // ── Étape 1 : test ping ─────────────────────────────────────────────────
+    // Retire ce bloc une fois confirmé que la réponse WhatsApp arrive
+    logger.info("[twilio-wa] DEBUG ping", { from, to, text })
+    await sendReply(accountSid, authToken, to, from, `✅ Webhook OK — reçu : "${text}"`)
+
+    // ── Étape 2 : orgId ─────────────────────────────────────────────────────
     const orgId = await resolveOrgId()
+    logger.info("[twilio-wa] orgId", { orgId })
     if (!orgId) {
-      logger.error("[twilio-wa] orgId introuvable")
+      await sendReply(accountSid, authToken, to, from, "❌ orgId introuvable — contacte Yoann")
       return
     }
 
     pushHistory(orgId, senderPhone, { role: "user", content: text })
     const history = getHistory(orgId, senderPhone)
 
+    // ── Étape 3 : Charles ───────────────────────────────────────────────────
     let reply: string
     try {
       logger.info("[twilio-wa] Appel Charles", { orgId, senderPhone })
@@ -103,14 +110,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         config: { channel: "whatsapp", senderPhone },
       })
       reply = result.content.trim()
-      logger.info("[twilio-wa] Charles a répondu", { preview: reply.slice(0, 80) })
     } catch (err) {
       logger.error("[twilio-wa] runAgent échoué", { err: String(err) })
       reply = "Désolé, une erreur est survenue. Réessaie dans quelques instants."
     }
 
     if (!reply) return
-
     pushHistory(orgId, senderPhone, { role: "assistant", content: reply })
     await sendReply(accountSid, authToken, to, from, reply)
   })
