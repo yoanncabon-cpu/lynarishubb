@@ -1,7 +1,7 @@
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-import { type NextRequest, NextResponse, after } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { integrations, organizations } from "@/lib/db/schema"
 import { runAgent } from "@/lib/agents/executor"
@@ -14,10 +14,10 @@ import { eq } from "drizzle-orm"
 async function sendReply(
   accountSid: string,
   authToken: string,
-  sandboxNumber: string,   // whatsapp:+14155238886
-  userNumber: string,      // whatsapp:+33XXXXXXXXX
+  sandboxNumber: string,
+  userNumber: string,
   body: string,
-): Promise<void> {
+): Promise<{ ok: boolean; status: number; error?: string; sid?: string }> {
   const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64")
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
@@ -27,19 +27,16 @@ async function sendReply(
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({
-        From: sandboxNumber,  // toujours le numéro sandbox, pas le MessagingServiceSid
-        To:   userNumber,
-        Body: body,
-      }),
+      body: new URLSearchParams({ From: sandboxNumber, To: userNumber, Body: body }),
     },
   )
+  const data = await res.json() as { message?: string; sid?: string }
   if (!res.ok) {
-    const err = await res.json() as { message?: string }
-    logger.error("[twilio-wa] Envoi reply échoué", { status: res.status, error: err.message })
-  } else {
-    logger.info("[twilio-wa] Reply envoyée", { to: userNumber })
+    logger.error("[twilio-wa] sendReply échoué", { status: res.status, error: data.message, from: sandboxNumber, to: userNumber })
+    return { ok: false, status: res.status, error: data.message }
   }
+  logger.info("[twilio-wa] sendReply OK", { sid: data.sid, to: userNumber })
+  return { ok: true, status: res.status, sid: data.sid }
 }
 
 // ── Résolution orgId ─────────────────────────────────────────────────────────
@@ -80,46 +77,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (!from || !to || !text) return new NextResponse("", { status: 200 })
 
-  const senderPhone = from.replace("whatsapp:", "")
+  // ── Test ping synchrone ───────────────────────────────────────────────────
+  // Envoie un pong immédiat pour vérifier que Twilio → sendReply fonctionne
+  logger.info("[twilio-wa] ping", { from, to, text })
+  const pingResult = await sendReply(accountSid, authToken, to, from, `✅ Charles reçoit : "${text}"`)
+  logger.info("[twilio-wa] sendReply résultat", { pingResult })
 
-  after(async () => {
-    // ── Étape 1 : test ping ─────────────────────────────────────────────────
-    // Retire ce bloc une fois confirmé que la réponse WhatsApp arrive
-    logger.info("[twilio-wa] DEBUG ping", { from, to, text })
-    await sendReply(accountSid, authToken, to, from, `✅ Webhook OK — reçu : "${text}"`)
-
-    // ── Étape 2 : orgId ─────────────────────────────────────────────────────
-    const orgId = await resolveOrgId()
-    logger.info("[twilio-wa] orgId", { orgId })
-    if (!orgId) {
-      await sendReply(accountSid, authToken, to, from, "❌ orgId introuvable — contacte Yoann")
-      return
-    }
-
-    pushHistory(orgId, senderPhone, { role: "user", content: text })
-    const history = getHistory(orgId, senderPhone)
-
-    // ── Étape 3 : Charles ───────────────────────────────────────────────────
-    let reply: string
-    try {
-      logger.info("[twilio-wa] Appel Charles", { orgId, senderPhone })
-      const result = await runAgent({
-        agentSlug: "charles",
-        messages:  history,
-        orgId,
-        config: { channel: "whatsapp", senderPhone },
-      })
-      reply = result.content.trim()
-    } catch (err) {
-      logger.error("[twilio-wa] runAgent échoué", { err: String(err) })
-      reply = "Désolé, une erreur est survenue. Réessaie dans quelques instants."
-    }
-
-    if (!reply) return
-    pushHistory(orgId, senderPhone, { role: "assistant", content: reply })
-    await sendReply(accountSid, authToken, to, from, reply)
-  })
-
-  // Répond 200 vide immédiatement — Twilio n'attend pas de corps
   return new NextResponse("", { status: 200 })
 }
