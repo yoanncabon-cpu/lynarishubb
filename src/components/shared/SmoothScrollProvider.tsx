@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { usePathname } from "next/navigation"
 import Lenis from "lenis"
 
 /**
@@ -14,6 +15,24 @@ import Lenis from "lenis"
  * animations scroll-pinnées restent en phase avec le smooth-scroll.
  */
 export function SmoothScrollProvider() {
+  const pathname = usePathname()
+
+  // Recalcule les positions ScrollTrigger après chaque navigation client-side
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>
+    void (async () => {
+      try {
+        const { ScrollTrigger } = await import("gsap/ScrollTrigger")
+        // Délai pour laisser le DOM de la nouvelle page se rendre
+        timeoutId = setTimeout(() => {
+          window.scrollTo(0, 0)
+          ScrollTrigger.refresh()
+        }, 100)
+      } catch { /* gsap absent */ }
+    })()
+    return () => clearTimeout(timeoutId)
+  }, [pathname])
+
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches

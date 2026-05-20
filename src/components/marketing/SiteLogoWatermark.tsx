@@ -2,6 +2,7 @@
 "use client"
 
 import { useRef, useMemo, Suspense, useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import { Canvas, useFrame } from "@react-three/fiber"
 import * as THREE from "three"
 import "@/lib/three-compat"
@@ -315,13 +316,14 @@ function Scene() {
 // ─── Export ───────────────────────────────────────────────────────────────────
 export function SiteLogoWatermark() {
   const [mounted, setMounted] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
     setMounted(true)
   }, [])
 
-  // Timeline GSAP scroll-driven
+  // Timeline GSAP scroll-driven — se réinitialise à chaque changement de route
   useEffect(() => {
     if (!mounted) return
     let cleanup: (() => void) | null = null
@@ -331,6 +333,8 @@ export function SiteLogoWatermark() {
       ([{ default: gsap }, stMod]) => {
         if (cancelled) return
         gsap.registerPlugin(stMod.ScrollTrigger)
+        // Tuer les anciens triggers avant de recréer (navigation client-side)
+        stMod.ScrollTrigger.getAll().forEach(st => st.kill())
 
         // Reset — logo brisé visible dès le chargement
         Object.assign(gs, {
@@ -391,7 +395,7 @@ export function SiteLogoWatermark() {
     )
 
     return () => { cancelled = true; cleanup?.() }
-  }, [mounted])
+  }, [mounted, pathname])
 
   // Mouse parallax
   useEffect(() => {
@@ -409,7 +413,7 @@ export function SiteLogoWatermark() {
   return (
     <div
       aria-hidden
-      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}
+      style={{ position: "fixed", inset: 0, zIndex: 15, pointerEvents: "none", mixBlendMode: "screen" }}
     >
       <Canvas
         camera={{ position: [0, 0, 7], fov: 44 }}
