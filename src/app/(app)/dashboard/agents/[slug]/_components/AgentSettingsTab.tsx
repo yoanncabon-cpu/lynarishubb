@@ -295,6 +295,175 @@ function blurInput(el: HTMLElement | null) {
   el.style.borderColor = "rgba(255,255,255,0.08)"
 }
 
+// ─── ElevenLabsConnectSection ─────────────────────────────────────────────────
+
+function ElevenLabsConnectSection() {
+  const [agentId, setAgentId] = useState("")
+  const [currentId, setCurrentId] = useState<string | null>(null)
+  const [connected, setConnected] = useState(false)
+  const [saveState, setSaveState] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [loaded, setLoaded] = useState(false)
+  const [syncState, setSyncState] = useState<"idle" | "loading" | "success" | "error">("idle")
+
+  useEffect(() => {
+    fetch("/api/integrations/elevenlabs/agent-id")
+      .then(r => r.json() as Promise<{ agent_id: string | null; connected: boolean }>)
+      .then(data => {
+        setCurrentId(data.agent_id)
+        setConnected(data.connected)
+        if (data.agent_id) setAgentId(data.agent_id)
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true))
+  }, [])
+
+  async function handleSave() {
+    if (!agentId.trim()) return
+    setSaveState("loading")
+    try {
+      const res = await fetch("/api/integrations/elevenlabs/agent-id", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent_id: agentId.trim() }),
+      })
+      if (res.ok) {
+        setCurrentId(agentId.trim())
+        setSaveState("success")
+        setTimeout(() => setSaveState("idle"), 2500)
+      } else {
+        const err = await res.json() as { error?: string }
+        setSaveState("error")
+        setTimeout(() => setSaveState("idle"), 3000)
+        console.error("[ElevenLabs agent-id]", err.error)
+      }
+    } catch {
+      setSaveState("error")
+      setTimeout(() => setSaveState("idle"), 3000)
+    }
+  }
+
+  async function handleSync() {
+    setSyncState("loading")
+    try {
+      const res = await fetch("/api/agents/marine/elevenlabs-sync", { method: "POST" })
+      const data = await res.json() as { synced?: boolean; error?: string; skipped?: boolean; reason?: string }
+      if (data.synced) {
+        setSyncState("success")
+      } else {
+        setSyncState("error")
+        console.error("[ElevenLabs sync]", data.error ?? data.reason)
+      }
+    } catch {
+      setSyncState("error")
+    }
+    setTimeout(() => setSyncState("idle"), 3000)
+  }
+
+  return (
+    <div style={{ ...sectionStyle }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        {/* ElevenLabs icon — simple waveform SVG */}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ color: "#A855F7", flexShrink: 0 }}>
+          <path d="M2 12h2M6 8v8M10 5v14M14 9v6M18 6v12M22 10v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+        <p style={{ ...sectionTitleStyle, margin: 0 }}>ElevenLabs Conversational AI</p>
+      </div>
+
+      {!loaded ? (
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: 0 }}>Chargement…</p>
+      ) : !connected ? (
+        <p style={{ fontSize: 12, color: "rgba(232,111,77,0.7)", margin: 0 }}>
+          ElevenLabs non connecté — va dans <strong style={{ color: "rgba(255,255,255,0.5)" }}>Intégrations → ElevenLabs</strong> pour entrer ta clé API d&apos;abord.
+        </p>
+      ) : (
+        <>
+          <div>
+            <label style={labelStyle}>Agent ID ElevenLabs</label>
+            <p style={{ ...helperStyle, marginTop: 0, marginBottom: 8 }}>
+              L&apos;ID de ton agent Conversational AI ElevenLabs (format <code style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>xxxxxxxxxxxxxxxxxxxxxxxx</code>).
+              Trouve-le dans ElevenLabs → Conversational AI → ton agent → Settings.
+            </p>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                type="text"
+                value={agentId}
+                onChange={e => setAgentId(e.target.value)}
+                placeholder="Colle ici l'Agent ID ElevenLabs"
+                style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-geist-mono, monospace)", fontSize: 12 }}
+                onFocus={e => focusInput(e.currentTarget)}
+                onBlur={e => blurInput(e.currentTarget)}
+              />
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saveState === "loading" || !agentId.trim()}
+                style={{
+                  flexShrink: 0, height: 36, padding: "0 14px", borderRadius: 8, cursor: "pointer",
+                  border: "1px solid rgba(168,85,247,0.3)",
+                  background: saveState === "success" ? "rgba(34,197,94,0.12)" : "rgba(168,85,247,0.12)",
+                  color: saveState === "success" ? "#86efac" : saveState === "error" ? "#f87171" : "#C084FC",
+                  fontSize: 12, fontWeight: 600,
+                  opacity: (!agentId.trim() || saveState === "loading") ? 0.5 : 1,
+                  transition: "all 150ms",
+                }}
+              >
+                {saveState === "loading" ? "…" : saveState === "success" ? "✓ Sauvé" : saveState === "error" ? "Erreur" : "Sauvegarder"}
+              </button>
+            </div>
+            {saveState === "error" && (
+              <p style={{ ...helperStyle, color: "rgba(248,113,113,0.8)", marginTop: 6 }}>
+                Erreur — assure-toi que l&apos;intégration ElevenLabs est bien connectée.
+              </p>
+            )}
+          </div>
+
+          {currentId && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{
+                  width: 6, height: 6, borderRadius: "50%",
+                  background: "#22C55E",
+                  boxShadow: "0 0 6px rgba(34,197,94,0.6)",
+                }} />
+                <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                  Agent configuré : <code style={{ fontSize: 10, color: "rgba(168,85,247,0.8)" }}>{currentId.slice(0, 14)}…</code>
+                </p>
+              </div>
+
+              {/* Sync prompt button */}
+              <button
+                type="button"
+                onClick={handleSync}
+                disabled={syncState === "loading"}
+                style={{
+                  marginTop: 10,
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+                  border: "1px solid rgba(168,85,247,0.2)",
+                  background: syncState === "success" ? "rgba(34,197,94,0.08)" : "rgba(168,85,247,0.06)",
+                  color: syncState === "success" ? "#86efac" : syncState === "error" ? "#f87171" : "rgba(192,132,252,0.8)",
+                  fontSize: 11, fontWeight: 500,
+                  opacity: syncState === "loading" ? 0.6 : 1,
+                  transition: "all 150ms",
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 4v6h-6M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                </svg>
+                {syncState === "loading" ? "Synchronisation…" : syncState === "success" ? "Prompt synchronisé !" : syncState === "error" ? "Erreur sync" : "Synchroniser le prompt maintenant"}
+              </button>
+              <p style={{ ...helperStyle, marginTop: 4 }}>
+                Pousse le prompt de Marine vers ElevenLabs. Se fait aussi automatiquement à chaque sauvegarde.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── TelephonieSectionMarine ──────────────────────────────────────────────────
 
 const SECTORS = [
@@ -826,6 +995,9 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
             })}
           </div>
         )}
+
+        {/* Section ElevenLabs — Marine uniquement */}
+        {agent.slug === "marine" && <ElevenLabsConnectSection />}
 
         {/* Section Téléphonie — Marine uniquement */}
         {agent.slug === "marine" && (
