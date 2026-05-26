@@ -96,6 +96,24 @@ const AGENT_SPECIFIC_FIELDS: Record<string, SpecificField[]> = {
 const TONE_OPTIONS: AgentSettings["tone"][] = ["Professionnel", "Décontracté", "Formel", "Chaleureux"]
 const LANG_OPTIONS: AgentSettings["language"][] = ["Français", "English", "Español"]
 
+// Placeholders dynamiques pour le champ "services" selon le secteur
+const SECTOR_SERVICES_PLACEHOLDER: Record<string, string> = {
+  "médical":    "Kinésithérapie, Ostéopathie, Médecine générale…",
+  "restaurant": "Menu déjeuner, Formules du soir, Terrasse, Click & Collect…",
+  "artisan":    "Plomberie, Électricité, Carrelage, Dépannage urgence…",
+  "immobilier": "Vente, Location, Gestion locative, Estimation gratuite…",
+  "auto-école": "Leçons de conduite, Code, Permis B, Conduite accompagnée…",
+  "commerce":   "Vêtements, Accessoires, Retouches, Click & Collect…",
+  "générique":  "Consulting, Formation, Assistance, Support client…",
+}
+
+function getFieldPlaceholder(field: SpecificField, agentSlug: string, sector: string): string {
+  if (agentSlug === "marine" && field.key === "services") {
+    return SECTOR_SERVICES_PLACEHOLDER[sector] ?? field.placeholder
+  }
+  return field.placeholder
+}
+
 
 function buildDefaults(agentName: string): AgentSettings {
   return {
@@ -1009,6 +1027,8 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
             {specificFields.map((field) => {
               const value = settings.specific[field.key] ?? ""
               const fieldId = `specific-${field.key}`
+              const currentSector = settings.specific["sector"] ?? "médical"
+              const placeholder = getFieldPlaceholder(field, agent.slug, currentSector)
 
               if (field.type === "textarea") {
                 return (
@@ -1020,7 +1040,7 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
                       id={fieldId}
                       value={value}
                       onChange={(e) => setSpecific(field.key, e.target.value)}
-                      placeholder={field.placeholder}
+                      placeholder={placeholder}
                       rows={3}
                       style={textareaBaseStyle}
                       onFocus={(e) => focusInput(e.currentTarget)}
@@ -1042,7 +1062,7 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
                       type="number"
                       value={value}
                       onChange={(e) => setSpecific(field.key, e.target.value)}
-                      placeholder={field.placeholder}
+                      placeholder={placeholder}
                       style={inputStyle}
                       onFocus={(e) => focusInput(e.currentTarget)}
                       onBlur={(e) => blurInput(e.currentTarget)}
@@ -1062,7 +1082,7 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
                     type="text"
                     value={value}
                     onChange={(e) => setSpecific(field.key, e.target.value)}
-                    placeholder={field.placeholder}
+                    placeholder={placeholder}
                     style={inputStyle}
                     onFocus={(e) => focusInput(e.currentTarget)}
                     onBlur={(e) => blurInput(e.currentTarget)}
