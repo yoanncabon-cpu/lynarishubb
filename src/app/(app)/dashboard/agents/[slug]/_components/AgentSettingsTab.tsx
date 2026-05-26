@@ -349,6 +349,10 @@ function ElevenLabsConnectSection() {
       const data = await res.json() as { synced?: boolean; error?: string; skipped?: boolean; reason?: string }
       if (data.synced) {
         setSyncState("success")
+      } else if (data.skipped) {
+        // skipped = clé API manquante ou agent_id non configuré — pas une erreur bloquante
+        setSyncState("success")
+        console.warn("[ElevenLabs sync] skipped:", data.reason)
       } else {
         setSyncState("error")
         console.error("[ElevenLabs sync]", data.error ?? data.reason)
