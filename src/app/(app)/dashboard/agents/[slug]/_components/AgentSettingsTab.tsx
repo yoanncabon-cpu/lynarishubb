@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Save, Check, Play, Pause } from "lucide-react"
+import { Save, Check, Play, Pause, Copy, Phone } from "lucide-react"
 import type { Agent } from "@/lib/agents/data"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -295,6 +295,133 @@ function blurInput(el: HTMLElement | null) {
   el.style.borderColor = "rgba(255,255,255,0.08)"
 }
 
+// ─── TelephonieSectionMarine ──────────────────────────────────────────────────
+
+const SECTORS = [
+  { value: "médical", label: "Médical / Santé", description: "Kiné, médecin, dentiste, ostéo…" },
+  { value: "restaurant", label: "Restaurant / Bar", description: "Réservations, commandes, horaires" },
+  { value: "artisan", label: "Artisan / BTP", description: "Devis, urgences, suivi chantier" },
+  { value: "immobilier", label: "Immobilier", description: "Visites, estimations, rappels" },
+  { value: "commerce", label: "Commerce / Retail", description: "Info produit, stock, SAV" },
+  { value: "générique", label: "Autre / Générique", description: "Standard téléphonique multi-usage" },
+]
+
+function TelephonieSectionMarine({
+  orgId,
+  sector,
+  onSectorChange,
+}: {
+  orgId: string | null
+  sector: string
+  onSectorChange: (v: string) => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const appUrl = typeof window !== "undefined" ? window.location.origin : "https://www.lynaris.pro"
+  const webhookUrl = orgId
+    ? `${appUrl}/api/voice/incoming?org=${orgId}`
+    : `${appUrl}/api/voice/incoming?org=VOTRE_ORG_ID`
+
+  function handleCopy() {
+    void navigator.clipboard.writeText(webhookUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div style={{ ...sectionStyle }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <Phone size={13} style={{ color: "#22D3EE", flexShrink: 0 }} />
+        <p style={{ ...sectionTitleStyle, margin: 0 }}>Téléphonie</p>
+      </div>
+
+      {/* Secteur */}
+      <div>
+        <label style={labelStyle}>Type d&apos;activité</label>
+        <p style={{ ...helperStyle, marginTop: 0, marginBottom: 8 }}>
+          Définit le comportement de Marine selon ton secteur.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {SECTORS.map(s => {
+            const isSelected = (sector || "médical") === s.value
+            return (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => onSectorChange(s.value)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "8px 12px", borderRadius: 8, textAlign: "left", cursor: "pointer",
+                  border: `1px solid ${isSelected ? "rgba(34,211,238,0.35)" : "rgba(255,255,255,0.07)"}`,
+                  background: isSelected ? "rgba(34,211,238,0.07)" : "rgba(255,255,255,0.025)",
+                  transition: "border-color 150ms, background 150ms",
+                }}
+                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)" }}
+                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)" }}
+              >
+                <div style={{
+                  width: 12, height: 12, borderRadius: "50%", flexShrink: 0,
+                  border: `2px solid ${isSelected ? "#22D3EE" : "rgba(255,255,255,0.2)"}`,
+                  background: isSelected ? "#22D3EE" : "transparent",
+                  transition: "all 150ms",
+                }} />
+                <div>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: isSelected ? 600 : 400, color: isSelected ? "#22D3EE" : "rgba(255,255,255,0.75)" }}>
+                    {s.label}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                    {s.description}
+                  </p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Webhook URL Twilio */}
+      <div>
+        <label style={labelStyle}>URL Twilio (Appel entrant)</label>
+        <p style={{ ...helperStyle, marginTop: 0, marginBottom: 8 }}>
+          Colle cette URL dans <strong style={{ color: "rgba(255,255,255,0.55)" }}>Twilio → Numéros de téléphone → Webhook &quot;Appel entrant&quot;</strong>
+        </p>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{
+            flex: 1, padding: "8px 12px", borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(0,0,0,0.25)",
+            fontSize: 11, color: "rgba(255,255,255,0.5)",
+            fontFamily: "var(--font-geist-mono, monospace)",
+            overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis",
+          }}>
+            {webhookUrl}
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label="Copier l'URL"
+            style={{
+              flexShrink: 0, width: 34, height: 34, borderRadius: 8, cursor: "pointer",
+              border: "1px solid rgba(255,255,255,0.1)",
+              background: copied ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.04)",
+              color: copied ? "#22C55E" : "rgba(255,255,255,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 150ms",
+            }}
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+          </button>
+        </div>
+        {!orgId && (
+          <p style={{ ...helperStyle, color: "rgba(232,111,77,0.7)", marginTop: 6 }}>
+            Connecte-toi pour voir ton URL personnalisée.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── VoicePicker ─────────────────────────────────────────────────────────────
 
 interface VoiceItem {
@@ -463,6 +590,7 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const [toastIsError, setToastIsError] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [orgId, setOrgId] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const storageKey = `agent-settings-${agent.slug}`
@@ -472,7 +600,8 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
   useEffect(() => {
     fetch(`/api/agents/${agent.slug}/settings`)
       .then((r) => r.json())
-      .then((data: { settings: Partial<AgentSettings>; isActive?: boolean }) => {
+      .then((data: { settings: Partial<AgentSettings>; isActive?: boolean; orgId?: string }) => {
+        if (data.orgId) setOrgId(data.orgId)
         const { displayName: _ignored, ...rest } = data.settings
         setSettings((prev) => ({
           ...prev,
@@ -696,6 +825,15 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
               )
             })}
           </div>
+        )}
+
+        {/* Section Téléphonie — Marine uniquement */}
+        {agent.slug === "marine" && (
+          <TelephonieSectionMarine
+            orgId={orgId}
+            sector={settings.specific["sector"] ?? ""}
+            onSectorChange={(v) => setSpecific("sector", v)}
+          />
         )}
 
         {/* Section Voice ElevenLabs — Marine uniquement */}

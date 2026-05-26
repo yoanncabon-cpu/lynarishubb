@@ -51,6 +51,7 @@ export async function GET(
     settings: (row?.config as Record<string, unknown>) ?? {},
     isActive: row?.isActive ?? false,
     systemPromptOverride: row?.systemPromptOverride ?? null,
+    orgId,
   })
 }
 
