@@ -304,6 +304,9 @@ function ElevenLabsConnectSection() {
   const [saveState, setSaveState] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [loaded, setLoaded] = useState(false)
   const [syncState, setSyncState] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [prompt, setPrompt] = useState<string | null>(null)
+  const [promptLoading, setPromptLoading] = useState(false)
+  const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
     fetch("/api/integrations/elevenlabs/agent-id")
@@ -361,6 +364,20 @@ function ElevenLabsConnectSection() {
       setSyncState("error")
     }
     setTimeout(() => setSyncState("idle"), 3000)
+  }
+
+  async function handleViewPrompt() {
+    if (showPrompt) { setShowPrompt(false); return }
+    setPromptLoading(true)
+    try {
+      const res = await fetch("/api/agents/marine/prompt")
+      const data = await res.json() as { prompt?: string }
+      setPrompt(data.prompt ?? null)
+      setShowPrompt(true)
+    } catch {
+      setPrompt(null)
+    }
+    setPromptLoading(false)
   }
 
   return (
@@ -460,6 +477,53 @@ function ElevenLabsConnectSection() {
               <p style={{ ...helperStyle, marginTop: 4 }}>
                 Pousse le prompt de Marine vers ElevenLabs. Se fait aussi automatiquement à chaque sauvegarde.
               </p>
+
+              {/* Voir le prompt */}
+              <button
+                type="button"
+                onClick={() => void handleViewPrompt()}
+                disabled={promptLoading}
+                style={{
+                  marginTop: 8,
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: showPrompt ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+                  color: "rgba(255,255,255,0.45)",
+                  fontSize: 11, fontWeight: 500,
+                  opacity: promptLoading ? 0.6 : 1,
+                  transition: "all 150ms",
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+                {promptLoading ? "Chargement…" : showPrompt ? "Masquer le prompt" : "Voir le prompt généré"}
+              </button>
+
+              {showPrompt && prompt && (
+                <div style={{
+                  marginTop: 8,
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  background: "rgba(0,0,0,0.3)",
+                  maxHeight: 320,
+                  overflowY: "auto",
+                }}>
+                  <pre style={{
+                    margin: 0,
+                    fontSize: 11,
+                    color: "rgba(255,255,255,0.55)",
+                    fontFamily: "var(--font-geist-mono, monospace)",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    lineHeight: 1.6,
+                  }}>
+                    {prompt}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
         </>

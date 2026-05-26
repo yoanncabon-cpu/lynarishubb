@@ -236,7 +236,7 @@ const SECTOR_CONTEXT: Record<string, {
 function systemPrompt(config: AgentConfig): string {
   const specific = (config.specific as Record<string, string | undefined> | undefined) ?? {}
 
-  const agentName    = "Marine"
+  const agentName    = (config["displayName"] as string | undefined)?.trim() || "Marine"
   const rawSector    = (config["sector"] as string | undefined) ?? specific.sector ?? "médical"
   const sector       = SECTOR_CONTEXT[rawSector] ? rawSector : "générique"
   const ctx          = SECTOR_CONTEXT[sector]!
