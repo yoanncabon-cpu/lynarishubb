@@ -58,6 +58,14 @@ type LucideIcon = React.FC<{ size?: number; color?: string; strokeWidth?: number
 
 type SkillFlow = "generate" | "upload" | "campaign" | "setup"
 
+interface SkillField {
+  key: string
+  label: string
+  placeholder: string
+  multiline?: boolean
+  required?: boolean
+}
+
 interface SkillItem {
   id: string
   title: string
@@ -72,6 +80,7 @@ interface SkillItem {
   placeholder?: string
   fileUrlLabel?: string
   fileUrlPlaceholder?: string
+  fields?: SkillField[]
 }
 
 const SKILLS: SkillItem[] = [
@@ -228,7 +237,12 @@ const SKILLS: SkillItem[] = [
     ctaLabel: "Créer un agent",
     category: "automatisation",
     flow: "setup",
-    placeholder: "Décrivez votre activité, les questions fréquentes de vos clients, le ton souhaité...",
+    fields: [
+      { key: "orgName", label: "Nom de l'entreprise", placeholder: "Cabinet Médical Dupont...", required: true },
+      { key: "product", label: "Produit / service concerné", placeholder: "Logiciel de gestion, formation en ligne..." },
+      { key: "faq", label: "Questions fréquentes des clients", placeholder: "Délais, retours, fonctionnement du service...", multiline: true },
+      { key: "tone", label: "Ton souhaité", placeholder: "Professionnel et chaleureux, formel, décontracté..." },
+    ],
   },
   {
     id: "agent-standard",
@@ -241,7 +255,12 @@ const SKILLS: SkillItem[] = [
     ctaLabel: "Créer un agent",
     category: "automatisation",
     flow: "setup",
-    placeholder: "Nom de l'entreprise, horaires d'ouverture, services proposés, numéros de redirection...",
+    fields: [
+      { key: "orgName", label: "Nom de l'entreprise", placeholder: "Cabinet Médical Dupont...", required: true },
+      { key: "hours", label: "Horaires d'ouverture", placeholder: "Lun–Ven 8h–19h, Sam 9h–12h" },
+      { key: "services", label: "Services proposés", placeholder: "Kinésithérapie, ostéopathie, rééducation...", multiline: true },
+      { key: "redirections", label: "Numéros de redirection", placeholder: "+33 6 12 34 56 78 — Urgences" },
+    ],
   },
 ]
 
@@ -358,6 +377,7 @@ interface WizardState {
   date: string
   time: string
   fileUrl: string
+  fieldValues: Record<string, string>
   loading: boolean
   result: string | null
   errorMsg: string | null
@@ -371,6 +391,7 @@ const INITIAL_WIZARD: WizardState = {
   date: "",
   time: "",
   fileUrl: "",
+  fieldValues: {},
   loading: false,
   result: null,
   errorMsg: null,
@@ -466,11 +487,25 @@ function buildMessage(skill: SkillItem, state: WizardState): string {
         .filter(Boolean)
         .join("\n")
 
-    case "agent-support":
-      return `Configure-toi en tant qu'agent de support client.\nDescription du contexte et des besoins :\n${state.description}`
+    case "agent-support": {
+      const lines = ["Configure-toi en tant qu'agent de support client."]
+      if (state.fieldValues["orgName"]) lines.push(`Entreprise : ${state.fieldValues["orgName"]}`)
+      if (state.fieldValues["product"]) lines.push(`Produit / service : ${state.fieldValues["product"]}`)
+      if (state.fieldValues["faq"]) lines.push(`Questions fréquentes :\n${state.fieldValues["faq"]}`)
+      if (state.fieldValues["tone"]) lines.push(`Ton souhaité : ${state.fieldValues["tone"]}`)
+      if (state.description) lines.push(`Notes supplémentaires : ${state.description}`)
+      return lines.join("\n")
+    }
 
-    case "agent-standard":
-      return `Configure-toi en tant qu'agent de standard téléphonique.\nDescription du contexte et des besoins :\n${state.description}`
+    case "agent-standard": {
+      const lines = ["Configure-toi en tant qu'agent de standard téléphonique."]
+      if (state.fieldValues["orgName"]) lines.push(`Entreprise : ${state.fieldValues["orgName"]}`)
+      if (state.fieldValues["hours"]) lines.push(`Horaires : ${state.fieldValues["hours"]}`)
+      if (state.fieldValues["services"]) lines.push(`Services proposés :\n${state.fieldValues["services"]}`)
+      if (state.fieldValues["redirections"]) lines.push(`Numéros de redirection : ${state.fieldValues["redirections"]}`)
+      if (state.description) lines.push(`Notes supplémentaires : ${state.description}`)
+      return lines.join("\n")
+    }
 
     default:
       return state.description
@@ -588,6 +623,7 @@ function Step1({
   skill,
   state,
   onChange,
+  onFieldChange,
   onFileUrlChange,
   onAction,
   ctaLabel,
@@ -596,6 +632,7 @@ function Step1({
   skill: SkillItem
   state: WizardState
   onChange: (v: string) => void
+  onFieldChange: (key: string, v: string) => void
   onFileUrlChange: (v: string) => void
   onAction: () => void
   ctaLabel: string
@@ -647,43 +684,84 @@ function Step1({
         </p>
       </div>
 
-      {/* File URL field — upload flow only */}
-      {skill.flow === "upload" && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={S.label}>{skill.fileUrlLabel ?? "URL du fichier"}</div>
-          <input
-            type="url"
-            style={{ ...S.input, width: "100%" }}
-            placeholder={skill.fileUrlPlaceholder ?? "https://..."}
-            value={state.fileUrl}
-            onChange={(e) => onFileUrlChange(e.target.value)}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)"
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"
-            }}
-          />
+      {/* Structured fields — setup flow with fields */}
+      {skill.fields ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
+          {skill.fields.map((field) => (
+            <div key={field.key}>
+              <div style={{ ...S.label, marginBottom: 5 }}>
+                {field.label}
+                {field.required && (
+                  <span style={{ color: "#E86F4D", marginLeft: 3 }}>*</span>
+                )}
+              </div>
+              {field.multiline ? (
+                <textarea
+                  style={{ ...S.textarea, minHeight: 72 }}
+                  placeholder={field.placeholder}
+                  value={state.fieldValues[field.key] ?? ""}
+                  onChange={(e) => onFieldChange(field.key, e.target.value)}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)" }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)" }}
+                />
+              ) : (
+                <input
+                  type="text"
+                  style={{ ...S.input, width: "100%" }}
+                  placeholder={field.placeholder}
+                  value={state.fieldValues[field.key] ?? ""}
+                  onChange={(e) => onFieldChange(field.key, e.target.value)}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)" }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)" }}
+                />
+              )}
+            </div>
+          ))}
+          {/* Notes facultatives */}
+          <div>
+            <div style={{ ...S.label, marginBottom: 5 }}>Notes supplémentaires (facultatif)</div>
+            <textarea
+              style={{ ...S.textarea, minHeight: 68 }}
+              placeholder="Toute information complémentaire..."
+              value={state.description}
+              onChange={(e) => onChange(e.target.value)}
+              onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)" }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)" }}
+            />
+          </div>
         </div>
+      ) : (
+        <>
+          {/* File URL field — upload flow only */}
+          {skill.flow === "upload" && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={S.label}>{skill.fileUrlLabel ?? "URL du fichier"}</div>
+              <input
+                type="url"
+                style={{ ...S.input, width: "100%" }}
+                placeholder={skill.fileUrlPlaceholder ?? "https://..."}
+                value={state.fileUrl}
+                onChange={(e) => onFileUrlChange(e.target.value)}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)" }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)" }}
+              />
+            </div>
+          )}
+          <div style={{ marginBottom: 24 }}>
+            <div style={S.label}>
+              {skill.flow === "upload" ? "Instructions (facultatif)" : "Descriptif"}
+            </div>
+            <textarea
+              style={S.textarea}
+              placeholder={skill.placeholder ?? "Décrivez l'idée, le ton et le message..."}
+              value={state.description}
+              onChange={(e) => onChange(e.target.value)}
+              onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)" }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)" }}
+            />
+          </div>
+        </>
       )}
-
-      <div style={{ marginBottom: 24 }}>
-        <div style={S.label}>
-          {skill.flow === "upload" ? "Instructions (facultatif)" : "Descriptif"}
-        </div>
-        <textarea
-          style={S.textarea}
-          placeholder={skill.placeholder ?? "Décrivez l'idée, le ton et le message..."}
-          value={state.description}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)"
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"
-          }}
-        />
-      </div>
 
       {/* Ask agent link */}
       <div style={{ marginBottom: 20 }}>
@@ -1365,10 +1443,17 @@ function SkillWizardModal({
   }
 
   // Step 1 can-proceed logic
-  const step1CanProceed =
-    skill.flow === "upload"
-      ? state.fileUrl.trim() !== ""
-      : state.description.trim() !== ""
+  const step1CanProceed = (() => {
+    if (skill.fields) {
+      // au moins le 1er champ requis rempli
+      const requiredField = skill.fields.find((f) => f.required)
+      if (requiredField) return (state.fieldValues[requiredField.key] ?? "").trim() !== ""
+      // sinon au moins un champ non vide
+      return skill.fields.some((f) => (state.fieldValues[f.key] ?? "").trim() !== "")
+    }
+    if (skill.flow === "upload") return state.fileUrl.trim() !== ""
+    return state.description.trim() !== ""
+  })()
 
   // Progress bars — only for campaign flow
   const isCampaign = skill.flow === "campaign"
@@ -1420,6 +1505,9 @@ function SkillWizardModal({
             skill={skill}
             state={state}
             onChange={(v) => patch({ description: v })}
+            onFieldChange={(key, v) =>
+              patch({ fieldValues: { ...state.fieldValues, [key]: v } })
+            }
             onFileUrlChange={(v) => patch({ fileUrl: v })}
             onAction={handleStepNext}
             ctaLabel={step1CtaLabel[skill.flow]}

@@ -18,6 +18,9 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GOOGLE_AI_API_KEY: z.string().optional(),
   REPLICATE_API_TOKEN: z.string().optional(),
+  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_VOICE_ID_MARINE: z.string().optional(),
+  ELEVENLABS_WEBHOOK_SECRET: z.string().optional(),
 
   // ── Chiffrement ──────────────────────────────────────────────────
   INTEGRATIONS_ENCRYPTION_KEY: z.string().min(32),

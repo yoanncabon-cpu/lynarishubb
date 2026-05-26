@@ -52,6 +52,8 @@ interface CallSession {
   transcript: string[]
   isProcessing: boolean
   ws: WebSocket
+  voiceId: string
+  orgConfig: Record<string, unknown>
 }
 
 // ─── Lazy agent registry import ───────────────────────────────────────────────
@@ -86,7 +88,7 @@ async function sendAudioToTwilio(session: CallSession, text: string): Promise<vo
     return
   }
 
-  const voiceId = process.env["ELEVENLABS_VOICE_ID_MARINE"] ?? "pNInz6obpgDQGcFmaJgB"
+  const voiceId = session.voiceId
 
   try {
     const response = await fetch(
@@ -153,7 +155,7 @@ async function sendGreeting(session: CallSession): Promise<void> {
   const greeting = await anthropic.messages.create({
     model: agentDef.model,
     max_tokens: 100,
-    system: agentDef.systemPromptFn({ orgId: session.orgId }),
+    system: agentDef.systemPromptFn({ orgId: session.orgId, ...session.orgConfig }),
     messages: [
       { role: "user", content: "[CALL_START] Answer the phone with your standard greeting." },
     ],
@@ -197,7 +199,7 @@ async function processUserSpeech(session: CallSession, userText: string): Promis
     const stream = anthropic.messages.stream({
       model: agentDef.model,
       max_tokens: agentDef.maxTokens,
-      system: agentDef.systemPromptFn({ orgId: session.orgId }),
+      system: agentDef.systemPromptFn({ orgId: session.orgId, ...session.orgConfig }),
       messages: session.messages,
       tools: agentDef.tools as Tool[],
     })
@@ -252,25 +254,52 @@ function createWss(port = 3001): WebSocketServer {
 
         case "start": {
           if (!event.start) break
-          const { streamSid, callSid, customParameters } = event.start
-          session = {
-            streamSid,
-            callSid,
-            orgId: customParameters["org_id"] ?? orgId,
-            agentSlug: customParameters["agent_slug"] ?? agentSlug,
-            messages: [],
-            transcript: [],
-            isProcessing: false,
-            ws,
-          }
-          sessions.set(streamSid, session)
-          logger.info("[Voice] call started", {
-            callSid: callSid.slice(-6),
-            orgId: session.orgId,
-          })
+          const startPayload = event.start
+          void (async () => {
+            const { streamSid, callSid, customParameters } = startPayload
+            const sessionOrgId = customParameters["org_id"] ?? orgId
+            const sessionAgentSlug = customParameters["agent_slug"] ?? agentSlug
 
-          // Fire and forget — greeting runs async
-          void sendGreeting(session)
+            // Fetch org config + selected voice from Next.js API
+            let orgConfig: Record<string, unknown> = {}
+            let resolvedVoiceId = process.env["ELEVENLABS_VOICE_ID_MARINE"] ?? "pNInz6obpgDQGcFmaJgB"
+            try {
+              const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"
+              const cfgRes = await fetch(`${baseUrl}/api/agents/${sessionAgentSlug}/settings`, {
+                headers: { "x-internal-voice": "1", "x-org-id": sessionOrgId },
+              })
+              if (cfgRes.ok) {
+                const cfgData = await cfgRes.json() as { settings?: Record<string, unknown> }
+                orgConfig = cfgData.settings ?? {}
+                const specific = orgConfig["specific"] as Record<string, unknown> | undefined
+                const pickedVoice = specific?.["elevenLabsVoiceId"] as string | undefined
+                if (pickedVoice) resolvedVoiceId = pickedVoice
+              }
+            } catch {
+              // Config unavailable — continue with defaults
+            }
+
+            session = {
+              streamSid,
+              callSid,
+              orgId: sessionOrgId,
+              agentSlug: sessionAgentSlug,
+              messages: [],
+              transcript: [],
+              isProcessing: false,
+              ws,
+              voiceId: resolvedVoiceId,
+              orgConfig,
+            }
+            sessions.set(streamSid, session)
+            logger.info("[Voice] call started", {
+              callSid: callSid.slice(-6),
+              orgId: session.orgId,
+              voiceId: resolvedVoiceId,
+            })
+
+            await sendGreeting(session)
+          })()
           break
         }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Save, Check } from "lucide-react"
+import { Save, Check, Play, Pause } from "lucide-react"
 import type { Agent } from "@/lib/agents/data"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -295,9 +295,169 @@ function blurInput(el: HTMLElement | null) {
   el.style.borderColor = "rgba(255,255,255,0.08)"
 }
 
+// ─── VoicePicker ─────────────────────────────────────────────────────────────
+
+interface VoiceItem {
+  voice_id: string
+  name: string
+  preview_url: string | null
+  gender: string
+  accent: string
+  description: string
+}
+
+function VoicePickerSection({
+  selectedVoiceId,
+  onSelect,
+}: {
+  selectedVoiceId: string
+  onSelect: (voiceId: string) => void
+}) {
+  const [voices, setVoices] = useState<VoiceItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    fetch("/api/voices/elevenlabs")
+      .then(r => r.json() as Promise<{ voices: VoiceItem[]; error?: string }>)
+      .then(data => {
+        if (data.error) setError(data.error)
+        setVoices(data.voices ?? [])
+      })
+      .catch(() => setError("Impossible de charger les voix"))
+      .finally(() => setLoading(false))
+  }, [])
+
+  function handlePreview(voice: VoiceItem) {
+    if (!voice.preview_url) return
+    if (playingId === voice.voice_id) {
+      audioRef.current?.pause()
+      setPlayingId(null)
+      return
+    }
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.src = voice.preview_url
+      void audioRef.current.play().then(() => setPlayingId(voice.voice_id)).catch(() => setPlayingId(null))
+    } else {
+      const audio = new Audio(voice.preview_url)
+      audioRef.current = audio
+      audio.onended = () => setPlayingId(null)
+      void audio.play().then(() => setPlayingId(voice.voice_id)).catch(() => setPlayingId(null))
+    }
+  }
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause() }
+  }, [])
+
+  if (loading) {
+    return (
+      <div style={{ ...sectionStyle }}>
+        <p style={sectionTitleStyle}>Voix ElevenLabs</p>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: 0 }}>Chargement des voix…</p>
+      </div>
+    )
+  }
+
+  if (error || voices.length === 0) {
+    return (
+      <div style={{ ...sectionStyle }}>
+        <p style={sectionTitleStyle}>Voix ElevenLabs</p>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: 0 }}>
+          {error ?? "Aucune voix disponible — configure ELEVENLABS_API_KEY"}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ ...sectionStyle }}>
+      <p style={sectionTitleStyle}>Voix ElevenLabs</p>
+      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", margin: "0 0 4px" }}>
+        Choisis la voix que Marine utilisera lors des appels téléphoniques.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {voices.map(voice => {
+          const isSelected = selectedVoiceId === voice.voice_id
+          const isPlaying = playingId === voice.voice_id
+          return (
+            <div
+              key={voice.voice_id}
+              onClick={() => onSelect(voice.voice_id)}
+              role="option"
+              aria-selected={isSelected}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "9px 12px",
+                borderRadius: 8,
+                border: `1px solid ${isSelected ? "rgba(34,211,238,0.4)" : "rgba(255,255,255,0.07)"}`,
+                background: isSelected ? "rgba(34,211,238,0.07)" : "rgba(255,255,255,0.025)",
+                cursor: "pointer",
+                transition: "border-color 150ms, background 150ms",
+              }}
+              onMouseEnter={e => {
+                if (!isSelected) (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.14)"
+              }}
+              onMouseLeave={e => {
+                if (!isSelected) (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)"
+              }}
+            >
+              {/* Radio dot */}
+              <div style={{
+                width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                border: `2px solid ${isSelected ? "#22D3EE" : "rgba(255,255,255,0.2)"}`,
+                background: isSelected ? "#22D3EE" : "transparent",
+                transition: "border-color 150ms, background 150ms",
+              }} />
+
+              {/* Infos */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: isSelected ? 600 : 400, color: isSelected ? "#22D3EE" : "rgba(255,255,255,0.8)" }}>
+                  {voice.name}
+                </p>
+                {(voice.accent || voice.gender || voice.description) && (
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                    {[voice.gender, voice.accent, voice.description].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </div>
+
+              {/* Preview button */}
+              {voice.preview_url && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); handlePreview(voice) }}
+                  aria-label={isPlaying ? "Arrêter la preview" : "Écouter la preview"}
+                  style={{
+                    flexShrink: 0,
+                    width: 28, height: 28, borderRadius: "50%",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: isPlaying ? "rgba(34,211,238,0.15)" : "rgba(255,255,255,0.05)",
+                    color: isPlaying ? "#22D3EE" : "rgba(255,255,255,0.5)",
+                    cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "background 150ms, color 150ms",
+                  }}
+                >
+                  {isPlaying ? <Pause size={11} /> : <Play size={11} />}
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function AgentSettingsTab({ agent }: { agent: Agent }) {
+export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onNameChange?: (name: string) => void }) {
   const [settings, setSettings] = useState<AgentSettings>(() => buildDefaults(agent.name))
   const [saveState, setSaveState] = useState<SaveState>("idle")
   const [toastMsg, setToastMsg] = useState<string | null>(null)
@@ -359,6 +519,7 @@ export function AgentSettingsTab({ agent }: { agent: Agent }) {
         localStorage.setItem(storageKey, JSON.stringify(settings))
         setSaveState("success")
         showToast("Paramètres sauvegardés")
+        if (settings.displayName.trim()) onNameChange?.(settings.displayName.trim())
         setTimeout(() => setSaveState("idle"), 2500)
       } else {
         setSaveState("error")
@@ -531,6 +692,14 @@ export function AgentSettingsTab({ agent }: { agent: Agent }) {
               )
             })}
           </div>
+        )}
+
+        {/* Section Voice ElevenLabs — Marine uniquement */}
+        {agent.slug === "marine" && (
+          <VoicePickerSection
+            selectedVoiceId={settings.specific["elevenLabsVoiceId"] ?? ""}
+            onSelect={(voiceId) => setSpecific("elevenLabsVoiceId", voiceId)}
+          />
         )}
 
         {/* Section 5: Voix & Langue */}

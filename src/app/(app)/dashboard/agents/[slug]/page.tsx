@@ -27,6 +27,7 @@ export default function AgentDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const [activeTab, setActiveTab] = useState<Tab>("chat")
   const [stats, setStats] = useState<AgentStats>({ conversations: 0, lastAction: "—", costEur: "0.00", successRate: 100 })
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const agent = agents.find((a) => a.slug === slug)
   const { limits, loading: planLoading } = usePlan()
   const hasAccess = planLoading || limits.agents.includes(slug ?? "")
@@ -38,6 +39,18 @@ export default function AgentDetailPage() {
       .then((d: AgentStats) => setStats(d))
       .catch(() => {})
   }, [slug])
+
+  // Charge le displayName sauvegardé
+  useEffect(() => {
+    if (!slug) return
+    fetch(`/api/agents/${slug}/settings`)
+      .then(r => r.json() as Promise<{ settings?: { displayName?: string } }>)
+      .then(d => { if (d.settings?.displayName) setDisplayName(d.settings.displayName) })
+      .catch(() => {})
+  }, [slug])
+
+  // Agent avec nom personnalisé (overrides static data)
+  const effectiveAgent = agent ? { ...agent, name: displayName ?? agent.name } : agent
 
   if (!agent) {
     return (
@@ -58,10 +71,10 @@ export default function AgentDetailPage() {
         <AgentAvatar slug={agent.slug} size={64} />
         <div style={{ textAlign: "center", maxWidth: 340 }}>
           <p style={{ fontSize: 18, fontWeight: 700, color: "#F5F5F7", margin: "0 0 8px" }}>
-            {agent.name} n&apos;est pas inclus dans ton plan
+            {effectiveAgent!.name} n&apos;est pas inclus dans ton plan
           </p>
           <p style={{ fontSize: 14, color: "rgba(245,245,247,0.55)", margin: "0 0 24px", lineHeight: 1.6 }}>
-            Passe au plan Pro pour accéder à {agent.name} et à tous les agents Lynaris.
+            Passe au plan Pro pour accéder à {effectiveAgent!.name} et à tous les agents Lynaris.
           </p>
           <Link
             href="/dashboard/billing"
@@ -137,10 +150,10 @@ export default function AgentDetailPage() {
                   style={{
                     fontSize: 24, fontWeight: 700, letterSpacing: "-0.03em",
                     fontFamily: "var(--font-fraunces-var, Georgia, serif)", fontStyle: "italic",
-                    color: agent.color, margin: 0,
+                    color: effectiveAgent!.color, margin: 0,
                   }}
                 >
-                  {agent.name}
+                  {effectiveAgent!.name}
                 </h1>
 
                 {/* Online status */}
@@ -164,18 +177,18 @@ export default function AgentDetailPage() {
 
               </div>
 
-              <p style={{ fontSize: 13, color: "#71717A", margin: "0 0 10px" }}>{agent.role}</p>
+              <p style={{ fontSize: 13, color: "#71717A", margin: "0 0 10px" }}>{effectiveAgent!.role}</p>
 
               {/* Tags */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {agent.tags.map((tag) => (
+                {effectiveAgent!.tags.map((tag) => (
                   <span
                     key={tag}
                     style={{
                       padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 500,
-                      background: `${agent.color}14`,
-                      color: agent.color,
-                      border: `1px solid ${agent.color}28`,
+                      background: `${effectiveAgent!.color}14`,
+                      color: effectiveAgent!.color,
+                      border: `1px solid ${effectiveAgent!.color}28`,
                     }}
                   >
                     {tag}
@@ -193,9 +206,9 @@ export default function AgentDetailPage() {
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "8px 14px", borderRadius: 10,
-                background: `${agent.color}20`,
-                border: `1px solid ${agent.color}40`,
-                color: agent.color,
+                background: `${effectiveAgent!.color}20`,
+                border: `1px solid ${effectiveAgent!.color}40`,
+                color: effectiveAgent!.color,
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
                 transition: "all 150ms",
               }}
@@ -357,7 +370,7 @@ export default function AgentDetailPage() {
                   fontSize: 13, fontWeight: active ? 600 : 500,
                   color: active ? "#F5EFE6" : "#71717A",
                   background: "none", border: "none",
-                  borderBottom: active ? `2px solid ${agent.color}` : "2px solid transparent",
+                  borderBottom: active ? `2px solid ${effectiveAgent!.color}` : "2px solid transparent",
                   marginBottom: -1, cursor: "pointer",
                   transition: "color 0.15s, border-color 0.15s",
                   outline: "none",
@@ -379,11 +392,11 @@ export default function AgentDetailPage() {
 
       {/* Tab content */}
       <div style={{ flex: 1, overflow: "hidden" }} role="tabpanel">
-        {activeTab === "chat" && <AgentChatTab agent={agent} />}
+        {activeTab === "chat" && <AgentChatTab agent={effectiveAgent!} />}
         {activeTab === "logs" && (
-          <AgentLogsTab agent={agent} onSwitchToChat={() => setActiveTab("chat")} />
+          <AgentLogsTab agent={effectiveAgent!} onSwitchToChat={() => setActiveTab("chat")} />
         )}
-        {activeTab === "settings" && <AgentSettingsTab agent={agent} />}
+        {activeTab === "settings" && <AgentSettingsTab agent={effectiveAgent!} onNameChange={setDisplayName} />}
         {activeTab === "memory" && slug === "charles" && <AgentMemoryTab />}
       </div>
 
