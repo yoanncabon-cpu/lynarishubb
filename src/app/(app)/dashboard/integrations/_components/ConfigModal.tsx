@@ -6,10 +6,56 @@ interface ConfigModalProps {
   provider: string
   name: string
   color: string
+  domain?: string
+  initial?: string
   isOpen: boolean
   isConnected?: boolean
   onClose: () => void
   onSaved: () => void
+}
+
+function ProviderLogo({ domain, name, color, initial, size = 40 }: {
+  domain?: string
+  name: string
+  color: string
+  initial?: string
+  size?: number
+}) {
+  const [failed, setFailed] = useState(false)
+  const letter = initial ?? name.charAt(0).toUpperCase()
+
+  if (!domain || failed) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: size * 0.25,
+        background: color,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontWeight: 800, fontSize: size * 0.38, color: "white",
+        flexShrink: 0,
+      }}>
+        {letter}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.25,
+      background: "rgba(255,255,255,0.92)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      flexShrink: 0, overflow: "hidden",
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+        alt={name}
+        width={size * 0.6}
+        height={size * 0.6}
+        style={{ objectFit: "contain", display: "block" }}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  )
 }
 
 const PROVIDER_DESCRIPTIONS: Record<string, string> = {
@@ -453,7 +499,7 @@ function ProviderForm({ provider }: { provider: string }) {
   )
 }
 
-export function ConfigModal({ provider, name, color, isOpen, isConnected, onClose, onSaved }: ConfigModalProps) {
+export function ConfigModal({ provider, name, color, domain, initial, isOpen, isConnected, onClose, onSaved }: ConfigModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -579,23 +625,7 @@ export function ConfigModal({ provider, name, color, isOpen, isConnected, onClos
       >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              background: color,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              fontSize: 14,
-              color: "white",
-              flexShrink: 0,
-            }}
-          >
-            {name.charAt(0).toUpperCase()}
-          </div>
+          <ProviderLogo domain={domain} name={name} color={color} initial={initial} size={40} />
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2

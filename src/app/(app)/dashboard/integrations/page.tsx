@@ -46,7 +46,7 @@ interface Integration {
 }
 
 type _ApiKeyModalState = { provider: string; name: string; label: string } | null
-type ConfigModalState = { provider: string; name: string; color: string; initial: string } | null
+type ConfigModalState = { provider: string; name: string; color: string; initial: string; domain: string } | null
 type _OAuthModalState = { provider: string; name: string; domain: string } | null
 
 // ─── 150+ Integrations catalog ────────────────────────────────────────────────
@@ -879,7 +879,7 @@ export default function IntegrationsPage() {
     }
     // Providers avec formulaire dédié dans ConfigModal
     if (["twilio", "elevenlabs", "stripe", "n8n", "make", "whatsapp"].includes(integration.provider)) {
-      setConfigModal({ provider: integration.provider, name: integration.name, color: integration.color, initial: integration.initial })
+      setConfigModal({ provider: integration.provider, name: integration.name, color: integration.color, initial: integration.initial, domain: integration.domain })
       return
     }
     setConnectModal(integration)
@@ -1141,6 +1141,8 @@ export default function IntegrationsPage() {
           provider={configModal.provider}
           name={configModal.name}
           color={configModal.color}
+          domain={configModal.domain}
+          initial={configModal.initial}
           isOpen={true}
           isConnected={isConnected(configModal.provider)}
           onClose={() => setConfigModal(null)}
