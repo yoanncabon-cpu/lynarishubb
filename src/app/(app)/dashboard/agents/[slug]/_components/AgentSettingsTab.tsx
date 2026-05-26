@@ -33,13 +33,12 @@ interface SpecificField {
 
 const AGENT_SPECIFIC_FIELDS: Record<string, SpecificField[]> = {
   marine: [
-    // Placeholders Cabinet Ménigoz / Dr. Ménigoz retirés — pas d'accord de citation
-    { key: "orgName", label: "Nom de l'organisation", placeholder: "Nom de votre cabinet", helper: "Nom utilisé par Marine pour se présenter" },
-    { key: "practitionerName", label: "Nom du praticien", placeholder: "Dr. Dupont", helper: "Marine mentionnera ce nom lors des urgences" },
-    { key: "services", label: "Services proposés", placeholder: "Kinésithérapie, Thérapie manuelle...", helper: "Séparés par des virgules" },
-    { key: "escalationPhone", label: "Téléphone d'urgence", placeholder: "+33612345678", helper: "Numéro où transférer les urgences" },
-    { key: "openingHours", label: "Horaires d'ouverture", placeholder: "Lundi-Vendredi 8h-19h, Samedi 9h-12h", helper: "Marine les annoncera aux patients" },
-    { key: "appointmentDuration", label: "Durée RDV (minutes)", placeholder: "30", helper: "Durée par défaut d'un rendez-vous", type: "number" },
+    { key: "orgName", label: "Nom de l'entreprise", placeholder: "Auto-école Martin, Cabinet Dupont...", helper: "Nom que Marine utilisera pour se présenter" },
+    { key: "practitionerName", label: "Responsable / Contact", placeholder: "Jean Dupont", helper: "Marine mentionnera ce nom si nécessaire" },
+    { key: "services", label: "Services proposés", placeholder: "Leçons de conduite, Code, Permis B...", helper: "Séparés par des virgules" },
+    { key: "escalationPhone", label: "Numéro de transfert", placeholder: "+33612345678", helper: "Numéro où renvoyer les appels urgents" },
+    { key: "openingHours", label: "Horaires d'ouverture", placeholder: "Lundi-Vendredi 9h-18h, Samedi 9h-12h", helper: "Marine les communiquera aux appelants" },
+    { key: "appointmentDuration", label: "Durée d'un créneau (min)", placeholder: "30", helper: "Durée par défaut pour une réservation", type: "number" },
   ],
   charles: [
     { key: "ownerName", label: "Ton prénom", placeholder: "Yoann", helper: "Charles t'appellera par ton prénom" },
@@ -345,39 +344,33 @@ function ElevenLabsConnectSection() {
     }
   }
 
-  async function handleSync() {
+  async function handleSyncAndView() {
+    if (showPrompt) { setShowPrompt(false); return }
     setSyncState("loading")
+    setPromptLoading(true)
     try {
-      const res = await fetch("/api/agents/marine/elevenlabs-sync", { method: "POST" })
-      const data = await res.json() as { synced?: boolean; error?: string; skipped?: boolean; reason?: string }
-      if (data.synced) {
+      const [syncRes, promptRes] = await Promise.all([
+        fetch("/api/agents/marine/elevenlabs-sync", { method: "POST" }),
+        fetch("/api/agents/marine/prompt"),
+      ])
+      const syncData = await syncRes.json() as { synced?: boolean; error?: string; skipped?: boolean; reason?: string }
+      const promptData = await promptRes.json() as { prompt?: string }
+
+      if (syncData.synced) {
         setSyncState("success")
-      } else if (data.skipped) {
-        // skipped = clé API manquante ou agent_id non configuré — pas une erreur bloquante
+      } else if (syncData.skipped) {
         setSyncState("success")
-        console.warn("[ElevenLabs sync] skipped:", data.reason)
       } else {
         setSyncState("error")
-        console.error("[ElevenLabs sync]", data.error ?? data.reason)
       }
+
+      setPrompt(promptData.prompt ?? null)
+      setShowPrompt(true)
     } catch {
       setSyncState("error")
     }
-    setTimeout(() => setSyncState("idle"), 3000)
-  }
-
-  async function handleViewPrompt() {
-    if (showPrompt) { setShowPrompt(false); return }
-    setPromptLoading(true)
-    try {
-      const res = await fetch("/api/agents/marine/prompt")
-      const data = await res.json() as { prompt?: string }
-      setPrompt(data.prompt ?? null)
-      setShowPrompt(true)
-    } catch {
-      setPrompt(null)
-    }
     setPromptLoading(false)
+    setTimeout(() => setSyncState("idle"), 3000)
   }
 
   return (
@@ -451,55 +444,50 @@ function ElevenLabsConnectSection() {
                 </p>
               </div>
 
-              {/* Sync prompt button */}
+              {/* Sync + Voir prompt — bouton unique */}
               <button
                 type="button"
-                onClick={handleSync}
-                disabled={syncState === "loading"}
+                onClick={() => void handleSyncAndView()}
+                disabled={syncState === "loading" || promptLoading}
                 style={{
                   marginTop: 10,
                   display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-                  border: "1px solid rgba(168,85,247,0.2)",
-                  background: syncState === "success" ? "rgba(34,197,94,0.08)" : "rgba(168,85,247,0.06)",
-                  color: syncState === "success" ? "#86efac" : syncState === "error" ? "#f87171" : "rgba(192,132,252,0.8)",
+                  padding: "7px 14px", borderRadius: 8, cursor: "pointer",
+                  border: `1px solid ${syncState === "error" ? "rgba(248,113,113,0.25)" : showPrompt ? "rgba(255,255,255,0.12)" : "rgba(168,85,247,0.25)"}`,
+                  background: syncState === "error" ? "rgba(248,113,113,0.07)" : showPrompt ? "rgba(255,255,255,0.05)" : "rgba(168,85,247,0.08)",
+                  color: syncState === "success" ? "#86efac" : syncState === "error" ? "#f87171" : showPrompt ? "rgba(255,255,255,0.5)" : "rgba(192,132,252,0.9)",
                   fontSize: 11, fontWeight: 500,
-                  opacity: syncState === "loading" ? 0.6 : 1,
+                  opacity: (syncState === "loading" || promptLoading) ? 0.6 : 1,
                   transition: "all 150ms",
+                  width: "100%", justifyContent: "center",
                 }}
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 4v6h-6M1 20v-6h6"/>
-                  <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-                </svg>
-                {syncState === "loading" ? "Synchronisation…" : syncState === "success" ? "Prompt synchronisé !" : syncState === "error" ? "Erreur sync" : "Synchroniser le prompt maintenant"}
+                {(syncState === "loading" || promptLoading) ? (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 0.8s linear infinite" }}>
+                      <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                    Synchronisation…
+                  </>
+                ) : showPrompt ? (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22"/>
+                    </svg>
+                    Masquer le prompt
+                  </>
+                ) : (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                    Synchroniser et voir le prompt
+                  </>
+                )}
               </button>
               <p style={{ ...helperStyle, marginTop: 4 }}>
-                Pousse le prompt de Marine vers ElevenLabs. Se fait aussi automatiquement à chaque sauvegarde.
+                Pousse le prompt vers ElevenLabs et l&apos;affiche. Aussi automatique à chaque sauvegarde.
               </p>
-
-              {/* Voir le prompt */}
-              <button
-                type="button"
-                onClick={() => void handleViewPrompt()}
-                disabled={promptLoading}
-                style={{
-                  marginTop: 8,
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: showPrompt ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
-                  color: "rgba(255,255,255,0.45)",
-                  fontSize: 11, fontWeight: 500,
-                  opacity: promptLoading ? 0.6 : 1,
-                  transition: "all 150ms",
-                }}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                </svg>
-                {promptLoading ? "Chargement…" : showPrompt ? "Masquer le prompt" : "Voir le prompt généré"}
-              </button>
 
               {showPrompt && prompt && (
                 <div style={{
