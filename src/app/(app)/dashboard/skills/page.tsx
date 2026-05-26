@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AgentAvatar } from "@/components/shared/AgentAvatar"
 import { GlassCard } from "@/components/app/glass/GlassCard"
@@ -19,6 +19,8 @@ import {
   Clock,
   Send,
   X,
+  Copy,
+  Check,
 } from "lucide-react"
 
 // LinkedIn icon (not in this lucide version)
@@ -54,6 +56,8 @@ function getAgentColor(slug: string): string {
 
 type LucideIcon = React.FC<{ size?: number; color?: string; strokeWidth?: number }>
 
+type SkillFlow = "generate" | "upload" | "campaign" | "setup"
+
 interface SkillItem {
   id: string
   title: string
@@ -64,6 +68,10 @@ interface SkillItem {
   icon: LucideIcon
   ctaLabel?: string
   category: "contenu" | "commercial" | "automatisation"
+  flow: SkillFlow
+  placeholder?: string
+  fileUrlLabel?: string
+  fileUrlPlaceholder?: string
 }
 
 const SKILLS: SkillItem[] = [
@@ -77,6 +85,8 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agente SEO",
     icon: ThumbsUp,
     category: "contenu",
+    flow: "campaign",
+    placeholder: "Décrivez le sujet du post, le ton souhaité, les mots-clés importants...",
   },
   {
     id: "presentation",
@@ -87,6 +97,8 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agente SEO",
     icon: Presentation,
     category: "contenu",
+    flow: "generate",
+    placeholder: "Sujet, public cible, nombre de slides souhaité, informations clés à inclure...",
   },
   {
     id: "supprimer-fond",
@@ -97,6 +109,10 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agent Photo & Vidéo",
     icon: Image,
     category: "contenu",
+    flow: "upload",
+    placeholder: "Instructions supplémentaires (format de sortie, zones à conserver...)",
+    fileUrlLabel: "URL de l'image",
+    fileUrlPlaceholder: "https://exemple.com/photo.jpg",
   },
   {
     id: "audio-texte",
@@ -107,6 +123,10 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agente Mail",
     icon: Mic,
     category: "contenu",
+    flow: "upload",
+    placeholder: "Instructions (langue, format attendu, points à mettre en évidence...)",
+    fileUrlLabel: "URL de l'audio",
+    fileUrlPlaceholder: "https://exemple.com/enregistrement.mp3",
   },
   {
     id: "creer-image",
@@ -117,6 +137,8 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agent Photo & Vidéo",
     icon: Palette,
     category: "contenu",
+    flow: "generate",
+    placeholder: "Décrivez l'image souhaitée : style, couleurs, sujet, format...",
   },
   {
     id: "creer-video",
@@ -127,6 +149,8 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agent Photo & Vidéo",
     icon: Video,
     category: "contenu",
+    flow: "generate",
+    placeholder: "Décrivez la vidéo souhaitée : scène, durée, style, ambiance...",
   },
   {
     id: "audit-seo",
@@ -137,6 +161,8 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agente SEO",
     icon: BarChart2,
     category: "contenu",
+    flow: "generate",
+    placeholder: "URL de votre site ou page à auditer, secteur d'activité, mots-clés cibles...",
   },
   {
     id: "article-blog",
@@ -147,6 +173,8 @@ const SKILLS: SkillItem[] = [
     agentRole: "Agente SEO",
     icon: FileText,
     category: "contenu",
+    flow: "generate",
+    placeholder: "Sujet, angle éditorial, public cible, longueur souhaitée, mots-clés SEO...",
   },
   // ─── Campagne sur mesure ──────────────────────────────────────────────────
   {
@@ -159,6 +187,8 @@ const SKILLS: SkillItem[] = [
     icon: BookOpen,
     ctaLabel: "Lancer cette campagne",
     category: "commercial",
+    flow: "campaign",
+    placeholder: "Thématiques, fréquence de publication, public cible, objectifs SEO...",
   },
   {
     id: "campagne-linkedin",
@@ -170,6 +200,8 @@ const SKILLS: SkillItem[] = [
     icon: LinkedInSvg,
     ctaLabel: "Lancer cette campagne",
     category: "commercial",
+    flow: "campaign",
+    placeholder: "Secteur cible, poste du prospect, message d'accroche, objectifs...",
   },
   {
     id: "campagne-appels",
@@ -181,6 +213,8 @@ const SKILLS: SkillItem[] = [
     icon: Phone,
     ctaLabel: "Lancer cette campagne",
     category: "commercial",
+    flow: "campaign",
+    placeholder: "Liste cible, script d'appel, objectif (RDV, qualification, relance)...",
   },
   // ─── Agents autonomes ────────────────────────────────────────────────────
   {
@@ -193,6 +227,8 @@ const SKILLS: SkillItem[] = [
     icon: MessageSquare,
     ctaLabel: "Créer un agent",
     category: "automatisation",
+    flow: "setup",
+    placeholder: "Décrivez votre activité, les questions fréquentes de vos clients, le ton souhaité...",
   },
   {
     id: "agent-standard",
@@ -204,6 +240,8 @@ const SKILLS: SkillItem[] = [
     icon: Phone,
     ctaLabel: "Créer un agent",
     category: "automatisation",
+    flow: "setup",
+    placeholder: "Nom de l'entreprise, horaires d'ouverture, services proposés, numéros de redirection...",
   },
 ]
 
@@ -235,7 +273,7 @@ const GROUPS: Array<{
 
 // ─── Social toggle data ──────────────────────────────────────────────────────
 
-type SocialNetwork = "linkedin" | "facebook" | "instagram"
+type SocialNetwork = "linkedin" | "facebook" | "instagram" | "twitter" | "youtube" | "tiktok"
 
 const SOCIAL_NETWORKS: Array<{
   id: SocialNetwork
@@ -247,7 +285,7 @@ const SOCIAL_NETWORKS: Array<{
     id: "linkedin",
     label: "LinkedIn",
     icon: ({ size = 18 }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="white">
         <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
         <rect x="2" y="9" width="4" height="12" />
         <circle cx="4" cy="4" r="2" />
@@ -256,65 +294,187 @@ const SOCIAL_NETWORKS: Array<{
     color: "#0077B5",
   },
   {
+    id: "instagram",
+    label: "Instagram",
+    icon: ({ size = 18 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="1" fill="white" stroke="none" />
+      </svg>
+    ),
+    color: "linear-gradient(135deg, #F58529, #DD2A7B, #8134AF)",
+  },
+  {
     id: "facebook",
     label: "Facebook",
     icon: ({ size = 18 }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="white">
         <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
       </svg>
     ),
     color: "#1877F2",
   },
   {
-    id: "instagram",
-    label: "Instagram",
+    id: "twitter",
+    label: "X (Twitter)",
     icon: ({ size = 18 }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-        <path
-          d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"
-          fill="white"
-          opacity="0.9"
-        />
-        <line
-          x1="17.5"
-          y1="6.5"
-          x2="17.51"
-          y2="6.5"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="white">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
       </svg>
     ),
-    color: "linear-gradient(135deg, #F58529, #DD2A7B, #8134AF)",
+    color: "#000000",
+  },
+  {
+    id: "youtube",
+    label: "YouTube",
+    icon: ({ size = 18 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="white">
+        <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
+        <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#FF0000" />
+      </svg>
+    ),
+    color: "#FF0000",
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    icon: ({ size = 18 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="white">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z" />
+      </svg>
+    ),
+    color: "#010101",
   },
 ]
 
 // ─── Wizard state ─────────────────────────────────────────────────────────────
 
 interface WizardState {
-  step: 1 | 2 | 3
+  step: 1 | 2 | 3 | 4
   description: string
   networks: Record<SocialNetwork, boolean>
   scheduling: "now" | "planned"
   date: string
   time: string
+  fileUrl: string
+  loading: boolean
+  result: string | null
+  errorMsg: string | null
 }
 
 const INITIAL_WIZARD: WizardState = {
   step: 1,
   description: "",
-  networks: { linkedin: false, facebook: false, instagram: false },
+  networks: { linkedin: false, facebook: false, instagram: false, twitter: false, youtube: false, tiktok: false },
   scheduling: "planned",
   date: "",
   time: "",
+  fileUrl: "",
+  loading: false,
+  result: null,
+  errorMsg: null,
 }
 
-const HAS_NETWORK_STEP_CATEGORIES: SkillItem["category"][] = ["contenu", "commercial"]
-
 function hasNetworkStep(skill: SkillItem): boolean {
-  return HAS_NETWORK_STEP_CATEGORIES.includes(skill.category)
+  return skill.flow === "campaign" && (skill.id === "post-reseaux" || skill.id === "campagne-blog")
+}
+
+// ─── Message builder ──────────────────────────────────────────────────────────
+
+function buildMessage(skill: SkillItem, state: WizardState): string {
+  const nets = (Object.keys(state.networks) as SocialNetwork[])
+    .filter((k) => state.networks[k])
+    .map((s) => SOCIAL_NETWORKS.find((n) => n.id === s)?.label ?? s)
+    .join(", ")
+
+  const scheduleInfo =
+    state.scheduling === "now"
+      ? "Publication immédiate."
+      : state.date && state.time
+        ? `Planifié le ${state.date} à ${state.time}.`
+        : ""
+
+  switch (skill.id) {
+    case "post-reseaux":
+      return [
+        `Crée un post optimisé pour les réseaux sociaux suivants : ${nets || "tous les réseaux"}.`,
+        `Contenu / contexte : ${state.description}`,
+        scheduleInfo,
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+    case "presentation":
+      return `Génère une présentation professionnelle complète sur le sujet suivant :\n${state.description}`
+
+    case "supprimer-fond":
+      return [
+        `Supprime l'arrière-plan de l'image suivante.`,
+        state.fileUrl ? `URL de l'image : ${state.fileUrl}` : "",
+        state.description ? `Instructions : ${state.description}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+    case "audio-texte":
+      return [
+        `Transcris l'audio suivant en texte précis et formaté.`,
+        state.fileUrl ? `URL de l'audio : ${state.fileUrl}` : "",
+        state.description ? `Instructions : ${state.description}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+    case "creer-image":
+      return `Génère une image avec la description suivante :\n${state.description}`
+
+    case "creer-video":
+      return `Génère une vidéo avec la description suivante :\n${state.description}`
+
+    case "audit-seo":
+      return `Réalise un audit SEO complet et détaillé pour :\n${state.description}\n\nFournis des recommandations priorisées et actionnables.`
+
+    case "article-blog":
+      return `Rédige un article de blog complet, optimisé SEO, sur :\n${state.description}\n\nInclus titre H1, méta-description, intertitres H2/H3, et un CTA final.`
+
+    case "campagne-blog":
+      return [
+        `Lance une campagne d'articles de blog.`,
+        `Contexte et objectifs : ${state.description}`,
+        nets ? `Canaux de diffusion : ${nets}` : "",
+        scheduleInfo,
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+    case "campagne-linkedin":
+      return [
+        `Lance une campagne de prospection LinkedIn.`,
+        `Contexte et cible : ${state.description}`,
+        scheduleInfo,
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+    case "campagne-appels":
+      return [
+        `Lance une campagne d'appels sortants.`,
+        `Contexte et objectif : ${state.description}`,
+        scheduleInfo,
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+    case "agent-support":
+      return `Configure-toi en tant qu'agent de support client.\nDescription du contexte et des besoins :\n${state.description}`
+
+    case "agent-standard":
+      return `Configure-toi en tant qu'agent de standard téléphonique.\nDescription du contexte et des besoins :\n${state.description}`
+
+    default:
+      return state.description
+  }
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -428,12 +588,18 @@ function Step1({
   skill,
   state,
   onChange,
-  onNext,
+  onFileUrlChange,
+  onAction,
+  ctaLabel,
+  canProceed,
 }: {
   skill: SkillItem
   state: WizardState
   onChange: (v: string) => void
-  onNext: () => void
+  onFileUrlChange: (v: string) => void
+  onAction: () => void
+  ctaLabel: string
+  canProceed: boolean
 }) {
   const IconComp = skill.icon
   const agentColor = getAgentColor(skill.agentSlug)
@@ -481,11 +647,33 @@ function Step1({
         </p>
       </div>
 
+      {/* File URL field — upload flow only */}
+      {skill.flow === "upload" && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={S.label}>{skill.fileUrlLabel ?? "URL du fichier"}</div>
+          <input
+            type="url"
+            style={{ ...S.input, width: "100%" }}
+            placeholder={skill.fileUrlPlaceholder ?? "https://..."}
+            value={state.fileUrl}
+            onChange={(e) => onFileUrlChange(e.target.value)}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "rgba(232,111,77,0.5)"
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"
+            }}
+          />
+        </div>
+      )}
+
       <div style={{ marginBottom: 24 }}>
-        <div style={S.label}>Descriptif</div>
+        <div style={S.label}>
+          {skill.flow === "upload" ? "Instructions (facultatif)" : "Descriptif"}
+        </div>
         <textarea
           style={S.textarea}
-          placeholder="Décrivez l'idée, le ton et le message..."
+          placeholder={skill.placeholder ?? "Décrivez l'idée, le ton et le message..."}
           value={state.description}
           onChange={(e) => onChange(e.target.value)}
           onFocus={(e) => {
@@ -532,13 +720,13 @@ function Step1({
         <button
           style={{
             ...S.btnPrimary,
-            opacity: state.description.trim() ? 1 : 0.4,
-            cursor: state.description.trim() ? "pointer" : "not-allowed",
+            opacity: canProceed ? 1 : 0.4,
+            cursor: canProceed ? "pointer" : "not-allowed",
           }}
-          onClick={onNext}
-          disabled={!state.description.trim()}
+          onClick={onAction}
+          disabled={!canProceed}
           onMouseEnter={(e) => {
-            if (state.description.trim()) {
+            if (canProceed) {
               e.currentTarget.style.background = "linear-gradient(135deg, #F47856, #E86F4D)"
             }
           }}
@@ -546,7 +734,7 @@ function Step1({
             e.currentTarget.style.background = "linear-gradient(135deg, #E86F4D, #D05A38)"
           }}
         >
-          Suivant →
+          {ctaLabel}
         </button>
       </div>
     </>
@@ -883,7 +1071,202 @@ function Step3({
             e.currentTarget.style.background = "linear-gradient(135deg, #E86F4D, #D05A38)"
           }}
         >
-          Créer →
+          Lancer →
+        </button>
+      </div>
+    </>
+  )
+}
+
+// ─── Step 4 — result view ─────────────────────────────────────────────────────
+
+function StepResult({
+  skill,
+  loading,
+  result,
+  errorMsg,
+  onBack,
+  onClose,
+}: {
+  skill: SkillItem
+  loading: boolean
+  result: string | null
+  errorMsg: string | null
+  onBack: () => void
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    if (!result) return
+    void navigator.clipboard.writeText(result).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "48px 0 40px" }}>
+        <style>{`@keyframes lynaris-spin { to { transform: rotate(360deg); } }`}</style>
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            border: "3px solid rgba(232,111,77,0.2)",
+            borderTopColor: "#E86F4D",
+            borderRadius: "50%",
+            animation: "lynaris-spin 0.8s linear infinite",
+            margin: "0 auto 20px",
+          }}
+        />
+        <p style={{ color: "rgba(250,250,250,0.55)", fontSize: 14, margin: "0 0 4px" }}>
+          {skill.agentName} génère votre contenu...
+        </p>
+        <p style={{ color: "rgba(250,250,250,0.28)", fontSize: 12, margin: 0 }}>
+          Cela peut prendre quelques secondes.
+        </p>
+      </div>
+    )
+  }
+
+  if (errorMsg) {
+    return (
+      <>
+        <div style={{ textAlign: "center", padding: "32px 0 24px" }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background: "rgba(248,113,113,0.12)",
+              border: "1px solid rgba(248,113,113,0.25)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+            }}
+          >
+            <X size={20} color="#F87171" />
+          </div>
+          <p style={{ color: "#F87171", fontSize: 14, margin: "0 0 8px", fontWeight: 600 }}>
+            Erreur lors de la génération
+          </p>
+          <p style={{ color: "rgba(250,250,250,0.5)", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+            {errorMsg}
+          </p>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <button
+            style={S.btnSecondary}
+            onClick={onBack}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"
+              e.currentTarget.style.color = "#FAFAFA"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"
+              e.currentTarget.style.color = "rgba(250,250,250,0.5)"
+            }}
+          >
+            ← Modifier
+          </button>
+          <button
+            style={S.btnPrimary}
+            onClick={onClose}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, #F47856, #E86F4D)"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, #E86F4D, #D05A38)"
+            }}
+          >
+            Fermer
+          </button>
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12,
+          }}
+        >
+          <h2 style={{ fontSize: 16, fontWeight: 600, color: "#FAFAFA", margin: 0 }}>
+            Résultat
+          </h2>
+          <button
+            onClick={handleCopy}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: copied ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.06)",
+              border: `1px solid ${copied ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.1)"}`,
+              borderRadius: 8,
+              padding: "6px 12px",
+              color: copied ? "#34D399" : "rgba(250,250,250,0.6)",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+            {copied ? "Copié" : "Copier"}
+          </button>
+        </div>
+        <div
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 8,
+            padding: "14px 16px",
+            maxHeight: 340,
+            overflowY: "auto",
+            fontSize: 13,
+            color: "rgba(250,250,250,0.85)",
+            lineHeight: 1.75,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {result}
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <button
+          style={S.btnSecondary}
+          onClick={onBack}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"
+            e.currentTarget.style.color = "#FAFAFA"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"
+            e.currentTarget.style.color = "rgba(250,250,250,0.5)"
+          }}
+        >
+          ← Modifier
+        </button>
+        <button
+          style={S.btnPrimary}
+          onClick={onClose}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "linear-gradient(135deg, #F47856, #E86F4D)"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "linear-gradient(135deg, #E86F4D, #D05A38)"
+          }}
+        >
+          Fermer
         </button>
       </div>
     </>
@@ -901,12 +1284,59 @@ function SkillWizardModal({
 }) {
   const router = useRouter()
   const [state, setState] = useState<WizardState>({ ...INITIAL_WIZARD })
+  const mounted = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   function patch(p: Partial<WizardState>) {
     setState((prev) => ({ ...prev, ...p }))
   }
 
-  function handleNext() {
+  async function handleCreate() {
+    const message = buildMessage(skill, state)
+
+    if (skill.flow === "generate") {
+      patch({ step: 4, loading: true, result: null, errorMsg: null })
+      try {
+        const res = await fetch(`/api/agents/${skill.agentSlug}/run`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        })
+        if (!mounted.current) return
+        if (!res.ok) {
+          const errBody = (await res.json().catch(() => ({}))) as { error?: string }
+          patch({ loading: false, errorMsg: errBody.error ?? `Erreur ${res.status}` })
+          return
+        }
+        const data = (await res.json()) as { content?: string; error?: string }
+        if (!mounted.current) return
+        if (data.error) {
+          patch({ loading: false, errorMsg: data.error })
+          return
+        }
+        patch({ loading: false, result: data.content ?? "" })
+      } catch {
+        if (!mounted.current) return
+        patch({ loading: false, errorMsg: "Impossible de joindre le serveur. Réessaie." })
+      }
+      return
+    }
+
+    // upload / campaign / setup → navigate to agent with pre-filled message
+    localStorage.setItem("lynaris_prefill_message", message)
+    router.push(`/dashboard/agents/${skill.agentSlug}`)
+  }
+
+  function handleStepNext() {
+    if (skill.flow !== "campaign") {
+      void handleCreate()
+      return
+    }
     if (state.step === 1) {
       patch({ step: hasNetworkStep(skill) ? 2 : 3 })
     } else if (state.step === 2) {
@@ -915,6 +1345,10 @@ function SkillWizardModal({
   }
 
   function handleBack() {
+    if (state.step === 4) {
+      patch({ step: 1, loading: false, result: null, errorMsg: null })
+      return
+    }
     if (state.step === 3) {
       patch({ step: hasNetworkStep(skill) ? 2 : 1 })
     } else if (state.step === 2) {
@@ -922,33 +1356,29 @@ function SkillWizardModal({
     }
   }
 
-  function handleCreate() {
-    const lines: string[] = []
-    lines.push(state.description)
-
-    if (hasNetworkStep(skill)) {
-      const selected = (Object.keys(state.networks) as SocialNetwork[]).filter(
-        (k) => state.networks[k]
-      )
-      if (selected.length) {
-        lines.push(
-          `\nRéseaux : ${selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}`
-        )
-      }
-    }
-
-    if (state.scheduling === "planned" && state.date && state.time) {
-      lines.push(`Planifié le ${state.date} à ${state.time}`)
-    } else if (state.scheduling === "now") {
-      lines.push("Publication immédiate")
-    }
-
-    localStorage.setItem("lynaris_prefill_message", lines.join("\n"))
-    router.push(`/dashboard/agents/${skill.agentSlug}`)
+  // CTA label for Step 1
+  const step1CtaLabel: Record<SkillFlow, string> = {
+    generate: "Générer →",
+    upload: `Envoyer à ${skill.agentName} →`,
+    campaign: "Suivant →",
+    setup: "Configurer →",
   }
 
-  const totalSteps = hasNetworkStep(skill) ? 3 : 2
-  const currentDisplay = state.step === 3 ? (hasNetworkStep(skill) ? 3 : 2) : state.step
+  // Step 1 can-proceed logic
+  const step1CanProceed =
+    skill.flow === "upload"
+      ? state.fileUrl.trim() !== ""
+      : state.description.trim() !== ""
+
+  // Progress bars — only for campaign flow
+  const isCampaign = skill.flow === "campaign"
+  const totalSteps = isCampaign ? (hasNetworkStep(skill) ? 3 : 2) : 0
+  const currentDisplay =
+    state.step === 3
+      ? hasNetworkStep(skill)
+        ? 3
+        : 2
+      : (state.step as number)
 
   return (
     <div style={S.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -967,28 +1397,33 @@ function SkillWizardModal({
           <X size={18} />
         </button>
 
-        {/* Step progress bars */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
-          {Array.from({ length: totalSteps }, (_, i) => (
-            <div
-              key={i}
-              style={{
-                height: 3,
-                flex: 1,
-                borderRadius: 2,
-                background: i + 1 <= currentDisplay ? "#E86F4D" : "rgba(255,255,255,0.1)",
-                transition: "background 0.2s",
-              }}
-            />
-          ))}
-        </div>
+        {/* Step progress bars — campaign only, hidden on step 4 */}
+        {isCampaign && state.step !== 4 && (
+          <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+            {Array.from({ length: totalSteps }, (_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: 3,
+                  flex: 1,
+                  borderRadius: 2,
+                  background: i + 1 <= currentDisplay ? "#E86F4D" : "rgba(255,255,255,0.1)",
+                  transition: "background 0.2s",
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {state.step === 1 && (
           <Step1
             skill={skill}
             state={state}
             onChange={(v) => patch({ description: v })}
-            onNext={handleNext}
+            onFileUrlChange={(v) => patch({ fileUrl: v })}
+            onAction={handleStepNext}
+            ctaLabel={step1CtaLabel[skill.flow]}
+            canProceed={step1CanProceed}
           />
         )}
         {state.step === 2 && (
@@ -999,7 +1434,7 @@ function SkillWizardModal({
               patch({ networks: { ...state.networks, [n]: !state.networks[n] } })
             }
             onBack={handleBack}
-            onNext={handleNext}
+            onNext={handleStepNext}
           />
         )}
         {state.step === 3 && (
@@ -1008,7 +1443,17 @@ function SkillWizardModal({
             state={state}
             onChange={patch}
             onBack={handleBack}
-            onCreate={handleCreate}
+            onCreate={() => void handleCreate()}
+          />
+        )}
+        {state.step === 4 && (
+          <StepResult
+            skill={skill}
+            loading={state.loading}
+            result={state.result}
+            errorMsg={state.errorMsg}
+            onBack={handleBack}
+            onClose={onClose}
           />
         )}
       </div>
