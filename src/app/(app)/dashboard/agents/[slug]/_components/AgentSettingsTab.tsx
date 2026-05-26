@@ -523,12 +523,13 @@ function ElevenLabsConnectSection() {
 // ─── TelephonieSectionMarine ──────────────────────────────────────────────────
 
 const SECTORS = [
-  { value: "médical", label: "Médical / Santé", description: "Kiné, médecin, dentiste, ostéo…" },
-  { value: "restaurant", label: "Restaurant / Bar", description: "Réservations, commandes, horaires" },
-  { value: "artisan", label: "Artisan / BTP", description: "Devis, urgences, suivi chantier" },
-  { value: "immobilier", label: "Immobilier", description: "Visites, estimations, rappels" },
-  { value: "commerce", label: "Commerce / Retail", description: "Info produit, stock, SAV" },
-  { value: "générique", label: "Autre / Générique", description: "Standard téléphonique multi-usage" },
+  { value: "médical",    label: "Médical / Santé",     description: "Kiné, médecin, dentiste, ostéo…" },
+  { value: "restaurant", label: "Restaurant / Bar",     description: "Réservations, commandes, horaires" },
+  { value: "artisan",    label: "Artisan / BTP",        description: "Devis, urgences, suivi chantier" },
+  { value: "immobilier", label: "Immobilier",           description: "Visites, estimations, rappels" },
+  { value: "auto-école", label: "Auto-école",           description: "Leçons, examens, tarifs, annulations" },
+  { value: "commerce",   label: "Commerce / Retail",    description: "Info produit, stock, SAV" },
+  { value: "générique",  label: "Autre / Générique",    description: "Standard téléphonique multi-usage" },
 ]
 
 function TelephonieSectionMarine({
