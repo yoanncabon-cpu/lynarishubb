@@ -520,6 +520,10 @@ export function AgentSettingsTab({ agent, onNameChange }: { agent: Agent; onName
         setSaveState("success")
         showToast("Paramètres sauvegardés")
         if (settings.displayName.trim()) onNameChange?.(settings.displayName.trim())
+        // Sync ElevenLabs agent prompt si Marine
+        if (agent.slug === "marine") {
+          void fetch(`/api/agents/${agent.slug}/elevenlabs-sync`, { method: "POST" }).catch(() => {})
+        }
         setTimeout(() => setSaveState("idle"), 2500)
       } else {
         setSaveState("error")
