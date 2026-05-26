@@ -1268,11 +1268,6 @@ export default function ContenuPage() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <GlassChip>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(250,250,250,0.55)" }}>
-              Calendrier — bientôt
-            </span>
-          </GlassChip>
           <button
             type="button"
             onClick={() => {

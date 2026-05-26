@@ -215,42 +215,29 @@ const tools: Tool[] = [
       required: [],
     },
   },
-  // ── SMS / Twilio ──────────────────────────────────────────────────────────
+  // ── SMS / Twilio — Charles envoie directement, pas de délégation ─────────
   {
     name: "send_sms",
-    description: "Send SMS immediately via Twilio. Execute without confirmation when user says 'envoie un SMS' or similar.",
+    description: "Send an SMS immediately via Twilio. Call this tool directly — NO confirmation, NO delegation to Marine. The message is sent in one shot. Use for any 'envoie un message', 'envoie un SMS', 'confirme par SMS' request.",
     input_schema: {
       type: "object" as const,
       properties: {
-        to: { type: "string", description: "Recipient phone in E.164 format (e.g. +33768592852)" },
-        message: { type: "string", description: "SMS content" },
+        to: { type: "string", description: "Recipient phone number (any format: 0768592852, +33768592852, etc.)" },
+        message: { type: "string", description: "SMS text to send" },
       },
       required: ["to", "message"],
     },
   },
-  // ── Email (Gmail) ─────────────────────────────────────────────────────────
+  // ── Email (Gmail) — lecture/archivage uniquement (envoi → déléguer à Mae) ──
   {
     name: "list_unread_emails",
-    description: "List unread emails from Gmail inbox.",
+    description: "List unread emails from Gmail inbox. For sending or drafting emails, delegate to Mae.",
     input_schema: {
       type: "object" as const,
       properties: {
         max_results: { type: "number", description: "Max emails to return (default 10)" },
       },
       required: [],
-    },
-  },
-  {
-    name: "send_email",
-    description: "Send an email immediately via Gmail. Use when user explicitly says 'envoie'. No confirmation needed.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        to: { type: "string", description: "Recipient email" },
-        subject: { type: "string", description: "Subject" },
-        body: { type: "string", description: "Email body" },
-      },
-      required: ["to", "subject", "body"],
     },
   },
   {
@@ -420,7 +407,7 @@ You work with ${userName}. You know their preferences, habits, and priorities fr
 Timezone: ${timezone}
 
 ## YOUR TEAM (agents you can delegate to)
-- **Marine** — ALL phone calls, SMS messages, appointment scheduling, voice. USE Marine for ANY send_sms request — you do not have a send_sms tool, Marine does.
+- **Marine** — ALL inbound/outbound phone calls and appointment scheduling via voice. For simple SMS sending tasks, Charles uses send_sms directly (faster, no round-trip). Delegate to Marine only for complex voice/appointment flows.
 - **Mae** — ALL email tasks: sending, drafting, replying, inbox triage. USE Mae for ANY email request — even if you have send_email_draft, ALWAYS delegate emails to Mae instead of using it yourself.
 - **Lou** — Web content ONLY: articles, LinkedIn posts, newsletters, Instagram captions, blog posts, social media. DO NOT delegate PDFs, rapports, guides, cours, ebooks, or any structured document to Lou — use your own create_document tool for those.
 - **Elio** — ALL commercial tasks: prospecting, lead qualification, follow-ups, CRM updates.
@@ -484,8 +471,9 @@ Charles exécute. Il ne demande pas la permission. Il ne met pas dans les brouil
 - search_memory: Always call at the start of complex requests
 - save_memory: Call after any important decision, preference, or new information
 - create_document: YOU MUST CALL THIS TOOL IMMEDIATELY when the user asks for a PDF, document, rapport, guide, cours, or any structured file. ZERO preamble — do NOT write "Je vais créer...", "Je crée ça maintenant", "Je lance la création" or ANY text before calling. Do NOT call search_memory before create_document — skip it. The tool call must be your FIRST and only action. Content must be ≤ 1000 words in Markdown (## sections, bullet lists, bold key terms). STRICT LIMIT: if you exceed 1000 words the system will timeout. After tool returns, respond with exactly 1 sentence + the link.
-- delegate_to_agent: ALWAYS delegate specialized tasks — NEVER execute them yourself with your own tools when a specialist agent exists:
-  • SMS → Marine (never use your own tools for SMS)
+- send_sms: Call IMMEDIATELY when user asks to send any SMS/message to a phone number. NO confirmation. NO delegation. One call → message sent → respond "Message envoyé à [number] ✓". If send_sms fails, report the exact error.
+- delegate_to_agent: Delegate specialized tasks to experts:
+  • Voice calls / appointment booking → Marine
   • Email (send/draft/reply) → Mae (never use send_email_draft yourself)
   • Content/posts/articles → Lou
   • Images/videos/visuals → Max

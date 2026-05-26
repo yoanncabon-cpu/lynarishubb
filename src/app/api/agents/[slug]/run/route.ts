@@ -4,6 +4,9 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources"
 import { runAgent } from "@/lib/agents/executor"
 import { getAgent } from "@/lib/agents/registry"
 import type { EmailStyleConfig } from "@/lib/db/schema"
+import { agentInstances } from "@/lib/db/schema"
+import { db } from "@/lib/db"
+import { eq, and } from "drizzle-orm"
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit"
 import {
   buildAccessDeniedPayload,
@@ -66,11 +69,19 @@ export async function POST(
   const cleanConfig = { ...rawConfig }
   delete cleanConfig["email_style"]
 
+  // Charge la config DB de l'instance agent (même logique que le chat route)
+  // afin que les agents délégués aient accès à orgName, practitionerName, etc.
+  const dbConfig = await db.query.agentInstances.findFirst({
+    where: and(eq(agentInstances.orgId, orgId), eq(agentInstances.agentSlug, slug)),
+    columns: { config: true },
+  }).catch(() => null)
+  const mergedConfig = { ...((dbConfig?.config ?? {}) as Record<string, unknown>), ...cleanConfig }
+
   try {
     const result = await runAgent({
       agentSlug: slug,
       messages,
-      config: cleanConfig,
+      config: mergedConfig,
       orgId,
       conversationId: body.conversationId,
       emailStyle,
