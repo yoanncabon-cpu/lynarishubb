@@ -670,6 +670,15 @@ interface VoiceItem {
   description: string
 }
 
+const GENDER_FR: Record<string, string> = {
+  male: "Homme", female: "Femme", neutral: "Neutre",
+}
+const ACCENT_FR: Record<string, string> = {
+  american: "Américain", british: "Britannique", australian: "Australien",
+  french: "Français", spanish: "Espagnol", irish: "Irlandais",
+  indian: "Indien", african: "Africain", swedish: "Suédois",
+}
+
 function VoicePickerSection({
   selectedVoiceId,
   onSelect,
@@ -694,7 +703,7 @@ function VoicePickerSection({
       .finally(() => setLoading(false))
   }, [])
 
-  function handlePreview(voice: VoiceItem) {
+  function playVoice(voice: VoiceItem) {
     if (!voice.preview_url) return
     if (playingId === voice.voice_id) {
       audioRef.current?.pause()
@@ -704,18 +713,20 @@ function VoicePickerSection({
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.src = voice.preview_url
-      void audioRef.current.play().then(() => setPlayingId(voice.voice_id)).catch(() => setPlayingId(null))
     } else {
       const audio = new Audio(voice.preview_url)
       audioRef.current = audio
       audio.onended = () => setPlayingId(null)
-      void audio.play().then(() => setPlayingId(voice.voice_id)).catch(() => setPlayingId(null))
     }
+    void audioRef.current.play().then(() => setPlayingId(voice.voice_id)).catch(() => setPlayingId(null))
   }
 
-  useEffect(() => {
-    return () => { audioRef.current?.pause() }
-  }, [])
+  function handleCardClick(voice: VoiceItem) {
+    onSelect(voice.voice_id)
+    playVoice(voice)
+  }
+
+  useEffect(() => { return () => { audioRef.current?.pause() } }, [])
 
   if (loading) {
     return (
@@ -740,29 +751,35 @@ function VoicePickerSection({
   return (
     <div style={{ ...sectionStyle }}>
       <p style={sectionTitleStyle}>Voix ElevenLabs</p>
-      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", margin: "0 0 4px" }}>
-        Choisis la voix que Marine utilisera lors des appels téléphoniques.
+      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", margin: "0 0 8px" }}>
+        Clique sur une carte pour sélectionner et écouter la voix.
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 6,
+      }}>
         {voices.map(voice => {
           const isSelected = selectedVoiceId === voice.voice_id
           const isPlaying = playingId === voice.voice_id
+          const genderFr = GENDER_FR[voice.gender?.toLowerCase()] ?? voice.gender
+          const accentFr = ACCENT_FR[voice.accent?.toLowerCase()] ?? voice.accent
+          const tags = [genderFr, accentFr].filter(Boolean).join(" · ")
+
           return (
             <div
               key={voice.voice_id}
-              onClick={() => onSelect(voice.voice_id)}
+              onClick={() => handleCardClick(voice)}
               role="option"
               aria-selected={isSelected}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "9px 12px",
+                padding: "10px 12px",
                 borderRadius: 8,
                 border: `1px solid ${isSelected ? "rgba(34,211,238,0.4)" : "rgba(255,255,255,0.07)"}`,
                 background: isSelected ? "rgba(34,211,238,0.07)" : "rgba(255,255,255,0.025)",
                 cursor: "pointer",
                 transition: "border-color 150ms, background 150ms",
+                position: "relative",
               }}
               onMouseEnter={e => {
                 if (!isSelected) (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.14)"
@@ -771,50 +788,54 @@ function VoicePickerSection({
                 if (!isSelected) (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)"
               }}
             >
-              {/* Radio dot */}
-              <div style={{
-                width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                border: `2px solid ${isSelected ? "#22D3EE" : "rgba(255,255,255,0.2)"}`,
-                background: isSelected ? "#22D3EE" : "transparent",
-                transition: "border-color 150ms, background 150ms",
-              }} />
-
-              {/* Infos */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: isSelected ? 600 : 400, color: isSelected ? "#22D3EE" : "rgba(255,255,255,0.8)" }}>
+              {/* Nom + indicateur lecture */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                <p style={{
+                  margin: 0, fontSize: 12, fontWeight: isSelected ? 600 : 500,
+                  color: isSelected ? "#22D3EE" : "rgba(255,255,255,0.85)",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
                   {voice.name}
                 </p>
-                {(voice.accent || voice.gender || voice.description) && (
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-                    {[voice.gender, voice.accent, voice.description].filter(Boolean).join(" · ")}
-                  </p>
+                {isPlaying && (
+                  <div style={{ display: "flex", gap: 2, alignItems: "flex-end", flexShrink: 0 }}>
+                    {[4, 7, 5, 8, 3].map((h, i) => (
+                      <div key={i} style={{
+                        width: 2, height: h, borderRadius: 1,
+                        background: "#22D3EE",
+                        animation: `voiceBar 0.6s ease-in-out ${i * 0.1}s infinite alternate`,
+                      }} />
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* Preview button */}
-              {voice.preview_url && (
-                <button
-                  type="button"
-                  onClick={e => { e.stopPropagation(); handlePreview(voice) }}
-                  aria-label={isPlaying ? "Arrêter la preview" : "Écouter la preview"}
-                  style={{
-                    flexShrink: 0,
-                    width: 28, height: 28, borderRadius: "50%",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    background: isPlaying ? "rgba(34,211,238,0.15)" : "rgba(255,255,255,0.05)",
-                    color: isPlaying ? "#22D3EE" : "rgba(255,255,255,0.5)",
-                    cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "background 150ms, color 150ms",
-                  }}
-                >
-                  {isPlaying ? <Pause size={11} /> : <Play size={11} />}
-                </button>
+              {/* Tags */}
+              {tags && (
+                <p style={{ margin: "4px 0 0", fontSize: 10, color: "rgba(255,255,255,0.3)", lineHeight: 1.3 }}>
+                  {tags}
+                </p>
+              )}
+
+              {/* Sélectionné */}
+              {isSelected && (
+                <div style={{
+                  position: "absolute", top: 6, right: 8,
+                  width: 6, height: 6, borderRadius: "50%",
+                  background: "#22D3EE",
+                  boxShadow: "0 0 5px rgba(34,211,238,0.7)",
+                }} />
               )}
             </div>
           )
         })}
       </div>
+      <style>{`
+        @keyframes voiceBar {
+          from { transform: scaleY(0.4); }
+          to { transform: scaleY(1); }
+        }
+      `}</style>
     </div>
   )
 }
