@@ -3,10 +3,6 @@
   "regions": ["cdg1"],
   "crons": [
     {
-      "path": "/api/cron/run-jobs",
-      "schedule": "* * * * *"
-    },
-    {
       "path": "/api/cron/trial-check",
       "schedule": "0 8 * * *"
     },
