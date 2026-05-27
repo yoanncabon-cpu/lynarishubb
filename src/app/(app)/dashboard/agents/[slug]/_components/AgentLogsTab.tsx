@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   MessageSquare,
   Phone,
@@ -9,6 +9,9 @@ import {
   Search,
   MessageSquareText,
   ArrowRight,
+  X,
+  Bot,
+  User,
 } from "lucide-react"
 import type { Agent } from "@/lib/agents/data"
 
@@ -23,6 +26,28 @@ interface Conversation {
   lastMessage: string
   time: string
   status: "terminée" | "en cours"
+}
+
+interface Message {
+  id: string
+  role: "user" | "assistant" | "tool" | "system"
+  content: unknown
+  createdAt: string
+}
+
+function extractText(content: unknown): string {
+  if (typeof content === "string") return content
+  if (content && typeof content === "object") {
+    const c = content as Record<string, unknown>
+    if (typeof c["text"] === "string") return c["text"]
+    if (Array.isArray(c)) {
+      return (c as Array<{ type?: string; text?: string }>)
+        .filter((b) => b.type === "text")
+        .map((b) => b.text ?? "")
+        .join("\n")
+    }
+  }
+  return String(content ?? "")
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -141,17 +166,209 @@ function EmptyState({
   )
 }
 
+// ─── Conversation Modal ───────────────────────────────────────────────────────
+
+function ConversationModal({
+  conv,
+  agentColor,
+  onClose,
+}: {
+  conv: Conversation
+  agentColor: string
+  onClose: () => void
+}) {
+  const [msgs, setMsgs] = useState<Message[]>([])
+  const [loading, setLoading] = useState(true)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const color = channelColor(conv.channel)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setLoading(true)
+    fetch(`/api/conversations/${conv.id}/messages`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data: { messages?: Message[] }) => {
+        const visible = (data.messages ?? []).filter(
+          (m) => m.role === "user" || m.role === "assistant"
+        )
+        setMsgs(visible)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+    return () => controller.abort()
+  }, [conv.id])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [msgs])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={conv.title}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "20px 16px",
+      }}
+    >
+      <div
+        style={{
+          width: "min(660px, 100%)",
+          maxHeight: "80dvh",
+          background: "rgba(18,18,26,0.96)",
+          backdropFilter: "blur(32px) saturate(1.5)",
+          WebkitBackdropFilter: "blur(32px) saturate(1.5)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: 20,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          boxShadow: "0 40px 100px -30px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.07)",
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "16px 18px",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          flexShrink: 0,
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: `${color}16`, border: `1px solid ${color}32`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color, flexShrink: 0,
+          }}>
+            <ChannelIcon channel={conv.channel} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {conv.title}
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color, background: `${color}14`, border: `1px solid ${color}28`, padding: "1px 7px", borderRadius: 999 }}>
+                {channelLabel(conv.channel)}
+              </span>
+              {conv.status === "en cours" && (
+                <span style={{ fontSize: 10, fontWeight: 600, color: "#10B981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", padding: "1px 6px", borderRadius: 999, display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#10B981", display: "inline-block" }} />
+                  en cours
+                </span>
+              )}
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", marginLeft: "auto" }}>{conv.time}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer"
+            style={{
+              width: 30, height: 30, borderRadius: 8, border: "none", flexShrink: 0,
+              background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", transition: "background 150ms",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)" }}
+          >
+            <X size={14} aria-hidden />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "18px 18px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, flexDirection: i % 2 === 0 ? "row" : "row-reverse" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                <div style={{ height: 40, width: `${45 + (i % 3) * 15}%`, borderRadius: 12, background: "rgba(255,255,255,0.05)" }} />
+              </div>
+            ))
+          ) : msgs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+              Aucun message dans cette conversation.
+            </div>
+          ) : (
+            msgs.map((msg) => {
+              const isUser = msg.role === "user"
+              const text = extractText(msg.content)
+              return (
+                <div
+                  key={msg.id}
+                  style={{ display: "flex", gap: 10, flexDirection: isUser ? "row-reverse" : "row", alignItems: "flex-end" }}
+                >
+                  {/* Avatar */}
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                    background: isUser ? "rgba(255,255,255,0.08)" : `${agentColor}20`,
+                    border: `1px solid ${isUser ? "rgba(255,255,255,0.1)" : `${agentColor}40`}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: isUser ? "rgba(255,255,255,0.5)" : agentColor,
+                  }}>
+                    {isUser ? <User size={13} aria-hidden /> : <Bot size={13} aria-hidden />}
+                  </div>
+
+                  {/* Bubble */}
+                  <div style={{
+                    maxWidth: "72%",
+                    padding: "10px 13px",
+                    borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                    background: isUser
+                      ? "rgba(255,255,255,0.07)"
+                      : `${agentColor}12`,
+                    border: `1px solid ${isUser ? "rgba(255,255,255,0.08)" : `${agentColor}22`}`,
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    color: isUser ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.88)",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}>
+                    {text}
+                  </div>
+                </div>
+              )
+            })
+          )}
+          <div ref={bottomRef} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Conversation card ────────────────────────────────────────────────────────
+
 interface ConversationCardProps {
   conv: Conversation
   agentColor: string
+  onClick: () => void
 }
 
-function ConversationCard({ conv, agentColor }: ConversationCardProps) {
+function ConversationCard({ conv, agentColor, onClick }: ConversationCardProps) {
   const color = channelColor(conv.channel)
   const isOngoing = conv.status === "en cours"
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Voir la conversation : ${conv.title}`}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick() }}
       style={{
         padding: "14px 16px",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
@@ -159,10 +376,10 @@ function ConversationCard({ conv, agentColor }: ConversationCardProps) {
         gap: 12,
         alignItems: "flex-start",
         transition: "background 150ms",
-        cursor: "default",
+        cursor: "pointer",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.025)"
+        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)"
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLDivElement).style.background = "transparent"
@@ -295,6 +512,7 @@ export function AgentLogsTab({
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState("")
+  const [selectedConv, setSelectedConv] = useState<Conversation | null>(null)
 
   const fetchConversations = useCallback(
     async (isRefresh = false) => {
@@ -333,6 +551,14 @@ export function AgentLogsTab({
   const hasFilter = search.trim() !== ""
 
   return (
+    <>
+    {selectedConv && (
+      <ConversationModal
+        conv={selectedConv}
+        agentColor={agent.color}
+        onClose={() => setSelectedConv(null)}
+      />
+    )}
     <div
       style={{
         padding: 24,
@@ -440,7 +666,12 @@ export function AgentLogsTab({
           />
         ) : (
           filtered.map((conv) => (
-            <ConversationCard key={conv.id} conv={conv} agentColor={agent.color} />
+            <ConversationCard
+              key={conv.id}
+              conv={conv}
+              agentColor={agent.color}
+              onClick={() => setSelectedConv(conv)}
+            />
           ))
         )}
       </div>
@@ -452,5 +683,6 @@ export function AgentLogsTab({
         }
       `}</style>
     </div>
+    </>
   )
 }
