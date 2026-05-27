@@ -563,7 +563,7 @@ export default function TeamPage() {
       {/* ── Members table ───────────────────────────────────────────────────── */}
       <section style={{ marginBottom: 32 }}>
         <SectionLabel>Membres</SectionLabel>
-        <div className="ly-card" style={glassCard}>
+        <div className="ly-card" style={{ ...glassCard, overflow: "visible" }}>
           {/* Table header */}
           <div style={{
             display: "grid",
@@ -651,7 +651,7 @@ export default function TeamPage() {
                         width: 30, height: 30, borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)",
                         background: actionsOpen === member.email ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)",
                         color: "#71717A", display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: "pointer", padding: 0, transition: "all 150ms",
+                        cursor: "pointer", padding: 0, transition: "all 150ms", outline: "none",
                       }}
                     >
                       <MoreHorizontal size={13} />
