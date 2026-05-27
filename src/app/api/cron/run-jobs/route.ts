@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
-export const maxDuration = 60
+export const maxDuration = 300
 
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
@@ -48,17 +48,19 @@ export async function GET(req: NextRequest) {
   const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? url.origin
   const secret = expectedSecret
 
-  // Fire-and-forget — on ne attend pas la réponse de chaque job
-  const dispatched = due.map((job) => {
-    void fetch(`${baseUrl}/api/scheduled-jobs/${job.id}/execute`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-cron-secret": secret,
-      },
-    }).catch(() => {})
-    return job.id
-  })
+  const jobIds = due.map((job) => job.id)
 
-  return NextResponse.json({ dispatched: dispatched.length, jobIds: dispatched })
+  await Promise.allSettled(
+    due.map((job) =>
+      fetch(`${baseUrl}/api/scheduled-jobs/${job.id}/execute`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-cron-secret": secret,
+        },
+      }).catch(() => {})
+    )
+  )
+
+  return NextResponse.json({ dispatched: jobIds.length, jobIds })
 }
