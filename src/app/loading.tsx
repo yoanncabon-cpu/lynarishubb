@@ -1,3 +1,5 @@
+"use client"
+
 import { LynarisLogo } from "@/components/shared/LynarisLogo"
 
 export default function GlobalLoading() {
@@ -16,7 +18,7 @@ export default function GlobalLoading() {
       }}
     >
       <div style={{ animation: "glPulse 2s ease-in-out infinite" }}>
-        <LynarisLogo size={52} showWordmark />
+        <LynarisLogo size={56} showWordmark />
       </div>
 
       <div style={{ display: "flex", gap: 6 }}>
@@ -40,11 +42,11 @@ export default function GlobalLoading() {
       <style>{`
         @keyframes glPulse {
           0%, 100% { opacity: 1; }
-          50%       { opacity: 0.65; }
+          50%       { opacity: 0.55; }
         }
         @keyframes glBounce {
           0%, 80%, 100% { transform: translateY(0); }
-          40%           { transform: translateY(-7px); }
+          40%           { transform: translateY(-8px); }
         }
         @media (prefers-reduced-motion: reduce) {
           [role="status"] * { animation: none !important; }
