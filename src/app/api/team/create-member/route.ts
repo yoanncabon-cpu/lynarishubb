@@ -89,7 +89,11 @@ export async function POST(request: NextRequest) {
     }
 
     const authUserId = linkData.user.id
-    const activationLink = linkData.properties.action_link
+    // hashed_token → verifyOtp côté client, pas besoin de PKCE
+    // action_link utilise le flow Supabase natif qui redirige avec hash fragment
+    // (non lisible côté serveur). On construit notre propre URL cliente à la place.
+    const hashed_token = linkData.properties.hashed_token
+    const activationLink = `${appUrl}/accept-invite?token_hash=${encodeURIComponent(hashed_token)}&type=invite`
 
     // ── Insérer dans la table users (profil réel immédiat) ───────────────────
     const [newUser] = await db
