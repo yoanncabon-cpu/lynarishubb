@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { agents } from "@/lib/agents/data"
-import { MessageSquare, Clock, Settings, ArrowLeft, Brain, Play, SlidersHorizontal } from "lucide-react"
+import { MessageSquare, History, Settings, ArrowLeft, Brain, Play, SlidersHorizontal } from "lucide-react"
 import Link from "next/link"
 import { AgentChatTab } from "./_components/AgentChatTab"
 import { AgentLogsTab } from "./_components/AgentLogsTab"
@@ -97,7 +97,7 @@ export default function AgentDetailPage() {
 
   const tabs: { id: Tab; label: string; icon: typeof MessageSquare }[] = [
     { id: "chat", label: "Chat", icon: MessageSquare },
-    { id: "logs", label: "Logs", icon: Clock },
+    { id: "logs", label: "Historique", icon: History },
     { id: "settings", label: "Paramètres", icon: Settings },
     ...(slug === "charles" ? [{ id: "memory" as Tab, label: "Mémoire", icon: Brain }] : []),
   ]

@@ -1,170 +1,80 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
-  CheckCircle2,
-  XCircle,
-  Clock,
-  RefreshCw,
-  Wrench,
   MessageSquare,
+  Phone,
+  Mail,
+  RefreshCw,
   Search,
-  Download,
-  ChevronDown,
-  ChevronUp,
   MessageSquareText,
+  ArrowRight,
 } from "lucide-react"
 import type { Agent } from "@/lib/agents/data"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface ActionLog {
+interface Conversation {
   id: string
-  type: string
-  status: "success" | "error" | "pending"
-  detail: string
-  cost_usd?: number
-  duration_ms?: number
-  created_at: string
+  title: string
+  agentSlug: string
+  channel: string
+  summary: string
+  lastMessage: string
+  time: string
+  status: "terminée" | "en cours"
 }
-
-type FilterStatus = "all" | "success" | "error" | "tool"
-type DateRange = "today" | "7d" | "30d"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatType(type: string): string {
-  return type
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+function ChannelIcon({ channel }: { channel: string }) {
+  const props = { size: 12, "aria-hidden": true as const }
+  if (channel === "voice") return <Phone {...props} />
+  if (channel === "email") return <Mail {...props} />
+  return <MessageSquare {...props} />
 }
 
-function formatTimestamp(iso: string): string {
-  const date = new Date(iso)
-  const now = new Date()
-  const isToday =
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear()
-
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const isYesterday =
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear()
-
-  const time = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-
-  if (isToday) return `Aujourd'hui ${time}`
-  if (isYesterday) return `Hier ${time}`
-  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) + ` ${time}`
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
-}
-
-function isToolLog(log: ActionLog): boolean {
-  return log.type.includes("tool") || log.type.includes("call") || log.type.includes("function")
-}
-
-function isInDateRange(iso: string, range: DateRange): boolean {
-  const date = new Date(iso)
-  const now = new Date()
-  if (range === "today") {
-    return (
-      date.getDate() === now.getDate() &&
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    )
+function channelLabel(channel: string): string {
+  const labels: Record<string, string> = {
+    chat: "Chat",
+    voice: "Voix",
+    email: "Email",
+    whatsapp: "WhatsApp",
+    internal: "Interne",
   }
-  if (range === "7d") {
-    const limit = new Date(now)
-    limit.setDate(limit.getDate() - 7)
-    return date >= limit
-  }
-  if (range === "30d") {
-    const limit = new Date(now)
-    limit.setDate(limit.getDate() - 30)
-    return date >= limit
-  }
-  return true
+  return labels[channel] ?? channel
 }
 
-function exportCSV(logs: ActionLog[], agentSlug: string) {
-  const header = ["id", "type", "status", "detail", "duration_ms", "cost_usd", "created_at"]
-  const rows = logs.map((l) =>
-    [
-      l.id,
-      l.type,
-      l.status,
-      `"${(l.detail ?? "").replace(/"/g, '""')}"`,
-      l.duration_ms ?? "",
-      l.cost_usd ?? "",
-      l.created_at,
-    ].join(",")
-  )
-  const csv = [header.join(","), ...rows].join("\n")
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = `logs-${agentSlug}-${new Date().toISOString().split("T")[0]}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+function channelColor(channel: string): string {
+  const colors: Record<string, string> = {
+    chat: "#60a5fa",
+    voice: "#22D3EE",
+    email: "#F472B6",
+    whatsapp: "#22c55e",
+    internal: "#a78bfa",
+  }
+  return colors[channel] ?? "#71717A"
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SkeletonRow() {
+function SkeletonCard() {
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 12,
         padding: "14px 16px",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
       }}
     >
-      <div
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.08)",
-          flexShrink: 0,
-          marginTop: 4,
-        }}
-      />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-        <div
-          style={{
-            height: 12,
-            width: "40%",
-            borderRadius: 4,
-            background: "rgba(255,255,255,0.06)",
-          }}
-        />
-        <div
-          style={{
-            height: 10,
-            width: "70%",
-            borderRadius: 4,
-            background: "rgba(255,255,255,0.04)",
-          }}
-        />
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ height: 10, width: 60, borderRadius: 4, background: "rgba(255,255,255,0.06)" }} />
+        <div style={{ height: 10, width: 50, borderRadius: 4, background: "rgba(255,255,255,0.04)" }} />
       </div>
-      <div
-        style={{
-          width: 64,
-          height: 10,
-          borderRadius: 4,
-          background: "rgba(255,255,255,0.04)",
-          flexShrink: 0,
-        }}
-      />
+      <div style={{ height: 12, width: "55%", borderRadius: 4, background: "rgba(255,255,255,0.06)" }} />
+      <div style={{ height: 10, width: "80%", borderRadius: 4, background: "rgba(255,255,255,0.04)" }} />
     </div>
   )
 }
@@ -189,39 +99,19 @@ function EmptyState({
         padding: "56px 24px",
       }}
     >
-      {/* Simple SVG illustration */}
-      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden>
-        <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5" />
-        <circle cx="32" cy="32" r="18" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-        <circle cx="22" cy="28" r="2.5" fill="rgba(255,255,255,0.12)" />
-        <circle cx="32" cy="24" r="2.5" fill="rgba(255,255,255,0.12)" />
-        <circle cx="42" cy="28" r="2.5" fill="rgba(255,255,255,0.12)" />
-        <circle cx="27" cy="38" r="2" fill="rgba(255,255,255,0.08)" />
-        <circle cx="37" cy="38" r="2" fill="rgba(255,255,255,0.08)" />
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" aria-hidden>
+        <circle cx="28" cy="28" r="24" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5" />
+        <rect x="16" y="18" width="24" height="16" rx="4" stroke="rgba(255,255,255,0.12)" strokeWidth="1.2" />
+        <path d="M16 30l4 4 4-4" stroke="rgba(255,255,255,0.08)" strokeWidth="1.2" strokeLinecap="round" />
       </svg>
-
       <div style={{ textAlign: "center", maxWidth: 280 }}>
-        <p
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "rgba(255,255,255,0.5)",
-            margin: "0 0 6px",
-          }}
-        >
-          {hasFilter ? "Aucun log pour ce filtre" : "Aucune activité pour le moment"}
+        <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.5)", margin: "0 0 6px" }}>
+          {hasFilter ? "Aucune conversation pour ce filtre" : "Aucune conversation pour le moment"}
         </p>
-        <p
-          style={{
-            fontSize: 12,
-            color: "rgba(255,255,255,0.3)",
-            margin: "0 0 16px",
-            lineHeight: 1.5,
-          }}
-        >
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "0 0 16px", lineHeight: 1.5 }}>
           {hasFilter
-            ? "Essaie un autre filtre ou une plage de dates plus large."
-            : `Envoie une instruction à ${agentName} pour commencer.`}
+            ? "Essaie une autre recherche."
+            : `Lance une première conversation avec ${agentName}.`}
         </p>
         {!hasFilter && (
           <button
@@ -251,172 +141,143 @@ function EmptyState({
   )
 }
 
-interface LogEntryProps {
-  log: ActionLog
-  isLast: boolean
+interface ConversationCardProps {
+  conv: Conversation
+  agentColor: string
 }
 
-function LogEntry({ log, isLast }: LogEntryProps) {
-  const [expanded, setExpanded] = useState(false)
-
-  const isTool = isToolLog(log)
-
-  const iconColor =
-    log.status === "success"
-      ? "#22c55e"
-      : log.status === "error"
-        ? "#ef4444"
-        : isTool
-          ? "#a78bfa"
-          : "#60a5fa"
-
-  const IconComp =
-    log.status === "success"
-      ? CheckCircle2
-      : log.status === "error"
-        ? XCircle
-        : isTool
-          ? Wrench
-          : log.status === "pending"
-            ? Clock
-            : MessageSquare
-
-  const detail = log.detail ?? ""
-  const preview = detail.length > 120 ? detail.slice(0, 120) + "…" : detail
-  const hasMore = detail.length > 120
+function ConversationCard({ conv, agentColor }: ConversationCardProps) {
+  const color = channelColor(conv.channel)
+  const isOngoing = conv.status === "en cours"
 
   return (
     <div
       style={{
-        position: "relative",
+        padding: "14px 16px",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
         display: "flex",
-        gap: 0,
-        borderBottom: isLast ? undefined : "1px solid rgba(255,255,255,0.05)",
+        gap: 12,
+        alignItems: "flex-start",
+        transition: "background 150ms",
+        cursor: "default",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.025)"
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.background = "transparent"
       }}
     >
-      {/* Timeline line + dot */}
+      {/* Channel icon bubble */}
       <div
         style={{
+          width: 32,
+          height: 32,
+          borderRadius: "50%",
+          background: `${color}14`,
+          border: `1px solid ${color}30`,
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
-          padding: "14px 0 0 16px",
-          marginRight: 12,
+          justifyContent: "center",
           flexShrink: 0,
+          color: color,
+          marginTop: 2,
         }}
       >
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            background: `${iconColor}14`,
-            border: `1px solid ${iconColor}30`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <IconComp size={13} style={{ color: iconColor }} aria-hidden />
-        </div>
-        {!isLast && (
-          <div
-            style={{
-              width: 1,
-              flex: 1,
-              minHeight: 12,
-              marginTop: 4,
-              background:
-                "repeating-linear-gradient(to bottom, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 4px, transparent 4px, transparent 8px)",
-            }}
-          />
-        )}
+        <ChannelIcon channel={conv.channel} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: "14px 16px 14px 0" }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Top row */}
         <div
           style={{
             display: "flex",
-            alignItems: "flex-start",
+            alignItems: "center",
             justifyContent: "space-between",
             gap: 8,
-            marginBottom: 4,
+            marginBottom: 3,
           }}
         >
-          <p
-            style={{
-              margin: 0,
-              fontSize: 13,
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.85)",
-            }}
-          >
-            {formatType(log.type)}
-          </p>
-          <div
-            style={{
-              flexShrink: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              gap: 2,
-            }}
-          >
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>
-              {formatTimestamp(log.created_at)}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: color,
+                background: `${color}14`,
+                border: `1px solid ${color}28`,
+                padding: "1px 7px",
+                borderRadius: 999,
+              }}
+            >
+              {channelLabel(conv.channel)}
             </span>
-            {(log.duration_ms !== undefined || log.cost_usd !== undefined) && (
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>
-                {log.duration_ms !== undefined && formatDuration(log.duration_ms)}
-                {log.duration_ms !== undefined && log.cost_usd !== undefined && " · "}
-                {log.cost_usd !== undefined && `$${log.cost_usd.toFixed(4)}`}
+            {isOngoing && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#10B981",
+                  background: "rgba(16,185,129,0.1)",
+                  border: "1px solid rgba(16,185,129,0.25)",
+                  padding: "1px 6px",
+                  borderRadius: 999,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: "50%",
+                    background: "#10B981",
+                    display: "inline-block",
+                  }}
+                />
+                en cours
               </span>
             )}
           </div>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>
+            {conv.time}
+          </span>
         </div>
 
+        {/* Title */}
+        <p
+          style={{
+            margin: "0 0 3px",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "rgba(255,255,255,0.82)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {conv.title}
+        </p>
+
+        {/* Last message preview */}
         <p
           style={{
             margin: 0,
             fontSize: 12,
-            color: "rgba(255,255,255,0.4)",
-            lineHeight: 1.5,
+            color: "rgba(255,255,255,0.38)",
+            lineHeight: 1.45,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          {expanded ? log.detail : preview}
+          {conv.lastMessage || "Pas encore de message"}
         </p>
-
-        {hasMore && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 3,
-              marginTop: 6,
-              fontSize: 11,
-              color: "rgba(255,255,255,0.3)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-            }}
-          >
-            {expanded ? (
-              <>
-                <ChevronUp size={11} aria-hidden /> Réduire
-              </>
-            ) : (
-              <>
-                <ChevronDown size={11} aria-hidden /> Voir tout
-              </>
-            )}
-          </button>
-        )}
       </div>
+
+      <ArrowRight size={14} style={{ color: "rgba(255,255,255,0.15)", flexShrink: 0, marginTop: 8 }} aria-hidden />
     </div>
   )
 }
@@ -430,26 +291,23 @@ export function AgentLogsTab({
   agent: Agent
   onSwitchToChat?: () => void
 }) {
-  const [logs, setLogs] = useState<ActionLog[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<FilterStatus>("all")
-  const [dateRange, setDateRange] = useState<DateRange>("7d")
-  const [search, setSearch] = useState("")
   const [refreshing, setRefreshing] = useState(false)
-  const searchRef = useRef<HTMLInputElement>(null)
+  const [search, setSearch] = useState("")
 
-  const fetchLogs = useCallback(
+  const fetchConversations = useCallback(
     async (isRefresh = false) => {
       if (isRefresh) setRefreshing(true)
       else setLoading(true)
 
       try {
-        const res = await fetch(`/api/agents/${agent.slug}/logs`)
+        const res = await fetch(`/api/conversations?agent_slug=${agent.slug}`)
         if (!res.ok) throw new Error("fetch failed")
-        const data = (await res.json()) as { logs?: ActionLog[] } | ActionLog[]
-        setLogs(Array.isArray(data) ? data : (data.logs ?? []))
+        const data = (await res.json()) as { conversations?: Conversation[] }
+        setConversations(data.conversations ?? [])
       } catch {
-        setLogs([])
+        setConversations([])
       } finally {
         setLoading(false)
         setRefreshing(false)
@@ -459,37 +317,20 @@ export function AgentLogsTab({
   )
 
   useEffect(() => {
-    fetchLogs()
-  }, [fetchLogs])
+    fetchConversations()
+  }, [fetchConversations])
 
-  // Apply filters
-  const filtered = logs.filter((l) => {
-    if (!isInDateRange(l.created_at, dateRange)) return false
-    if (filter === "success" && l.status !== "success") return false
-    if (filter === "error" && l.status !== "error") return false
-    if (filter === "tool" && !isToolLog(l)) return false
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      if (!l.type.toLowerCase().includes(q) && !l.detail.toLowerCase().includes(q)) return false
-    }
-    return true
+  const filtered = conversations.filter((c) => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      c.title.toLowerCase().includes(q) ||
+      c.lastMessage.toLowerCase().includes(q) ||
+      c.summary.toLowerCase().includes(q)
+    )
   })
 
-  const totalCost = logs.reduce((acc, l) => acc + (l.cost_usd ?? 0), 0)
-  const hasActiveFilter = filter !== "all" || dateRange !== "7d" || search.trim() !== ""
-
-  const filterLabels: Record<FilterStatus, string> = {
-    all: "Tous",
-    success: "Succès",
-    error: "Erreurs",
-    tool: "Tool calls",
-  }
-
-  const dateRangeLabels: Record<DateRange, string> = {
-    today: "Aujourd'hui",
-    "7d": "7 jours",
-    "30d": "30 jours",
-  }
+  const hasFilter = search.trim() !== ""
 
   return (
     <div
@@ -502,141 +343,40 @@ export function AgentLogsTab({
         height: "100%",
       }}
     >
-      {/* Header row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
-            {loading
-              ? "Chargement..."
-              : `${filtered.length} / ${logs.length} action${logs.length !== 1 ? "s" : ""}`}
-          </span>
-          {!loading && totalCost > 0 && (
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
-              {(totalCost * 100).toFixed(3)} ct
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: "flex", gap: 6 }}>
-          {/* Export CSV */}
-          {!loading && filtered.length > 0 && (
-            <button
-              type="button"
-              onClick={() => exportCSV(filtered, agent.slug)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "5px 10px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.45)",
-                fontSize: 12,
-                cursor: "pointer",
-                transition: "opacity 150ms",
-              }}
-            >
-              <Download size={12} aria-hidden />
-              CSV
-            </button>
-          )}
-
-          {/* Refresh */}
-          <button
-            type="button"
-            onClick={() => fetchLogs(true)}
-            disabled={refreshing}
-            aria-label="Rafraichir les logs"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "5px 10px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.5)",
-              fontSize: 12,
-              cursor: refreshing ? "not-allowed" : "pointer",
-              opacity: refreshing ? 0.5 : 1,
-              transition: "opacity 150ms",
-            }}
-          >
-            <RefreshCw
-              size={12}
-              style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }}
-              aria-hidden
-            />
-            Rafraichir
-          </button>
-        </div>
-      </div>
-
-      {/* Filter row */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {/* Status filters */}
-        {(["all", "success", "error", "tool"] as FilterStatus[]).map((s) => {
-          const active = filter === s
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setFilter(s)}
-              style={{
-                padding: "4px 12px",
-                borderRadius: 999,
-                border: active
-                  ? "1px solid rgba(124,58,237,0.5)"
-                  : "1px solid rgba(255,255,255,0.08)",
-                background: active ? "rgba(124,58,237,0.15)" : "rgba(255,255,255,0.03)",
-                color: active ? "#a78bfa" : "rgba(255,255,255,0.45)",
-                fontSize: 12,
-                cursor: "pointer",
-                transition: "all 150ms",
-              }}
-            >
-              {filterLabels[s]}
-            </button>
-          )
-        })}
-
-        {/* Divider */}
-        <div
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+          {loading
+            ? "Chargement..."
+            : `${filtered.length} conversation${filtered.length !== 1 ? "s" : ""}`}
+        </span>
+        <button
+          type="button"
+          onClick={() => fetchConversations(true)}
+          disabled={refreshing}
+          aria-label="Rafraîchir les conversations"
           style={{
-            width: 1,
-            height: 24,
-            background: "rgba(255,255,255,0.08)",
-            alignSelf: "center",
-            margin: "0 2px",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "5px 10px",
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.04)",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 12,
+            cursor: refreshing ? "not-allowed" : "pointer",
+            opacity: refreshing ? 0.5 : 1,
+            transition: "opacity 150ms",
           }}
-        />
-
-        {/* Date range filters */}
-        {(["today", "7d", "30d"] as DateRange[]).map((d) => {
-          const active = dateRange === d
-          return (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDateRange(d)}
-              style={{
-                padding: "4px 12px",
-                borderRadius: 999,
-                border: active
-                  ? "1px solid rgba(232,111,77,0.4)"
-                  : "1px solid rgba(255,255,255,0.08)",
-                background: active ? "rgba(232,111,77,0.1)" : "rgba(255,255,255,0.03)",
-                color: active ? "#E86F4D" : "rgba(255,255,255,0.45)",
-                fontSize: 12,
-                cursor: "pointer",
-                transition: "all 150ms",
-              }}
-            >
-              {dateRangeLabels[d]}
-            </button>
-          )
-        })}
+        >
+          <RefreshCw
+            size={12}
+            style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }}
+            aria-hidden
+          />
+          Rafraîchir
+        </button>
       </div>
 
       {/* Search */}
@@ -654,11 +394,10 @@ export function AgentLogsTab({
           aria-hidden
         />
         <input
-          ref={searchRef}
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher dans les logs..."
+          placeholder="Rechercher dans les conversations..."
           style={{
             width: "100%",
             height: 36,
@@ -674,7 +413,7 @@ export function AgentLogsTab({
             transition: "border-color 150ms",
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)"
+            e.currentTarget.style.borderColor = `${agent.color}60`
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"
@@ -682,7 +421,7 @@ export function AgentLogsTab({
         />
       </div>
 
-      {/* Log list */}
+      {/* List */}
       <div
         style={{
           background: "rgba(20,20,28,0.8)",
@@ -692,25 +431,16 @@ export function AgentLogsTab({
         }}
       >
         {loading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              style={
-                i < 4 ? { borderBottom: "1px solid rgba(255,255,255,0.05)" } : undefined
-              }
-            >
-              <SkeletonRow />
-            </div>
-          ))
+          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : filtered.length === 0 ? (
           <EmptyState
-            hasFilter={hasActiveFilter}
+            hasFilter={hasFilter}
             agentName={agent.name}
             onScrollToChat={onSwitchToChat ?? (() => {})}
           />
         ) : (
-          filtered.map((log, i) => (
-            <LogEntry key={log.id} log={log} isLast={i === filtered.length - 1} />
+          filtered.map((conv) => (
+            <ConversationCard key={conv.id} conv={conv} agentColor={agent.color} />
           ))
         )}
       </div>
