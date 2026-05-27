@@ -1,21 +1,55 @@
+import { LynarisLogo } from "@/components/shared/LynarisLogo"
+
 export default function GlobalLoading() {
   return (
-    <div className="min-h-dvh bg-[--ly-bg] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[--ly-primary] to-[--ly-primary-soft] flex items-center justify-center animate-pulse">
-          <span className="text-white font-bold select-none">L</span>
-        </div>
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map(i => (
-            <span
-              key={i}
-              className="h-1.5 w-1.5 rounded-full bg-[--ly-primary]/60 animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
-              aria-hidden
-            />
-          ))}
-        </div>
+    <div
+      role="status"
+      aria-label="Chargement"
+      style={{
+        minHeight: "100dvh",
+        background: "#0C0C0F",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 28,
+      }}
+    >
+      <div style={{ animation: "glPulse 2s ease-in-out infinite" }}>
+        <LynarisLogo size={52} showWordmark />
       </div>
+
+      <div style={{ display: "flex", gap: 6 }}>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            aria-hidden
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: "rgba(232,111,77,0.6)",
+              display: "inline-block",
+              animation: "glBounce 1.2s ease-in-out infinite",
+              animationDelay: `${i * 0.18}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes glPulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.65; }
+        }
+        @keyframes glBounce {
+          0%, 80%, 100% { transform: translateY(0); }
+          40%           { transform: translateY(-7px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [role="status"] * { animation: none !important; }
+        }
+      `}</style>
     </div>
   )
 }

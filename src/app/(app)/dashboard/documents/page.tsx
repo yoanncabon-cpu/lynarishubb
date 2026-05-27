@@ -15,6 +15,9 @@ import {
   ChevronDown,
   FolderOpen,
   FolderInput,
+  Download,
+  X,
+  Eye,
 } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/auth/supabase-browser"
 
@@ -386,6 +389,134 @@ function FolderCard({
   )
 }
 
+// ── FileViewerModal ───────────────────────────────────────────────────────────
+
+function FileViewerModal({ file, onClose }: { file: DocFile; onClose: () => void }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!file.storagePath) { setLoading(false); return }
+    const supabase = getSupabaseBrowserClient()
+    supabase.storage
+      .from("documents")
+      .createSignedUrl(file.storagePath, 3600)
+      .then(({ data }: { data: { signedUrl: string } | null }) => setUrl(data?.signedUrl ?? null))
+      .catch(() => setUrl(null))
+      .finally(() => setLoading(false))
+  }, [file.storagePath])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  const isImage = file.mimeType.startsWith("image/")
+  const isPdf   = file.mimeType === "application/pdf"
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={file.name}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.75)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div style={{
+        width: "min(900px,100%)",
+        maxHeight: "90dvh",
+        background: "rgba(18,18,26,0.97)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: 20,
+        display: "flex", flexDirection: "column", overflow: "hidden",
+        boxShadow: "0 40px 100px -30px rgba(0,0,0,0.9)",
+      }}>
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "14px 18px",
+          borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0,
+        }}>
+          <File size={15} color="rgba(245,245,247,0.45)" aria-hidden />
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#F5F5F7", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+          <span style={{ fontSize: 12, color: "rgba(245,245,247,0.35)", marginRight: 8 }}>{file.size}</span>
+          {url && (
+            <a
+              href={url}
+              download={file.name}
+              style={{
+                display: "flex", alignItems: "center", gap: 5, height: 30, padding: "0 12px",
+                borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(255,255,255,0.05)", color: "rgba(245,245,247,0.7)",
+                fontSize: 12, fontWeight: 500, textDecoration: "none",
+              }}
+            >
+              <Download size={12} aria-hidden /> Télécharger
+            </a>
+          )}
+          <button type="button" onClick={onClose} aria-label="Fermer" style={{
+            width: 30, height: 30, borderRadius: 8, border: "none",
+            background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+          }}>
+            <X size={14} aria-hidden />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, minHeight: 200 }}>
+          {loading ? (
+            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Chargement…</div>
+          ) : !url ? (
+            <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+              <File size={32} color="rgba(255,255,255,0.2)" aria-hidden style={{ marginBottom: 12 }} />
+              <p style={{ margin: "0 0 16px" }}>Aperçu non disponible</p>
+              <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.2)" }}>Fichier non stocké dans le cloud</p>
+            </div>
+          ) : isImage ? (
+            <img src={url} alt={file.name} style={{ maxWidth: "100%", maxHeight: "70dvh", borderRadius: 10, objectFit: "contain" }} />
+          ) : isPdf ? (
+            <iframe
+              src={url}
+              title={file.name}
+              style={{ width: "100%", height: "70dvh", border: "none", borderRadius: 10, background: "#fff" }}
+            />
+          ) : (
+            <div style={{ textAlign: "center" }}>
+              <File size={48} color="rgba(255,255,255,0.15)" aria-hidden style={{ marginBottom: 16 }} />
+              <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>
+                {file.mimeType || "Fichier"}
+              </p>
+              <p style={{ margin: "0 0 20px", fontSize: 13, color: "rgba(255,255,255,0.3)" }}>
+                Aperçu non disponible pour ce type de fichier
+              </p>
+              <a
+                href={url}
+                download={file.name}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "10px 20px", borderRadius: 10,
+                  background: "linear-gradient(135deg, #E86F4D 0%, #C2552A 100%)",
+                  color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
+                }}
+              >
+                <Download size={14} aria-hidden /> Télécharger le fichier
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DocumentsPage() {
@@ -401,6 +532,7 @@ export default function DocumentsPage() {
   const folderInputRef2 = useRef<HTMLInputElement>(null)
 
   const [openFolderId, setOpenFolderId] = useState<string | null>(null)
+  const [viewingFile, setViewingFile] = useState<DocFile | null>(null)
 
   type Modal =
     | { type: "create" }
@@ -422,7 +554,23 @@ export default function DocumentsPage() {
       if (!res.ok) return
       const json = await res.json() as { documents: DbDocument[] }
       const docs = json.documents ?? []
-      setFolders(docs.filter((d) => d.type === "folder").map(dbToDocFolder))
+      const folderDocs = docs.filter((d) => d.type === "folder")
+
+      // Charge les fichiers de chaque dossier en parallèle pour le compteur
+      const foldersWithFiles = await Promise.all(
+        folderDocs.map(async (doc) => {
+          const folder = dbToDocFolder(doc)
+          try {
+            const r = await fetch(`/api/documents?folderId=${folder.id}`)
+            if (!r.ok) return folder
+            const fj = await r.json() as { documents: DbDocument[] }
+            folder.files = (fj.documents ?? []).filter((d) => d.type === "file").map(dbToDocFile)
+          } catch { /* non-bloquant */ }
+          return folder
+        })
+      )
+
+      setFolders(foldersWithFiles)
       setRootFiles(docs.filter((d) => d.type === "file").map(dbToDocFile))
     } finally {
       setLoading(false)
@@ -551,6 +699,9 @@ export default function DocumentsPage() {
             const json = await res.json() as { document: DbDocument }
             const newFolder = dbToDocFolder(json.document)
             setFolders((prev) => [newFolder, ...prev])
+            // Si un seul dossier droppé, naviguer dedans automatiquement
+            const dirEntries = entries.filter((en) => en.isDirectory)
+            if (dirEntries.length === 1) setOpenFolderId(newFolder.id)
             await uploadFilesCore(files, newFolder.id)
           }
         } else {
@@ -585,6 +736,7 @@ export default function DocumentsPage() {
     const json = await res.json() as { document: DbDocument }
     const newFolder = dbToDocFolder(json.document)
     setFolders((prev) => [newFolder, ...prev])
+    setOpenFolderId(newFolder.id) // naviguer immédiatement dans le dossier
 
     await uploadFiles(allFiles, newFolder.id)
     if (e.target) e.target.value = ""
@@ -653,6 +805,11 @@ export default function DocumentsPage() {
 
   return (
     <div style={{ padding: "clamp(20px, 4vw, 32px) clamp(16px, 4vw, 40px)" }}>
+
+      {/* ── File viewer ── */}
+      {viewingFile && (
+        <FileViewerModal file={viewingFile} onClose={() => setViewingFile(null)} />
+      )}
 
       {/* ── Modals ── */}
       {modal?.type === "create" && (
@@ -937,16 +1094,13 @@ export default function DocumentsPage() {
                 <FolderInput size={26} color="rgba(245,245,247,0.25)" aria-hidden />
               </div>
               <p style={{ fontSize: 14, color: "rgba(245,245,247,0.75)", margin: 0, textAlign: "center" }}>
-                Déposez vos documents ou dossiers ici ou{" "}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    background: "none", border: "none", color: "#E86F4D",
-                    fontSize: 14, cursor: "pointer", padding: 0,
-                  }}
-                >
-                  parcourir
+                Déposez vos documents ou dossiers ici, parcourir{" "}
+                <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: "none", border: "none", color: "#E86F4D", fontSize: 14, cursor: "pointer", padding: 0 }}>
+                  un fichier
+                </button>
+                {" "}ou{" "}
+                <button type="button" onClick={() => folderInputRef2.current?.click()} style={{ background: "none", border: "none", color: "#E86F4D", fontSize: 14, cursor: "pointer", padding: 0 }}>
+                  un dossier
                 </button>
               </p>
               <p style={{ fontSize: 12, color: "rgba(245,245,247,0.3)", margin: 0 }}>Fichiers individuels ou dossiers entiers · Max. 25 Mo / fichier</p>
@@ -959,17 +1113,34 @@ export default function DocumentsPage() {
                   className="ly-surface"
                   style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                    borderRadius: 12,
+                    borderRadius: 12, cursor: "pointer", transition: "background 150ms",
                   }}
+                  onClick={() => setViewingFile(f)}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "" }}
                 >
                   <File size={16} color="rgba(245,245,247,0.45)" aria-hidden />
                   <span style={{ flex: 1, fontSize: 13, color: "#F5F5F7" }}>{f.name}</span>
-                  <span style={{ fontSize: 12, color: "rgba(245,245,247,0.3)", flexShrink: 0, marginRight: 8 }}>
+                  <span style={{ fontSize: 12, color: "rgba(245,245,247,0.3)", flexShrink: 0, marginRight: 4 }}>
                     {f.size}
                   </span>
                   <button
                     type="button"
-                    onClick={() => setModal({ type: "deleteFile", fileId: f.id, name: f.name })}
+                    onClick={(e) => { e.stopPropagation(); setViewingFile(f) }}
+                    aria-label={`Visualiser ${f.name}`}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "rgba(245,245,247,0.3)", padding: 4,
+                      display: "flex", borderRadius: 4, transition: "color 0.15s",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#E86F4D" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "rgba(245,245,247,0.3)" }}
+                  >
+                    <Eye size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setModal({ type: "deleteFile", fileId: f.id, name: f.name }) }}
                     aria-label={`Supprimer ${f.name}`}
                     style={{
                       background: "none", border: "none", cursor: "pointer",
