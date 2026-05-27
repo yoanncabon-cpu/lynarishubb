@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   ChevronDown,
   FolderOpen,
+  FolderInput,
 } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/auth/supabase-browser"
 
@@ -99,6 +100,40 @@ function dbToDocFolder(row: DbDocument): DocFolder {
     files: [],
     addedAt: new Date(row.created_at).getTime(),
   }
+}
+
+// Lit récursivement tous les File d'une entrée FileSystem (fichier ou dossier)
+async function getFilesFromEntry(entry: FileSystemEntry): Promise<File[]> {
+  if (entry.isFile) {
+    return new Promise((resolve) => {
+      (entry as FileSystemFileEntry).file(
+        (f) => resolve([f]),
+        () => resolve([])
+      )
+    })
+  }
+  if (entry.isDirectory) {
+    const reader = (entry as FileSystemDirectoryEntry).createReader()
+    const allFiles: File[] = []
+    await new Promise<void>((resolve) => {
+      function read() {
+        reader.readEntries(
+          async (entries) => {
+            if (!entries.length) { resolve(); return }
+            for (const e of entries) {
+              const files = await getFilesFromEntry(e)
+              allFiles.push(...files)
+            }
+            read()
+          },
+          () => resolve()
+        )
+      }
+      read()
+    })
+    return allFiles
+  }
+  return []
 }
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -428,63 +463,104 @@ export default function DocumentsPage() {
 
   // ── Upload fichiers ───────────────────────────────────────────────────────
 
+  async function uploadFilesCore(rawFiles: File[], folderId: string | null) {
+    if (!rawFiles.length) return
+    const supabase = getSupabaseBrowserClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    for (const file of rawFiles) {
+      let storagePath: string | null = null
+
+      if (user) {
+        const path = `${user.id}/${Date.now()}-${file.name}`
+        const { error: storageError } = await supabase.storage
+          .from("documents")
+          .upload(path, file, { upsert: false })
+        if (!storageError) storagePath = path
+      }
+
+      const body: Record<string, unknown> = {
+        name: file.name,
+        type: "file",
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+      }
+      if (folderId) body.folderId = folderId
+      if (storagePath) body.storagePath = storagePath
+
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) continue
+      const json = await res.json() as { document: DbDocument }
+      const docFile = dbToDocFile(json.document)
+
+      if (folderId) {
+        setFolders((prev) =>
+          prev.map((fo) =>
+            fo.id === folderId ? { ...fo, files: [docFile, ...fo.files] } : fo
+          )
+        )
+      } else {
+        setRootFiles((prev) => [docFile, ...prev])
+      }
+    }
+  }
+
   async function uploadFiles(rawFiles: File[], folderId: string | null) {
     if (!rawFiles.length) return
     setUploading(true)
-    const supabase = getSupabaseBrowserClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
     try {
-      for (const file of rawFiles) {
-        let storagePath: string | null = null
-
-        if (user) {
-          const path = `${user.id}/${Date.now()}-${file.name}`
-          const { error: storageError } = await supabase.storage
-            .from("documents")
-            .upload(path, file, { upsert: false })
-          if (!storageError) storagePath = path
-        }
-
-        const body: Record<string, unknown> = {
-          name: file.name,
-          type: "file",
-          mimeType: file.type || "application/octet-stream",
-          sizeBytes: file.size,
-        }
-        if (folderId) body.folderId = folderId
-        if (storagePath) body.storagePath = storagePath
-
-        const res = await fetch("/api/documents", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        })
-        if (!res.ok) continue
-        const json = await res.json() as { document: DbDocument }
-        const docFile = dbToDocFile(json.document)
-
-        if (folderId) {
-          setFolders((prev) =>
-            prev.map((fo) =>
-              fo.id === folderId ? { ...fo, files: [docFile, ...fo.files] } : fo
-            )
-          )
-        } else {
-          setRootFiles((prev) => [docFile, ...prev])
-        }
-      }
+      await uploadFilesCore(rawFiles, folderId)
     } finally {
       setUploading(false)
     }
   }
 
-  function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
+  async function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
     setDragging(false)
-    void uploadFiles(Array.from(e.dataTransfer.files), openFolderId)
+
+    const items = Array.from(e.dataTransfer.items)
+    const entries = items.map((item) => item.webkitGetAsEntry()).filter(Boolean) as FileSystemEntry[]
+    const hasDirectory = entries.some((en) => en.isDirectory)
+
+    if (!hasDirectory) {
+      void uploadFiles(Array.from(e.dataTransfer.files), openFolderId)
+      return
+    }
+
+    setUploading(true)
+    try {
+      for (const entry of entries) {
+        if (entry.isDirectory) {
+          const files = await getFilesFromEntry(entry)
+          if (openFolderId) {
+            // Dans un dossier ouvert : aplatir les fichiers dedans
+            await uploadFilesCore(files, openFolderId)
+          } else {
+            // À la racine : créer un dossier DB puis uploader les fichiers
+            const res = await fetch("/api/documents", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: entry.name, type: "folder" }),
+            })
+            if (!res.ok) continue
+            const json = await res.json() as { document: DbDocument }
+            const newFolder = dbToDocFolder(json.document)
+            setFolders((prev) => [newFolder, ...prev])
+            await uploadFilesCore(files, newFolder.id)
+          }
+        } else {
+          const files = await getFilesFromEntry(entry)
+          await uploadFilesCore(files, openFolderId)
+        }
+      }
+    } finally {
+      setUploading(false)
+    }
   }
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -856,9 +932,12 @@ export default function DocumentsPage() {
         >
           {displayFiles.length === 0 ? (
             <>
-              <File size={28} color="rgba(245,245,247,0.3)" aria-hidden />
+              <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center" }}>
+                <File size={26} color="rgba(245,245,247,0.25)" aria-hidden />
+                <FolderInput size={26} color="rgba(245,245,247,0.25)" aria-hidden />
+              </div>
               <p style={{ fontSize: 14, color: "rgba(245,245,247,0.75)", margin: 0, textAlign: "center" }}>
-                Déposez vos documents ici ou{" "}
+                Déposez vos documents ou dossiers ici ou{" "}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -870,7 +949,7 @@ export default function DocumentsPage() {
                   parcourir
                 </button>
               </p>
-              <p style={{ fontSize: 12, color: "rgba(245,245,247,0.3)", margin: 0 }}>Taille max. 25 Mo</p>
+              <p style={{ fontSize: 12, color: "rgba(245,245,247,0.3)", margin: 0 }}>Fichiers individuels ou dossiers entiers · Max. 25 Mo / fichier</p>
             </>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
