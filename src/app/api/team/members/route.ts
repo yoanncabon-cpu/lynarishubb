@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/auth/supabase-server"
 import { db } from "@/lib/db"
-import { users } from "@/lib/db/schema"
+import { users, organizations } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
+import { sendEmail } from "@/lib/emails/send"
+import { teamRemovalEmail } from "@/lib/emails/templates"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -104,19 +106,43 @@ export async function DELETE(request: NextRequest) {
 
   const target = await db.query.users.findFirst({
     where: and(eq(users.id, userId), eq(users.orgId, caller.orgId)),
-    columns: { id: true, role: true },
+    columns: { id: true, role: true, email: true, fullName: true },
   })
   if (!target) return NextResponse.json({ error: "Membre introuvable" }, { status: 404 })
   if (target.role === "owner") {
     return NextResponse.json({ error: "Impossible de retirer le propriétaire" }, { status: 403 })
   }
 
+  // Récupérer le nom de l'org et du caller pour l'email
+  const [org, callerUser] = await Promise.all([
+    db.query.organizations.findFirst({
+      where: eq(organizations.id, caller.orgId),
+      columns: { name: true },
+    }),
+    db.query.users.findFirst({
+      where: eq(users.id, caller.id),
+      columns: { fullName: true, email: true },
+    }),
+  ])
+
+  // Envoyer l'email de notification AVANT la suppression
+  void sendEmail({
+    to: target.email,
+    from: "Lynaris <support@lynarisai.com>",
+    template: teamRemovalEmail({
+      memberName: target.fullName ?? target.email.split("@")[0] ?? "Membre",
+      orgName: org?.name ?? "votre espace Lynaris",
+      removedByName: callerUser?.fullName ?? callerUser?.email ?? "L'administrateur",
+    }),
+    tags: ["team-removal"],
+  })
+
   // Supprimer de la table users (retire de l'org)
   await db
     .delete(users)
     .where(and(eq(users.id, userId), eq(users.orgId, caller.orgId)))
 
-  // Supprimer le compte auth Supabase pour révoquer l'accès immédiatement
+  // Révoquer le compte auth Supabase
   try {
     const supabaseAdmin = createSupabaseAdminClient()
     await supabaseAdmin.auth.admin.deleteUser(userId)

@@ -237,3 +237,43 @@ export function teamInviteEmail(params: {
     html: emailLayout(content),
   }
 }
+
+// ── 6. teamRemovalEmail ───────────────────────────────────────────────────────
+
+export function teamRemovalEmail(params: {
+  memberName: string
+  orgName: string
+  removedByName: string
+}): EmailTemplate {
+  const { memberName, orgName, removedByName } = params
+  const firstName = memberName.split(" ")[0] ?? memberName
+
+  const content = `
+    <h1 style="font-size:22px;font-weight:700;color:${C.text};margin:0 0 10px;font-family:system-ui,-apple-system,sans-serif;letter-spacing:-0.02em">
+      Ton accès à ${orgName} a été retiré
+    </h1>
+    <p style="font-size:15px;color:${C.muted};line-height:1.6;margin:0 0 24px;font-family:system-ui,-apple-system,sans-serif">
+      Bonjour <strong style="color:${C.text}">${firstName}</strong>,<br><br>
+      <strong style="color:${C.text}">${removedByName}</strong> a retiré ton compte de l'espace de travail
+      <strong style="color:${C.text}">${orgName}</strong> sur Lynaris.
+    </p>
+
+    <div style="height:1px;background:${C.border};margin-bottom:24px"></div>
+
+    <div style="background:${C.card};border-radius:10px;padding:16px 20px;margin-bottom:24px">
+      <p style="margin:0;font-size:13px;color:${C.muted};line-height:1.6;font-family:system-ui">
+        Tu n'as plus accès aux agents, conversations et paramètres de cet espace.<br>
+        Si tu penses qu'il s'agit d'une erreur, contacte directement
+        <strong style="color:${C.text}">${removedByName}</strong> ou l'administrateur de l'espace.
+      </p>
+    </div>
+
+    <p style="font-size:13px;color:${C.subtle};margin:0;font-family:system-ui">L'équipe Lynaris</p>
+  `
+
+  return {
+    subject: `Ton accès à ${orgName} sur Lynaris a été retiré`,
+    text: `Bonjour ${firstName},\n\n${removedByName} a retiré ton compte de l'espace de travail ${orgName} sur Lynaris.\n\nTu n'as plus accès aux agents, conversations et paramètres de cet espace.\n\nSi tu penses qu'il s'agit d'une erreur, contacte ${removedByName}.\n\nL'équipe Lynaris`,
+    html: emailLayout(content),
+  }
+}
