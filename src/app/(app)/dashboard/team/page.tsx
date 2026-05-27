@@ -408,19 +408,64 @@ export default function TeamPage() {
     setTimeout(() => { setSavingAccess(null); push("Accès agents sauvegardé") }, 400)
   }
 
-  // ── Role change ──────────────────────────────────────────────────────────────
-  function changeRole(email: string, newRole: "admin" | "member") {
-    setMembers((m) => m.map((mbr) => mbr.email === email ? { ...mbr, role: newRole } : mbr))
-    setRoleDropdown(null)
+  // ── Role change (persisté en DB) ─────────────────────────────────────────────
+  const [roleChanging, setRoleChanging] = useState<string | null>(null)
+
+  async function changeRole(email: string, newRole: "admin" | "member") {
+    const member = members.find((m) => m.email === email)
+    if (!member?.id) return
+
+    setRoleChanging(email)
     setActionsOpen(null)
-    push("Rôle mis à jour")
+
+    try {
+      const res = await fetch("/api/team/members", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: member.id, role: newRole }),
+      })
+      if (res.ok) {
+        setMembers((m) => m.map((mbr) => mbr.email === email ? { ...mbr, role: newRole } : mbr))
+        push("Rôle mis à jour")
+      } else {
+        const d = await res.json() as { error?: string }
+        push(d.error ?? "Erreur lors du changement de rôle", "error")
+      }
+    } catch {
+      push("Erreur réseau", "error")
+    } finally {
+      setRoleChanging(null)
+    }
   }
 
-  // ── Remove ───────────────────────────────────────────────────────────────────
-  function removeMember(email: string) {
-    setMembers((m) => m.filter((mbr) => mbr.email !== email))
+  // ── Remove (persisté en DB) ───────────────────────────────────────────────────
+  const [memberRemoving, setMemberRemoving] = useState<string | null>(null)
+
+  async function removeMember(email: string) {
+    const member = members.find((m) => m.email === email)
+    if (!member?.id) return
+
+    setMemberRemoving(email)
     setConfirmRemove(null)
-    push("Membre retiré")
+
+    try {
+      const res = await fetch("/api/team/members", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: member.id }),
+      })
+      if (res.ok) {
+        setMembers((m) => m.filter((mbr) => mbr.email !== email))
+        push("Membre retiré")
+      } else {
+        const d = await res.json() as { error?: string }
+        push(d.error ?? "Erreur lors de la suppression", "error")
+      }
+    } catch {
+      push("Erreur réseau", "error")
+    } finally {
+      setMemberRemoving(null)
+    }
   }
 
   // ── Open create modal ────────────────────────────────────────────────────────
@@ -607,7 +652,9 @@ export default function TeamPage() {
                   alignItems: "center",
                   padding: "13px 20px",
                   borderBottom: i < members.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                  transition: "background 0.15s",
+                  opacity: memberRemoving === member.email ? 0.4 : 1,
+                  pointerEvents: memberRemoving === member.email ? "none" : "auto",
+                  transition: "opacity 200ms, background 0.15s",
                 }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.025)" }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
@@ -675,14 +722,15 @@ export default function TeamPage() {
                             <button
                               key={r}
                               type="button"
-                              onClick={() => changeRole(member.email, r)}
+                              disabled={roleChanging === member.email}
+                              onClick={() => void changeRole(member.email, r)}
                               style={{
                                 width: "100%", height: 32, borderRadius: 7, border: "none",
                                 background: member.role === r ? "rgba(255,255,255,0.05)" : "transparent",
                                 color: member.role === r ? "#F5F5F7" : "#A1A1AA",
-                                fontSize: 12, cursor: "pointer", textAlign: "left",
-                                padding: "0 8px", display: "flex", alignItems: "center", gap: 7,
-                                transition: "background 100ms",
+                                fontSize: 12, cursor: roleChanging === member.email ? "not-allowed" : "pointer",
+                                textAlign: "left", padding: "0 8px", display: "flex", alignItems: "center", gap: 7,
+                                transition: "background 100ms", opacity: roleChanging === member.email ? 0.5 : 1,
                               }}
                               onMouseEnter={(e) => { if (member.role !== r) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)" }}
                               onMouseLeave={(e) => { if (member.role !== r) (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
@@ -1034,7 +1082,7 @@ export default function TeamPage() {
       {confirmRemove && (
         <ConfirmModal
           message="Retirer ce membre de l'équipe ? Cette action est réversible."
-          onConfirm={() => removeMember(confirmRemove)}
+          onConfirm={() => void removeMember(confirmRemove)}
           onCancel={() => setConfirmRemove(null)}
         />
       )}
