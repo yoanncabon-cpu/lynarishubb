@@ -391,9 +391,29 @@ function FolderCard({
 
 // ── FileViewerModal ───────────────────────────────────────────────────────────
 
+const TEXT_EXTENSIONS = new Set([
+  "txt","md","json","js","ts","jsx","tsx","css","scss","sass","html","htm",
+  "xml","yaml","yml","csv","liquid","liquid.js","sh","bash","py","rb","php",
+  "java","go","rs","c","cpp","h","sql","env","gitignore","lock","toml","ini",
+  "conf","log","graphql","gql","vue","svelte","astro",
+])
+
+function isTextFile(mimeType: string, name: string): boolean {
+  if (mimeType.startsWith("text/")) return true
+  if (["application/json","application/javascript","application/xml",
+       "application/yaml","application/x-yaml"].includes(mimeType)) return true
+  const ext = name.split(".").pop()?.toLowerCase() ?? ""
+  return TEXT_EXTENSIONS.has(ext)
+}
+
 function FileViewerModal({ file, onClose }: { file: DocFile; onClose: () => void }) {
   const [url, setUrl] = useState<string | null>(null)
+  const [textContent, setTextContent] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const isImage  = file.mimeType.startsWith("image/")
+  const isPdf    = file.mimeType === "application/pdf"
+  const isText   = isTextFile(file.mimeType, file.name)
 
   useEffect(() => {
     if (!file.storagePath) { setLoading(false); return }
@@ -401,19 +421,25 @@ function FileViewerModal({ file, onClose }: { file: DocFile; onClose: () => void
     supabase.storage
       .from("documents")
       .createSignedUrl(file.storagePath, 3600)
-      .then(({ data }: { data: { signedUrl: string } | null }) => setUrl(data?.signedUrl ?? null))
-      .catch(() => setUrl(null))
+      .then(({ data }: { data: { signedUrl: string } | null }) => {
+        const signedUrl = data?.signedUrl ?? null
+        setUrl(signedUrl)
+        if (signedUrl && isText) {
+          return fetch(signedUrl)
+            .then((r) => r.text())
+            .then((t) => setTextContent(t))
+            .catch(() => setTextContent(null))
+        }
+      })
+      .catch(() => {})
       .finally(() => setLoading(false))
-  }, [file.storagePath])
+  }, [file.storagePath, isText])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
   }, [onClose])
-
-  const isImage = file.mimeType.startsWith("image/")
-  const isPdf   = file.mimeType === "application/pdf"
 
   return (
     <div
@@ -431,9 +457,9 @@ function FileViewerModal({ file, onClose }: { file: DocFile; onClose: () => void
       }}
     >
       <div style={{
-        width: "min(900px,100%)",
-        maxHeight: "90dvh",
-        background: "rgba(18,18,26,0.97)",
+        width: "min(960px,100%)",
+        maxHeight: "92dvh",
+        background: "rgba(14,14,20,0.98)",
         border: "1px solid rgba(255,255,255,0.09)",
         borderRadius: 20,
         display: "flex", flexDirection: "column", overflow: "hidden",
@@ -441,72 +467,81 @@ function FileViewerModal({ file, onClose }: { file: DocFile; onClose: () => void
       }}>
         {/* Header */}
         <div style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "14px 18px",
+          display: "flex", alignItems: "center", gap: 10, padding: "13px 18px",
           borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0,
         }}>
-          <File size={15} color="rgba(245,245,247,0.45)" aria-hidden />
+          <File size={14} color="rgba(245,245,247,0.4)" aria-hidden />
           <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#F5F5F7", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
-          <span style={{ fontSize: 12, color: "rgba(245,245,247,0.35)", marginRight: 8 }}>{file.size}</span>
+          <span style={{ fontSize: 11, color: "rgba(245,245,247,0.28)", marginRight: 6, flexShrink: 0 }}>{file.size}</span>
           {url && (
-            <a
-              href={url}
-              download={file.name}
-              style={{
-                display: "flex", alignItems: "center", gap: 5, height: 30, padding: "0 12px",
-                borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(255,255,255,0.05)", color: "rgba(245,245,247,0.7)",
-                fontSize: 12, fontWeight: 500, textDecoration: "none",
-              }}
-            >
-              <Download size={12} aria-hidden /> Télécharger
+            <a href={url} download={file.name} style={{
+              display: "flex", alignItems: "center", gap: 5, height: 28, padding: "0 11px",
+              borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(255,255,255,0.05)", color: "rgba(245,245,247,0.65)",
+              fontSize: 12, fontWeight: 500, textDecoration: "none", flexShrink: 0,
+            }}>
+              <Download size={11} aria-hidden /> Télécharger
             </a>
           )}
           <button type="button" onClick={onClose} aria-label="Fermer" style={{
-            width: 30, height: 30, borderRadius: 8, border: "none",
+            width: 28, height: 28, borderRadius: 7, border: "none", flexShrink: 0,
             background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)",
             display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
           }}>
-            <X size={14} aria-hidden />
+            <X size={13} aria-hidden />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, minHeight: 200 }}>
+        <div style={{
+          flex: 1, overflow: "auto",
+          display: "flex",
+          alignItems: isImage ? "center" : "stretch",
+          justifyContent: isImage ? "center" : "stretch",
+          padding: isText ? 0 : 24,
+          minHeight: 200,
+        }}>
           {loading ? (
-            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Chargement…</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+              Chargement…
+            </div>
           ) : !url ? (
-            <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
-              <File size={32} color="rgba(255,255,255,0.2)" aria-hidden style={{ marginBottom: 12 }} />
-              <p style={{ margin: "0 0 16px" }}>Aperçu non disponible</p>
-              <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.2)" }}>Fichier non stocké dans le cloud</p>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+              <File size={32} color="rgba(255,255,255,0.15)" aria-hidden style={{ marginBottom: 12 }} />
+              <p style={{ margin: "0 0 6px" }}>Aperçu non disponible</p>
+              <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.18)" }}>Fichier non stocké dans le cloud</p>
             </div>
           ) : isImage ? (
-            <img src={url} alt={file.name} style={{ maxWidth: "100%", maxHeight: "70dvh", borderRadius: 10, objectFit: "contain" }} />
+            <img src={url} alt={file.name} style={{ maxWidth: "100%", maxHeight: "78dvh", borderRadius: 10, objectFit: "contain" }} />
           ) : isPdf ? (
-            <iframe
-              src={url}
-              title={file.name}
-              style={{ width: "100%", height: "70dvh", border: "none", borderRadius: 10, background: "#fff" }}
-            />
+            <iframe src={url} title={file.name} style={{ width: "100%", height: "78dvh", border: "none", borderRadius: 0 }} />
+          ) : isText ? (
+            <pre style={{
+              flex: 1, margin: 0, padding: "20px 24px",
+              fontSize: 12.5, lineHeight: 1.65,
+              fontFamily: "'Geist Mono', 'Fira Code', 'Cascadia Code', monospace",
+              color: "rgba(220,220,230,0.9)",
+              background: "transparent",
+              whiteSpace: "pre-wrap", wordBreak: "break-all",
+              overflowX: "auto",
+            }}>
+              {textContent ?? "Impossible de charger le contenu."}
+            </pre>
           ) : (
-            <div style={{ textAlign: "center" }}>
-              <File size={48} color="rgba(255,255,255,0.15)" aria-hidden style={{ marginBottom: 16 }} />
-              <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>
-                {file.mimeType || "Fichier"}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, textAlign: "center" }}>
+              <File size={44} color="rgba(255,255,255,0.12)" aria-hidden style={{ marginBottom: 14 }} />
+              <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>
+                {file.mimeType || file.name.split(".").pop()?.toUpperCase() || "Fichier"}
               </p>
-              <p style={{ margin: "0 0 20px", fontSize: 13, color: "rgba(255,255,255,0.3)" }}>
+              <p style={{ margin: "0 0 20px", fontSize: 12, color: "rgba(255,255,255,0.28)" }}>
                 Aperçu non disponible pour ce type de fichier
               </p>
-              <a
-                href={url}
-                download={file.name}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "10px 20px", borderRadius: 10,
-                  background: "linear-gradient(135deg, #E86F4D 0%, #C2552A 100%)",
-                  color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
-                }}
-              >
+              <a href={url} download={file.name} style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "10px 20px", borderRadius: 10,
+                background: "linear-gradient(135deg, #E86F4D 0%, #C2552A 100%)",
+                color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
+              }}>
                 <Download size={14} aria-hidden /> Télécharger le fichier
               </a>
             </div>
